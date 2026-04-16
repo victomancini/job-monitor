@@ -1,0 +1,14 @@
+name: Keepalive
+on:
+  schedule:
+    - cron: '0 0 1 * *'     # Monthly on the 1st at midnight UTC
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: gautamkrishnar/keepalive-workflow@v2

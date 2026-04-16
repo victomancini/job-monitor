@@ -1,0 +1,211 @@
+# Keyword Taxonomy for Employee Listening / People Analytics Job Classification
+# All matching MUST use word-boundary regex: re.search(r'\b' + re.escape(term) + r'\b', text, re.IGNORECASE)
+
+tier1_title:
+  score: 50
+  terms:
+    - "employee listening"
+    - "people analytics"
+    - "voice of employee"
+    - "voice of the employee"
+    - "employee voice"
+    - "workforce sensing"
+    - "continuous listening"
+    - "people science"
+    - "people scientist"
+    - "human capital analytics"
+    - "talent analytics"
+    - "workforce insights"
+    - "employee listening strategy"
+    - "employee listening manager"
+    - "employee listening director"
+    - "employee listening lead"
+    - "employee listening principal"
+    - "organizational network analysis"
+    - "people analytics manager"
+    - "people analytics director"
+    - "people analytics lead"
+    - "people analytics senior"
+
+tier1_description:
+  score: 30
+  terms:
+    - "employee listening"
+    - "people analytics"
+    - "voice of employee"
+    - "employee voice"
+    - "workforce sensing"
+    - "continuous listening"
+    - "human capital analytics"
+    - "Workday Peakon"
+    - "Perceptyx"
+    - "Qualtrics EX"
+    - "Qualtrics EmployeeXM"
+    - "Culture Amp"
+    - "Viva Glint"
+    - "Medallia"
+    - "employee experience analytics"
+    - "organizational network analysis"
+    - "Lattice engagement"
+    - "15Five"
+    - "Leapsome"
+    - "Betterworks"
+
+tier2_title:
+  score: 25
+  terms:
+    - "people insights"
+    - "employee insights"
+    - "organizational insights"
+    - "workforce analytics"
+    - "HR analytics"
+    - "human resources analytics"
+    - "talent intelligence"
+    - "workforce intelligence"
+    - "employee engagement analyst"
+    - "employee engagement manager"
+    - "employee engagement director"
+    - "people data scientist"
+    - "people data analyst"
+    - "HR data scientist"
+    - "employee experience researcher"
+    - "XM scientist"
+    - "XM listening"
+    - "employee experience management"
+    - "employee survey"
+    - "engagement survey"
+    - "pulse survey"
+    - "people research"
+    - "organizational research"
+    - "workplace insights"
+    - "employee sentiment"
+    - "I-O psychologist"
+    - "industrial-organizational"
+    - "organisational psychologist"
+    - "people analyst"
+    - "organizational development analyst"
+    - "organizational effectiveness"
+    - "employee experience analyst"
+    - "HR research"
+    - "workforce planning analyst"
+    - "employee voice"
+    - "culture analytics"
+    - "engagement analytics"
+    - "listening strategy"
+    - "EX transformation"
+
+tier2_description:
+  score: 10
+  terms:
+    - "people insights"
+    - "employee insights"
+    - "organizational insights"
+    - "workforce analytics"
+    - "talent analytics"
+    - "HR analytics"
+    - "human capital analytics"
+    - "pulse survey"
+    - "engagement survey"
+    - "eNPS"
+    - "employee net promoter"
+    - "employee sentiment"
+    - "survey design"
+    - "I-O psychology"
+    - "industrial-organizational psychology"
+    - "organizational behavior"
+    - "psychometric"
+    - "employee feedback"
+    - "culture survey"
+    - "climate survey"
+    - "lifecycle survey"
+    - "onboarding survey"
+    - "exit survey analytics"
+    - "attrition model"
+    - "turnover analytics"
+    - "retention analytics"
+    - "Perceptyx"
+    - "CultureAmp"
+    - "Glint"
+    - "Medallia"
+    - "ONA"
+    - "Viva Pulse"
+    - "Visier"
+    - "organizational health"
+    - "Workday Peakon"
+    - "sentiment analysis"
+    - "action planning"
+
+tier3_title:
+  score: 10
+  terms:
+    - "people operations analyst"
+    - "people & culture analyst"
+    - "employee experience"
+    - "workforce planning"
+    - "HR reporting"
+    - "talent management analyst"
+
+negative_auto_reject:
+  terms:
+    # Customer/brand listening (not employee listening)
+    - "customer listening"
+    - "social listening"
+    - "social media listening"
+    - "brand monitoring"
+    - "brand listening"
+    - "media monitoring"
+    - "voice of customer"
+    - "voice of the customer"
+    - "VoC program"
+    # Customer experience roles
+    - "patient experience manager"
+    - "customer experience analyst"
+    - "customer experience manager"
+    - "customer satisfaction"
+    - "NPS program manager"
+    - "CSAT"
+    # Marketing/sales analytics
+    - "marketing analytics manager"
+    - "SEO analyst"
+    - "Google Analytics specialist"
+    - "sales analytics manager"
+    - "social media manager"
+    - "performance marketing"
+    - "demand generation"
+    # Contact center / service
+    - "call center manager"
+    - "contact center"
+    - "customer service representative"
+    # Non-HR "listening" contexts — THE #1 FALSE POSITIVE SOURCE
+    - "active listening skills"
+    - "active listening"
+    - "listening comprehension"
+    - "patient listening"
+    - "listening bar"
+    # Healthcare/clinical/education
+    - "speech pathologist"
+    - "audiologist"
+    - "listening therapy"
+    # Security
+    - "threat intelligence"
+
+negative_score_reducers:
+  score: -15
+  terms:
+    - "customer engagement"
+    - "digital marketing"
+    - "market research"
+    - "brand strategy"
+    - "revenue analytics"
+    - "product analytics"
+    - "web analytics"
+    - "campaign analytics"
+    - "user analytics"
+    - "growth analytics"
+    - "HRIS analyst"
+    - "HRIS administrator"
+
+thresholds:
+  auto_include: 50
+  llm_review_min: 10
+  auto_reject: 10

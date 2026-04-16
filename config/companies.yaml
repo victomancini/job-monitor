@@ -1,0 +1,267 @@
+# Target Companies for Employee Listening / People Analytics Monitoring
+# Used by: OpenJobRadar configuration, notification flagging, hiring velocity tracking
+# Tier 1 = Dedicated EL team confirmed | Tier 2 = PA team confirmed | Tier 3 = Large enterprise, likely PA
+
+# ─── 2025-2026 M&A AND LEADERSHIP CHANGES (update monitoring accordingly) ───
+# Perceptyx acquired Lyceum AI (2026), plus earlier Waggl, Cultivate, Humu
+# Phenom acquired Included AI (people analytics platform) and Be Applied
+# Microsoft retired Viva Goals (Dec 2025) and Viva Topics (Feb 2025) — Viva Glint continues
+# Medallia: new CEO Mark Bishof appointed January 2025
+# Culture Amp: founder transitioned out of CEO role early 2026
+# Docebo acquired 365Talents (skills intelligence)
+
+# ─── TIER 1: Dedicated Employee Listening Teams ────────────────────────────
+
+tier1:
+  # Tech
+  - {name: "Microsoft", sector: "tech", hq: "Redmond, WA", evidence: "Dawn Klinghoffer VP HR Business Insights; Viva Glint product"}
+  - {name: "Netflix", sector: "tech", hq: "Los Gatos, CA", evidence: "Active Senior Manager Employee Listening posting; building dedicated EL team"}
+  - {name: "Atlassian", sector: "tech", hq: "Sydney, AU", evidence: "Head of Research & Employee Listening role within People Insights"}
+  - {name: "Airbnb", sector: "tech", hq: "San Francisco, CA", evidence: "Airbnb Pulse engagement survey; Airbnb Love peer feedback platform"}
+  - {name: "Autodesk", sector: "tech", hq: "San Francisco, CA", evidence: "Qualtrics EX customer story"}
+
+  # Financial services
+  - {name: "Goldman Sachs", sector: "finance", hq: "New York, NY", evidence: "Jacqueline Arthur at Wharton PAC 2024; Qualtrics EX client"}
+  - {name: "Standard Chartered", sector: "finance", hq: "London, UK", evidence: "Tanuj Kapilashrami Digital HR Leaders guest on EX design"}
+
+  # Healthcare/pharma
+  - {name: "AstraZeneca", sector: "pharma", hq: "Cambridge, UK", evidence: "Manisha Singh VP Employee Experience Analytics & Digital HR"}
+  - {name: "Johnson & Johnson", sector: "pharma", hq: "New Brunswick, NJ", evidence: "Piyush Mathur Global Head Workforce Analytics"}
+  - {name: "Banner Health", sector: "healthcare", hq: "Phoenix, AZ", evidence: "New Perceptyx customer 2023; 30-hospital system"}
+  - {name: "AdventHealth", sector: "healthcare", hq: "Altamonte Springs, FL", evidence: "Confirmed Workday Peakon client"}
+  - {name: "Intermountain Healthcare", sector: "healthcare", hq: "Salt Lake City, UT", evidence: "Qualtrics customer story"}
+  - {name: "Munson Healthcare", sector: "healthcare", hq: "Traverse City, MI", evidence: "Culture Amp case study"}
+
+  # Consumer/retail
+  - {name: "Walmart", sector: "retail", hq: "Bentonville, AR", evidence: "PA team of 70+ staff; Wharton PAC 2024 speaker"}
+  - {name: "Unilever", sector: "consumer", hq: "London, UK", evidence: "Nicky Clement VP Organisation & People Analytics; Qualtrics XM Discover"}
+  - {name: "BJ's Wholesale Club", sector: "retail", hq: "Marlborough, MA", evidence: "Confirmed Perceptyx client"}
+
+  # Telecom/media
+  - {name: "Comcast", sector: "telecom", hq: "Philadelphia, PA", evidence: "Perceptyx case study: 90% survey participation across 170K workforce"}
+  - {name: "Verizon", sector: "telecom", hq: "New York, NY", evidence: "Confirmed Workday Peakon client"}
+  - {name: "Gannett", sector: "media", hq: "McLean, VA", evidence: "New Perceptyx customer 2023"}
+
+  # Logistics/other
+  - {name: "FedEx", sector: "logistics", hq: "Memphis, TN", evidence: "Confirmed Perceptyx client"}
+  - {name: "UPS", sector: "logistics", hq: "Atlanta, GA", evidence: "Confirmed Workday Peakon client"}
+  - {name: "DuPont", sector: "industrial", hq: "Wilmington, DE", evidence: "Perceptyx case study: 360 feedback program"}
+  - {name: "WSP Global", sector: "engineering", hq: "Montreal, CA", evidence: "Detailed Workday Peakon case study"}
+  - {name: "C.H. Robinson", sector: "logistics", hq: "Eden Prairie, MN", evidence: "Confirmed Perceptyx client"}
+  - {name: "Southern Company", sector: "energy", hq: "Atlanta, GA", evidence: "Confirmed Perceptyx client"}
+  - {name: "NASCAR", sector: "sports", hq: "Daytona Beach, FL", evidence: "Culture Amp case study"}
+  - {name: "Philip Morris International", sector: "consumer", hq: "Stamford, CT", evidence: "Qualtrics client"}
+  - {name: "On Running", sector: "consumer", hq: "Zurich, CH", evidence: "Culture Amp case study"}
+
+  # Government
+  - {name: "U.S. OPM", sector: "government", hq: "Washington, DC", evidence: "FEVS survey since 2002; 674K+ respondents"}
+  - {name: "NHS England", sector: "government", hq: "London, UK", evidence: "Staff Survey since 2003; Monthly People Pulse"}
+
+  # EL/PA vendors
+  - {name: "Perceptyx", sector: "vendor", hq: "Temecula, CA", evidence: "Market leader; 25%+ Fortune 100 clients"}
+  - {name: "Qualtrics", sector: "vendor", hq: "Provo, UT", evidence: "EmployeeXM; 75%+ Fortune 100"}
+  - {name: "Culture Amp", sector: "vendor", hq: "Melbourne, AU", evidence: "6,800+ customers"}
+  - {name: "Workday", sector: "vendor", hq: "Pleasanton, CA", evidence: "Peakon Employee Voice; 3,000+ enterprise clients"}
+  - {name: "Gallup", sector: "vendor", hq: "Washington, DC", evidence: "Q12 engagement measurement pioneer"}
+
+  # Conference companies (UT Austin Voice Conference 2026)
+  - {name: "Qualcomm", sector: "tech", hq: "San Diego, CA", evidence: "Craig Funt SVP People Strategy; Leah Wolfeld Sr Mgr PA Insights & Surveys"}
+  - {name: "LinkedIn", sector: "tech", hq: "Sunnyvale, CA", evidence: "Daniel Maurath Sr Manager People Analytics Employee Listening"}
+  - {name: "Google", sector: "tech", hq: "Mountain View, CA", evidence: "Kristin Saboe Head of Employee Voice; Project Oxygen/Aristotle"}
+  - {name: "IBM", sector: "tech", hq: "Armonk, NY", evidence: "David Koch Workforce Science Leader"}
+  - {name: "Moody's", sector: "finance", hq: "New York, NY", evidence: "Ketaki Sodhi Head AI Enablement & Workforce Transformation"}
+  - {name: "The World Bank Group", sector: "intl_org", hq: "Washington, DC", evidence: "Silja Kupiainen Sr HR Specialist Employee Listening"}
+  - {name: "The Coca-Cola Company", sector: "consumer", hq: "Atlanta, GA", evidence: "Sue Lam VP People Insights Strategy & Culture"}
+  - {name: "UnitedHealth Group", sector: "healthcare", hq: "Minnetonka, MN", evidence: "Stephanie Murphy VP People Experience; SPA founder"}
+  - {name: "Cox Enterprises", sector: "telecom", hq: "Atlanta, GA", evidence: "Robert Gibby Director Data Science People Analytics"}
+
+# ─── TIER 2: Confirmed People Analytics Teams ──────────────────────────────
+
+tier2:
+  # Tech
+  - {name: "Meta", sector: "tech", hq: "Menlo Park, CA", evidence: "Alexis Fink former VP People Analytics & Workforce Strategy"}
+  - {name: "Adobe", sector: "tech", hq: "San Jose, CA", evidence: "Alan Wilson People Analytics leader"}
+  - {name: "Cisco", sector: "tech", hq: "San Jose, CA", evidence: "Ian Bailie former Global Head Talent Acquisition & People Planning"}
+  - {name: "Intel", sector: "tech", hq: "Santa Clara, CA", evidence: "Kelsey Kline conference attendee; recognized PA function"}
+  - {name: "SAP", sector: "tech", hq: "Walldorf, DE", evidence: "SuccessFactors People Intelligence; conference presenter"}
+  - {name: "Uber", sector: "tech", hq: "San Francisco, CA", evidence: "RJ Milnor Head of PA"}
+  - {name: "Spotify", sector: "tech", hq: "Stockholm, SE", evidence: "Data Research Insights teams"}
+  - {name: "eBay", sector: "tech", hq: "San Jose, CA", evidence: "Scott Judd Senior Director People Analytics"}
+  - {name: "PayPal", sector: "tech", hq: "San Jose, CA", evidence: "Jeremy Welland Global Head People Analytics"}
+  - {name: "Micron", sector: "tech", hq: "Boise, ID", evidence: "People Analytics and Intelligence Staff Analyst role confirmed"}
+  - {name: "Procore Technologies", sector: "tech", hq: "Austin, TX", evidence: "Active Employee Listening Program & Analytics Lead posting"}
+  - {name: "Infor", sector: "tech", hq: "Alpharetta, GA", evidence: "Active Employee Engagement Lead posting"}
+  - {name: "Northrop Grumman", sector: "defense", hq: "Falls Church, VA", evidence: "People AI & Analytics organization"}
+  - {name: "Cornerstone OnDemand", sector: "vendor", hq: "Santa Monica, CA", evidence: "Michael Housman Chief Analytics Officer; Wharton PAC"}
+  - {name: "Salesforce", sector: "tech", hq: "San Francisco, CA", evidence: "Director Employee Listening role posted Feb 2025"}
+
+  # Finance
+  - {name: "JPMorgan Chase", sector: "finance", hq: "New York, NY", evidence: "Ian O'Keefe built PA function 2017; HR Data Office"}
+  - {name: "HSBC", sector: "finance", hq: "London, UK", evidence: "Eden Britt Group Head People Analytics & CDO for HR"}
+  - {name: "ABN AMRO", sector: "finance", hq: "Amsterdam, NL", evidence: "Patrick Coolen Global Head People Analytics since 2014"}
+  - {name: "American Express", sector: "finance", hq: "New York, NY", evidence: "Ian O'Keefe held PA roles; confirmed historical PA function"}
+  - {name: "KKR", sector: "finance", hq: "New York, NY", evidence: "Building People Analytics team via LinkedIn"}
+  - {name: "Bloomberg", sector: "finance", hq: "New York, NY", evidence: "Presented at Wharton PAC"}
+  - {name: "Nomura", sector: "finance", hq: "Tokyo, JP", evidence: "Jonathan Green Exec Director Global Head People Analytics"}
+  - {name: "Aviva", sector: "insurance", hq: "London, UK", evidence: "Angela Ignam Mathon Head Global People Analytics; Perceptyx client"}
+
+  # Pharma/healthcare
+  - {name: "Merck", sector: "pharma", hq: "Rahway, NJ", evidence: "Jeremy Shapiro Executive Director Workforce Analytics; HBR co-author"}
+  - {name: "AbbVie", sector: "pharma", hq: "North Chicago, IL", evidence: "Bethany Dohleman Director People Insights; conference attendee"}
+  - {name: "Takeda", sector: "pharma", hq: "Tokyo, JP", evidence: "Confirmed Head of People Analytics Senior Director posting"}
+  - {name: "Merck KGaA", sector: "pharma", hq: "Darmstadt, DE", evidence: "Global Head People Insights and Effectiveness"}
+
+  # Consumer/retail
+  - {name: "PepsiCo", sector: "consumer", hq: "Purchase, NY", evidence: "Active People Analytics Analyst (Employee Listening) postings"}
+  - {name: "Mars", sector: "consumer", hq: "McLean, VA", evidence: "Mariana Carrasqueira Sr Director People Analytics; PAWorld speaker"}
+  - {name: "Kraft Heinz", sector: "consumer", hq: "Pittsburgh, PA", evidence: "Serena Huang former Global Head People Analytics"}
+  - {name: "Starbucks", sector: "retail", hq: "Seattle, WA", evidence: "Gustavo Canton Global Analytics Leader"}
+  - {name: "Nike", sector: "retail", hq: "Beaverton, OR", evidence: "Insight222 compendium"}
+  - {name: "CHANEL", sector: "luxury", hq: "Paris, FR", evidence: "Nicolas Martino Head of People Analytics; PAWorld speaker"}
+  - {name: "Best Buy", sector: "retail", hq: "Richfield, MN", evidence: "AIHR case study linking store engagement to income"}
+  - {name: "The Wonderful Company", sector: "consumer", hq: "Los Angeles, CA", evidence: "Active Director of People Analytics posting"}
+  - {name: "Inspire Brands", sector: "food", hq: "Atlanta, GA", evidence: "Active Director of People Analytics posting"}
+
+  # Industrial/energy
+  - {name: "Shell", sector: "energy", hq: "London, UK", evidence: "Esther Bongenaar VP HR Data & Analytics; AIHR case study"}
+  - {name: "GE", sector: "industrial", hq: "Boston, MA", evidence: "Balakarthikeyan Nagarajan Exec Director HR EX & People Analytics"}
+  - {name: "Honeywell", sector: "industrial", hq: "Charlotte, NC", evidence: "Melissa Beasley People Analytics Leader; PAWorld"}
+  - {name: "Eaton", sector: "industrial", hq: "Dublin, IE", evidence: "Wendy Hirsch VP Workforce Planning & Analytics"}
+  - {name: "E.ON", sector: "energy", hq: "Essen, DE", evidence: "AIHR case study on absence analytics with ROI"}
+  - {name: "Rolls-Royce", sector: "industrial", hq: "London, UK", evidence: "AIHR case study on PA for assessment"}
+  - {name: "Siemens", sector: "industrial", hq: "Munich, DE", evidence: "HR analytics leveraging Workday"}
+  - {name: "Airbus", sector: "aerospace", hq: "Leiden, NL", evidence: "Alessandro Alessandrini Head Workforce & Workplace; PAWorld"}
+  - {name: "Henkel", sector: "consumer", hq: "Dusseldorf, DE", evidence: "Frauke Austermann Global Head OE & Workforce Analytics"}
+  - {name: "Infineon", sector: "tech", hq: "Neubiberg, DE", evidence: "Christian Otto PA leader; Insight222 compendium"}
+  - {name: "Novo Nordisk", sector: "pharma", hq: "Bagsvaerd, DK", evidence: "Mark Hagstrom VP People Analytics since Feb 2021"}
+  - {name: "Vodafone", sector: "telecom", hq: "Newbury, UK", evidence: "Alessandro Linari Head People Analytics UK; Insight222"}
+  - {name: "Saudi Aramco", sector: "energy", hq: "Dhahran, SA", evidence: "PA leader presented at PAWorld"}
+
+  # Consulting
+  - {name: "Mercer", sector: "consulting", hq: "New York, NY", evidence: "Ravin Jesuthasan keynoted Wharton PAC 2025; 8.4M employee listening database"}
+  - {name: "Deloitte", sector: "consulting", hq: "London, UK", evidence: "People Analytics Suite; Bersin research"}
+  - {name: "McKinsey", sector: "consulting", hq: "New York, NY", evidence: "OrgSolutions; Organizational Health Index"}
+  - {name: "Korn Ferry", sector: "consulting", hq: "Los Angeles, CA", evidence: "Leadership assessment; talent analytics practice"}
+  - {name: "Aon", sector: "consulting", hq: "Dublin, IE", evidence: "People Solutions; engagement measurement"}
+  - {name: "WTW", sector: "consulting", hq: "London, UK", evidence: "Employee listening/engagement surveys"}
+  - {name: "Kincentric", sector: "consulting", hq: "Chicago, IL", evidence: "Best Employers methodology; engagement consulting"}
+  - {name: "Gartner", sector: "consulting", hq: "Stamford, CT", evidence: "HR research practice; workforce analytics advisory"}
+  - {name: "Insight222", sector: "consulting", hq: "London, UK", evidence: "People Analytics Program with 100+ peer organizations"}
+
+  # Government
+  - {name: "DHS", sector: "government", hq: "Washington, DC", evidence: "Employee Engagement Program Manager role"}
+  - {name: "U.S. DOD", sector: "government", hq: "Washington, DC", evidence: "FEVS participant; DMDC analytics"}
+
+  # Vendors (Tier 2)
+  - {name: "Visier", sector: "vendor", hq: "Vancouver, CA", evidence: "People analytics platform; acquired Yva.ai"}
+  - {name: "Medallia", sector: "vendor", hq: "San Jose, CA", evidence: "CX/EX platform"}
+  - {name: "Lattice", sector: "vendor", hq: "San Francisco, CA", evidence: "Performance + engagement"}
+  - {name: "15Five", sector: "vendor", hq: "San Francisco, CA", evidence: "Performance + engagement"}
+  - {name: "Leapsome", sector: "vendor", hq: "Berlin, DE", evidence: "Feedback + engagement"}
+  - {name: "Crunchr", sector: "vendor", hq: "Amsterdam, NL", evidence: "PA dashboards"}
+  - {name: "inFeedo", sector: "vendor", hq: "Gurugram, IN", evidence: "AI employee listening"}
+  - {name: "ChartHop", sector: "vendor", hq: "New York, NY", evidence: "Org design + people ops"}
+  - {name: "Worklytics", sector: "vendor", hq: "San Francisco, CA", evidence: "ONA/collaboration analytics"}
+  - {name: "One Model", sector: "vendor", hq: "Austin, TX", evidence: "Core PA platform; community job board"}
+  - {name: "Orgnostic", sector: "vendor", hq: "Belgrade, RS", evidence: "Core PA platform; Cole Napper VP PA"}
+  - {name: "Quantum Workplace", sector: "vendor", hq: "Omaha, NE", evidence: "Engagement surveys"}
+  - {name: "Firstup", sector: "vendor", hq: "San Francisco, CA", evidence: "Employee communications + listening"}
+  - {name: "Eletive", sector: "vendor", hq: "Malmo, SE", evidence: "Engagement + PA platform"}
+  - {name: "Betterworks", sector: "vendor", hq: "Menlo Park, CA", evidence: "Performance + goals + engagement"}
+  - {name: "Confirm", sector: "vendor", hq: "San Francisco, CA", evidence: "ONA-focused people analytics"}
+  - {name: "Included AI", sector: "vendor", hq: "Oakland, CA", evidence: "DEI analytics; acquired by Phenom 2025"}
+  - {name: "365Talents", sector: "vendor", hq: "Lyon, FR", evidence: "Skills intelligence; acquired by Docebo"}
+  - {name: "Propeller Insight", sector: "vendor", hq: "New York, NY", evidence: "Alexis Fink consultancy; I-O psychology advisory"}
+  - {name: "TI People", sector: "vendor", hq: "London, UK", evidence: "People analytics advisory; led by David Green"}
+
+  # Conference companies (UT Austin Voice Conference 2026)
+  - {name: "Dell Technologies", sector: "tech", hq: "Round Rock, TX", evidence: "Caroline Deck Talent Analytics Consultant; conference attendee"}
+  - {name: "SAS Institute", sector: "tech", hq: "Cary, NC", evidence: "Claire Masson HR People Analytics Senior Manager"}
+  - {name: "Target", sector: "retail", hq: "Minneapolis, MN", evidence: "Rob Dees Senior Director People Analytics & Insights"}
+  - {name: "MongoDB", sector: "tech", hq: "New York, NY", evidence: "Jolene Skinner VP Head of Culture Talent and Development"}
+  - {name: "Bristol Myers Squibb", sector: "pharma", hq: "New York, NY", evidence: "Nick Lobuglio conference attendee"}
+  - {name: "Cloudflare", sector: "tech", hq: "San Francisco, CA", evidence: "Roxanne Laczo Head of People Analytics"}
+  - {name: "Meijer", sector: "retail", hq: "Grand Rapids, MI", evidence: "Rob Slabik conference attendee; People Analytics Analyst role"}
+  - {name: "AMD", sector: "tech", hq: "Santa Clara, CA", evidence: "Robyn Guzman conference attendee"}
+  - {name: "Apple", sector: "tech", hq: "Cupertino, CA", evidence: "Emily Pelosi conference attendee; Culture Amp usage reported"}
+  - {name: "Ascension", sector: "healthcare", hq: "St. Louis, MO", evidence: "Matt Castillo I-O Psychologist; conference attendee"}
+  - {name: "Chick-fil-A", sector: "food", hq: "Atlanta, GA", evidence: "Kamila Gabka applied researcher; conference attendee"}
+  - {name: "Dimensional Fund Advisors", sector: "finance", hq: "Austin, TX", evidence: "Christina Marsh and Stacey Winning; conference attendees"}
+  - {name: "Dr. Squatch", sector: "consumer", hq: "Marina del Rey, CA", evidence: "Kylee Chase People Insights Analyst; conference attendee"}
+  - {name: "Foot Locker", sector: "retail", hq: "New York, NY", evidence: "Ryan Brunn conference attendee"}
+  - {name: "Oracle", sector: "tech", hq: "Austin, TX", evidence: "Rachel Hill conference attendee"}
+
+# ─── TIER 3: Large Enterprises Likely to Have PA Functions ─────────────────
+
+tier3:
+  # Tech
+  - {name: "Amazon", sector: "tech", hq: "Seattle, WA"}
+  - {name: "Snap", sector: "tech", hq: "Santa Monica, CA"}
+  - {name: "Pinterest", sector: "tech", hq: "San Francisco, CA"}
+  - {name: "Block", sector: "tech", hq: "San Francisco, CA"}
+  - {name: "Databricks", sector: "tech", hq: "San Francisco, CA"}
+  - {name: "Snowflake", sector: "tech", hq: "Bozeman, MT"}
+  - {name: "ServiceNow", sector: "tech", hq: "Santa Clara, CA"}
+
+  # Finance
+  - {name: "Capital One", sector: "finance", hq: "McLean, VA"}
+  - {name: "Bank of America", sector: "finance", hq: "Charlotte, NC"}
+  - {name: "Morgan Stanley", sector: "finance", hq: "New York, NY"}
+  - {name: "Citigroup", sector: "finance", hq: "New York, NY"}
+  - {name: "Wells Fargo", sector: "finance", hq: "San Francisco, CA"}
+  - {name: "Visa", sector: "finance", hq: "San Francisco, CA"}
+  - {name: "Mastercard", sector: "finance", hq: "Purchase, NY"}
+  - {name: "BlackRock", sector: "finance", hq: "New York, NY"}
+  - {name: "MetLife", sector: "insurance", hq: "New York, NY"}
+  - {name: "Prudential", sector: "insurance", hq: "Newark, NJ"}
+
+  # Pharma/healthcare
+  - {name: "Novartis", sector: "pharma", hq: "Basel, CH"}
+  - {name: "Roche", sector: "pharma", hq: "Basel, CH"}
+  - {name: "GSK", sector: "pharma", hq: "London, UK"}
+  - {name: "Sanofi", sector: "pharma", hq: "Paris, FR"}
+  - {name: "Bayer", sector: "pharma", hq: "Leverkusen, DE"}
+  - {name: "Pfizer", sector: "pharma", hq: "New York, NY"}
+  - {name: "Eli Lilly", sector: "pharma", hq: "Indianapolis, IN"}
+  - {name: "CVS Health", sector: "healthcare", hq: "Woonsocket, RI"}
+  - {name: "HCA Healthcare", sector: "healthcare", hq: "Nashville, TN"}
+  - {name: "Kaiser Permanente", sector: "healthcare", hq: "Oakland, CA"}
+
+  # Consumer/retail
+  - {name: "P&G", sector: "consumer", hq: "Cincinnati, OH"}
+  - {name: "Costco", sector: "retail", hq: "Issaquah, WA"}
+  - {name: "Home Depot", sector: "retail", hq: "Atlanta, GA"}
+  - {name: "Kroger", sector: "retail", hq: "Cincinnati, OH"}
+  - {name: "General Mills", sector: "consumer", hq: "Minneapolis, MN"}
+
+  # Industrial/energy/defense
+  - {name: "Boeing", sector: "defense", hq: "Arlington, VA"}
+  - {name: "Lockheed Martin", sector: "defense", hq: "Bethesda, MD"}
+  - {name: "Caterpillar", sector: "industrial", hq: "Irving, TX"}
+  - {name: "3M", sector: "industrial", hq: "St. Paul, MN"}
+  - {name: "ExxonMobil", sector: "energy", hq: "Spring, TX"}
+  - {name: "Chevron", sector: "energy", hq: "San Ramon, CA"}
+  - {name: "Schneider Electric", sector: "industrial", hq: "Rueil-Malmaison, FR"}
+
+  # Telecom/media
+  - {name: "AT&T", sector: "telecom", hq: "Dallas, TX"}
+  - {name: "Disney", sector: "media", hq: "Burbank, CA"}
+  - {name: "Deutsche Telekom", sector: "telecom", hq: "Bonn, DE"}
+  - {name: "BT Group", sector: "telecom", hq: "London, UK"}
+
+  # Consulting
+  - {name: "Accenture", sector: "consulting", hq: "Dublin, IE"}
+  - {name: "PwC", sector: "consulting", hq: "London, UK"}
+  - {name: "EY", sector: "consulting", hq: "London, UK"}
+  - {name: "KPMG", sector: "consulting", hq: "Amstelveen, NL"}
+  - {name: "BCG", sector: "consulting", hq: "Boston, MA"}
+
+  # Other
+  - {name: "Sunrise Senior Living", sector: "healthcare", hq: "McLean, VA"}
+  - {name: "Marathon Petroleum", sector: "energy", hq: "Findlay, OH"}
+  - {name: "DICK'S Sporting Goods", sector: "retail", hq: "Coraopolis, PA"}
+  - {name: "American Cancer Society", sector: "nonprofit", hq: "Atlanta, GA"}
+  - {name: "Kendra Scott", sector: "retail", hq: "Austin, TX"}
+  - {name: "Cambium Learning Group", sector: "education", hq: "Dallas, TX"}
+  - {name: "Zoom", sector: "tech", hq: "San Jose, CA"}
+  - {name: "QuestionPro", sector: "vendor", hq: "Austin, TX"}

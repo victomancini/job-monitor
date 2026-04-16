@@ -1,0 +1,83 @@
+# API Query Definitions — US-primary, international English as bonus
+
+jsearch:
+  # Budget: 200 req/month. 3 broad queries/day = 90/month (55% buffer).
+  # BILLING CAUTION: Start with num_pages=1. After first month, check actual
+  # quota consumption via X-RapidAPI-Requests-Remaining header. If num_pages=3
+  # counts as 1 request (not 3), increase to get more results per query.
+  queries:
+    - query: '"employee listening" OR "people analytics" OR "voice of employee"'
+      date_posted: "3days"
+      num_pages: 1
+    - query: '"workforce analytics" OR "talent analytics" OR "HR analytics" manager OR director OR lead'
+      date_posted: "3days"
+      num_pages: 1
+    - query: '"engagement survey" OR "people insights" OR "employee experience" analyst OR scientist'
+      date_posted: "week"
+      num_pages: 1
+  params:
+    page: 1
+    country: "us"
+
+jooble:
+  # US-primary. Bonus queries for UK/CA/AU.
+  queries:
+    - keywords: "employee listening"
+      location: "United States"
+    - keywords: "people analytics"
+      location: "United States"
+    - keywords: "workforce analytics OR talent analytics"
+      location: "United States"
+    - keywords: "engagement survey analyst"
+      location: "United States"
+    # Bonus international coverage
+    - keywords: "employee listening OR people analytics"
+      location: "United Kingdom"
+    - keywords: "employee listening OR people analytics"
+      location: "Canada"
+    - keywords: "employee listening OR people analytics"
+      location: "Australia"
+
+adzuna:
+  # US-primary endpoint. Bonus for gb/ca/au.
+  primary_country: "us"
+  bonus_countries: ["gb", "ca", "au"]
+  queries:
+    - what: "employee listening"
+    - what: "people analytics"
+    - what: "workforce analytics"
+  params:
+    results_per_page: 20
+    sort_by: "date"
+
+usajobs:
+  # Federal government roles. Run WEEKLY (not daily). No rate limit concerns.
+  # Auth: User-Agent header with email + API key from developer.usajobs.gov
+  keywords:
+    - "people analytics"
+    - "organizational development"
+    - "HR analytics"
+    - "survey research"
+    - "industrial organizational"
+    - "employee engagement"
+    - "workforce analytics"
+    - "human capital"
+  params:
+    ResultsPerPage: 25
+    SortField: "DatePosted"
+    SortDirection: "Desc"
+
+google_alerts:
+  # RSS feeds. Paste URLs in .env.yaml.
+  alert_queries_for_reference:
+    - '"employee listening" hiring OR careers'
+    - '"people analytics" manager OR director job'
+    - '"voice of employee" job OR role'
+    - '"workforce sensing" OR "continuous listening" hiring'
+    - '"people insights" OR "employee insights" job'
+  siop_alert_for_reference:
+    - 'site:jobs.siop.org'
+  talkwalker_queries_for_reference:
+    - '"employee listening" jobs'
+    - '"people analytics" hiring'
+    - '"workforce analytics" OR "talent analytics" careers'

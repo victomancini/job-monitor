@@ -1,0 +1,61 @@
+name: Collect Jobs
+on:
+  schedule:
+    - cron: '30 11 * * *'   # Daily 11:30 UTC (7:30am ET)
+  workflow_dispatch:         # Manual + external cron trigger
+
+concurrency:
+  group: "job-pipeline"
+  cancel-in-progress: false  # Let running job finish; block new from starting
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run collector
+        env:
+          JSEARCH_API_KEY: ${{ secrets.JSEARCH_API_KEY }}
+          JOOBLE_API_KEY: ${{ secrets.JOOBLE_API_KEY }}
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          USAJOBS_EMAIL: ${{ secrets.USAJOBS_EMAIL }}
+          USAJOBS_API_KEY: ${{ secrets.USAJOBS_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TURSO_DB_URL: ${{ secrets.TURSO_DB_URL }}
+          TURSO_AUTH_TOKEN: ${{ secrets.TURSO_AUTH_TOKEN }}
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          BREVO_SMTP_USER: ${{ secrets.BREVO_SMTP_USER }}
+          BREVO_SMTP_PASS: ${{ secrets.BREVO_SMTP_PASS }}
+          NOTIFICATION_EMAIL: ${{ secrets.NOTIFICATION_EMAIL }}
+          PUSHOVER_USER_KEY: ${{ secrets.PUSHOVER_USER_KEY }}
+          PUSHOVER_APP_TOKEN: ${{ secrets.PUSHOVER_APP_TOKEN }}
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+          GOOGLE_ALERT_RSS_1: ${{ secrets.GOOGLE_ALERT_RSS_1 }}
+          GOOGLE_ALERT_RSS_2: ${{ secrets.GOOGLE_ALERT_RSS_2 }}
+          GOOGLE_ALERT_RSS_3: ${{ secrets.GOOGLE_ALERT_RSS_3 }}
+          GOOGLE_ALERT_RSS_4: ${{ secrets.GOOGLE_ALERT_RSS_4 }}
+          GOOGLE_ALERT_RSS_5: ${{ secrets.GOOGLE_ALERT_RSS_5 }}
+          GOOGLE_ALERT_SIOP: ${{ secrets.GOOGLE_ALERT_SIOP }}
+          TALKWALKER_RSS_1: ${{ secrets.TALKWALKER_RSS_1 }}
+          TALKWALKER_RSS_2: ${{ secrets.TALKWALKER_RSS_2 }}
+          TALKWALKER_RSS_3: ${{ secrets.TALKWALKER_RSS_3 }}
+        run: python src/collector.py
+      - name: Ping healthcheck (success)
+        if: success()
+        run: curl -fsS -m 10 --retry 5 ${{ secrets.HEALTHCHECK_URL }}
+      - name: Ping healthcheck (failure)
+        if: failure()
+        run: curl -fsS -m 10 --retry 5 ${{ secrets.HEALTHCHECK_URL }}/fail
