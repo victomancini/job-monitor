@@ -71,6 +71,9 @@ def _map(raw: dict[str, Any], country_label: str) -> dict[str, Any] | None:
         date_posted=raw.get("updated"),
         raw_data=raw,
     )
+    # Phase A: Jooble's `link` is always an aggregator redirect; the enrichment
+    # pass should prefer whatever URL it resolves to after following redirects.
+    job["_apply_url_is_redirect"] = True
     return job
 
 

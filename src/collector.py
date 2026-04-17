@@ -20,7 +20,8 @@ if __package__ in (None, ""):
 
 from src import db
 from src.processors import deduplicator, enrichment, keyword_filter, llm_classifier
-from src.processors.seniority import extract_seniority
+from src.processors.category import classify_category
+from src.processors.seniority import extract_seniority, infer_seniority_from_salary
 from src.publishers import archiver, notifier, wordpress
 from src.shared import env, validate_required_env
 from src.sources import adzuna, google_alerts, jooble, jsearch, usajobs
@@ -130,12 +131,30 @@ def apply_keyword_filter(jobs: list[dict[str, Any]]) -> tuple[list[dict[str, Any
 
 
 def apply_seniority(jobs: list[dict[str, Any]]) -> None:
-    """Extract seniority from title (regex); LLM answer overrides if provided."""
+    """Extract seniority from title (regex). LLM answer overrides if provided.
+    If both fall through as Unknown, infer from salary_min as a last resort and mark
+    seniority_confidence='inferred' so the UI can show it as approximate."""
     for job in jobs:
         job["seniority"] = extract_seniority(job.get("title", ""))
         llm_hint = job.get("_llm_seniority")
-        if llm_hint:
+        if llm_hint and llm_hint != "Unknown":
             job["seniority"] = llm_hint
+        # Phase F (R2): salary-based fallback when title/LLM are both Unknown
+        if job["seniority"] == "Unknown":
+            inferred = infer_seniority_from_salary(job.get("salary_min"))
+            if inferred:
+                job["seniority"] = inferred
+                job["seniority_confidence"] = "inferred"
+
+
+def apply_category(jobs: list[dict[str, Any]]) -> None:
+    """Phase I (R2): assign each job a functional category for UI filtering."""
+    for job in jobs:
+        job["category"] = classify_category(
+            job.get("title", ""),
+            job.get("company", ""),
+            job.get("description", ""),
+        )
 
 
 def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
@@ -275,6 +294,8 @@ def run(dry_run: bool = False) -> int:
 
     # 5b. Seniority extraction (regex first, LLM may override via _llm_seniority hint)
     apply_seniority(to_publish)
+    # 5c. Category classification (Phase I R2) for UI filtering
+    apply_category(to_publish)
 
     # 6. Deduplicator (batch + DB)
     log.info("=== Phase 4: deduplicator ===")

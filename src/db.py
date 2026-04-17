@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     is_remote TEXT DEFAULT 'unknown',
     category TEXT,
     seniority TEXT,
+    seniority_confidence TEXT,
     keyword_score INTEGER DEFAULT 0,
     keywords_matched TEXT,
     llm_classification TEXT,
@@ -103,7 +104,7 @@ _JOB_COLUMNS = [
     "external_id", "title", "company", "company_normalized", "location",
     "location_country", "work_arrangement", "description", "description_snippet",
     "salary_min", "salary_max", "salary_range", "source_url", "apply_url",
-    "source_name", "is_remote", "category", "seniority",
+    "source_name", "is_remote", "category", "seniority", "seniority_confidence",
     "keyword_score", "keywords_matched",
     "llm_classification", "llm_confidence", "llm_provider", "llm_reasoning",
     "fit_score",
@@ -123,6 +124,8 @@ _ADD_COLUMN_MIGRATIONS = [
     ("remote_confidence", "remote_confidence TEXT DEFAULT 'unverified'"),
     ("enrichment_source", "enrichment_source TEXT"),
     ("enrichment_date", "enrichment_date TEXT"),
+    # Phase F (R2): seniority-level confidence (for salary-inferred seniority)
+    ("seniority_confidence", "seniority_confidence TEXT"),
 ]
 
 

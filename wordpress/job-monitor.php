@@ -46,7 +46,9 @@ add_action('init', function() {
         'keyword_score','llm_classification','llm_confidence','llm_provider',
         // Phase F: enrichment + confidence fields
         'location_confidence','salary_confidence','remote_confidence',
-        'enrichment_source','enrichment_date'];
+        'enrichment_source','enrichment_date',
+        // Phase B/F (R2): date_posted for freshness; seniority_confidence for badge
+        'date_posted','seniority_confidence'];
     foreach ($fields as $field) {
         register_post_meta('job_listing', $field, [
             'show_in_rest' => true,
@@ -104,7 +106,9 @@ function jm_batch_update($request) {
             'keyword_score','llm_classification','llm_confidence','llm_provider',
             // Phase F3: enrichment + confidence fields
             'location_confidence','salary_confidence','remote_confidence',
-            'enrichment_source','enrichment_date'];
+            'enrichment_source','enrichment_date',
+            // Phase B/F (R2): date_posted for freshness; seniority_confidence for badge
+            'date_posted','seniority_confidence'];
         $meta = [];
         foreach ($allowed as $k) {
             if (isset($job[$k])) {
@@ -202,6 +206,13 @@ function jm_confidence_badge($confidence) {
     if ($confidence === 'aggregator_only') {
         return ' <span class="confidence-aggregator" title="Aggregator data, not confirmed">&#8226;</span>';
     }
+    // Phase J (R2): inferred from description / LLM; assumed default ("onsite" fallback)
+    if ($confidence === 'inferred') {
+        return ' <span class="confidence-inferred" title="Inferred from description">~</span>';
+    }
+    if ($confidence === 'assumed') {
+        return ' <span class="confidence-assumed" title="Assumed default (no source mentioned it)">?</span>';
+    }
     return '';
 }
 
@@ -214,44 +225,147 @@ function jm_inline_styles() {
 <style>
 .confidence-confirmed { background:#d4edda; color:#155724; padding:2px 6px; border-radius:3px; font-size:0.8em; }
 .confidence-aggregator { background:#e2e3e5; color:#383d41; padding:2px 6px; border-radius:3px; font-size:0.8em; }
+.confidence-inferred { background:#fff3cd; color:#856404; padding:2px 6px; border-radius:3px; font-size:0.8em; }
+.confidence-assumed { background:#f8f9fa; color:#adb5bd; padding:2px 6px; border-radius:3px; font-size:0.8em; }
 .jm-apply-btn { display:inline-block; padding:4px 10px; background:#2271b1; color:#fff !important; border-radius:3px; text-decoration:none; font-size:0.85em; }
 .jm-apply-btn:hover { background:#135e96; color:#fff; }
 tfoot input, tfoot select { width:100%; box-sizing:border-box; font-size:0.85em; padding:2px 4px; }
+/* Phase B (R2): freshness + NEW badge */
+.freshness-hot { color:#155724; font-weight:bold; }
+.freshness-warm { color:#856404; }
+.freshness-cool { color:#856404; opacity:0.7; }
+.freshness-stale { color:#6c757d; }
+.badge-new { background:#dc3545; color:#fff; padding:1px 5px; border-radius:3px; font-size:0.7em; vertical-align:middle; margin-left:4px; }
+/* Phase C (R2): multi-select filter bar */
+.jm-filters { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding:12px; background:#f8f9fa; border-radius:6px; }
+.jm-filter-group { display:flex; align-items:flex-start; gap:6px; }
+.jm-filter-group > label:first-child { font-weight:600; white-space:nowrap; padding-top:4px; }
+.jm-checkboxes { display:flex; flex-wrap:wrap; gap:4px; max-width:560px; }
+.jm-chip { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; background:#fff; border:1px solid #dee2e6; border-radius:4px; font-size:0.82em; cursor:pointer; }
+.jm-chip input { margin:0; }
+.jm-chip.jm-chip-off { opacity:0.5; background:#e9ecef; }
+.jm-text-filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.jm-text-filters input { padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; font-size:0.85em; }
 </style>
 CSS;
 }
 
-// Phase F2: DataTables initComplete boilerplate. Adds dropdown filters to
-// categorical columns (Level, Remote, Source) and text filters to freeform
-// columns (Title, Company, Location). Column names must match <th> text.
+// Phase D (R2): render the Relevance cell from llm_classification.
+// RELEVANT → Relevant (green), PARTIALLY_RELEVANT → Partial (amber),
+// anything else (including empty) → Auto (gray, keyword-only).
+function jm_relevance_cell($classification) {
+    switch ($classification) {
+        case 'RELEVANT':
+            return '<td><span style="color:#155724;font-weight:600">Relevant</span></td>';
+        case 'PARTIALLY_RELEVANT':
+            return '<td><span style="color:#856404;font-weight:600">Partial</span></td>';
+        default:
+            return '<td><span style="color:#6c757d">Auto</span></td>';
+    }
+}
+
+// Phase B (R2): render the Posted column with freshness color coding.
+// Accepts date_posted (preferred) and first_seen_date (fallback, labeled "Seen").
+// Returns a <td>...</td> cell with data-order set to the raw days count so
+// DataTables sorts numerically.
+function jm_freshness_cell($date_posted, $first_seen) {
+    $ref_date = $date_posted ?: $first_seen;
+    $label = $date_posted ? '' : 'Seen ';
+    if (!$ref_date) {
+        return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
+    }
+    $ts = strtotime($ref_date);
+    if ($ts === false) {
+        return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
+    }
+    $days = max(0, (int)((time() - $ts) / 86400));
+    if ($days <= 3) { $class = 'freshness-hot'; }
+    elseif ($days <= 7) { $class = 'freshness-warm'; }
+    elseif ($days <= 14) { $class = 'freshness-cool'; }
+    else { $class = 'freshness-stale'; }
+    if ($days === 0) { $text = $label . 'Today'; }
+    elseif ($days === 1) { $text = $label . '1 day ago'; }
+    else { $text = $label . $days . ' days ago'; }
+    $is_new = ($first_seen && $first_seen === current_time('Y-m-d'));
+    $badge = $is_new ? ' <span class="badge-new">NEW</span>' : '';
+    return '<td data-order="' . $days . '"><span class="' . esc_attr($class) . '">' . esc_html($text) . '</span>' . $badge . '</td>';
+}
+
+// Phase C (R2): multi-select filter bar HTML. Renders above the table. Init-complete
+// JS populates checkboxes from unique column values. `$id_suffix` disambiguates the two
+// shortcodes; `$categorical_cols` lists the header names that get checkbox filters.
+function jm_filter_bar_html($id_suffix, $categorical_cols = ['Level','Remote','Source']) {
+    $out = '<div id="jm-filters-' . esc_attr($id_suffix) . '" class="jm-filters">';
+    foreach ($categorical_cols as $col) {
+        $out .= '<div class="jm-filter-group">';
+        $out .= '<label>' . esc_html($col) . ':</label>';
+        $out .= '<div class="jm-checkboxes" data-column="' . esc_attr($col) . '"></div>';
+        $out .= '</div>';
+    }
+    $out .= '<div class="jm-filter-group"><div class="jm-text-filters">';
+    foreach (['Title', 'Company', 'Location'] as $col) {
+        $out .= '<input type="text" class="jm-text-filter" data-column="' . esc_attr($col) . '" placeholder="' . esc_attr($col) . '...">';
+    }
+    $out .= '</div></div>';
+    $out .= '</div>';
+    return $out;
+}
+
+// Phase C (R2): DataTables initComplete. Populates checkbox filter pills from each
+// categorical column's unique values and wires text filters to freeform columns.
+// Column names are matched by <th> text so the PHP doesn't care about indices.
+// Uses nowdoc ('JS') so $ and \ are literal in the JS body.
 function jm_datatables_init_complete_js() {
-    return <<<JS
+    return <<<'JS'
 initComplete: function() {
     var api = this.api();
-    api.columns().every(function() {
-        var column = this;
-        var header = jQuery(column.header()).text().trim();
-        var footerCell = jQuery(column.footer()).empty();
-        if (['Level','Remote','Source'].indexOf(header) >= 0) {
-            var select = jQuery('<select><option value="">All</option></select>')
-                .appendTo(footerCell)
-                .on('change', function() {
-                    var val = jQuery.fn.dataTable.util.escapeRegex(jQuery(this).val());
-                    column.search(val ? '^' + val + '$' : '', true, false).draw();
-                });
-            column.data().unique().sort().each(function(d) {
-                var text = jQuery('<div>').html(d).text().trim();
-                if (text) select.append('<option value="' + text + '">' + text + '</option>');
+    var colIdxByName = {};
+    api.columns().every(function(i) {
+        colIdxByName[jQuery(this.header()).text().trim()] = i;
+    });
+    var $wrapper = jQuery(this.table().container()).parent();
+    $wrapper.find('.jm-checkboxes').each(function() {
+        var $container = jQuery(this);
+        var colName = $container.data('column');
+        var colIdx = colIdxByName[colName];
+        if (typeof colIdx !== 'number') return;
+        var column = api.column(colIdx);
+        var unique = {};
+        column.data().each(function(d) {
+            var text = jQuery('<div>').html(d).text().trim();
+            if (text) unique[text] = true;
+        });
+        Object.keys(unique).sort().forEach(function(val) {
+            var safeVal = val.replace(/"/g, '&quot;');
+            $container.append(
+                '<label class="jm-chip"><input type="checkbox" value="' + safeVal + '" checked> ' + val + '</label>'
+            );
+        });
+        $container.on('change', 'input[type=checkbox]', function() {
+            var $cb = jQuery(this);
+            $cb.closest('.jm-chip').toggleClass('jm-chip-off', !$cb.is(':checked'));
+            var checked = [];
+            $container.find('input:checked').each(function() {
+                checked.push(jQuery.fn.dataTable.util.escapeRegex(jQuery(this).val()));
             });
-        } else if (['Title','Company','Location'].indexOf(header) >= 0) {
-            jQuery('<input type="text" placeholder="Filter...">')
-                .appendTo(footerCell)
-                .on('keyup change clear', function() {
-                    if (column.search() !== this.value) {
-                        column.search(this.value).draw();
-                    }
-                });
-        }
+            if (checked.length === 0) {
+                column.search('').draw();
+            } else {
+                column.search('^(' + checked.join('|') + ')$', true, false).draw();
+            }
+        });
+    });
+    $wrapper.find('.jm-text-filter').each(function() {
+        var $input = jQuery(this);
+        var colName = $input.data('column');
+        var colIdx = colIdxByName[colName];
+        if (typeof colIdx !== 'number') return;
+        var column = api.column(colIdx);
+        $input.on('keyup change', function() {
+            if (column.search() !== this.value) {
+                column.search(this.value).draw();
+            }
+        });
     });
 }
 JS;
@@ -278,8 +392,10 @@ add_shortcode('job_table', function() {
 
     ob_start();
     echo jm_inline_styles();
+    echo '<div class="jm-wrapper">';
+    echo jm_filter_bar_html('active', ['Category', 'Level', 'Remote', 'Relevance', 'Source']);
     echo '<table id="jm-table" class="display nowrap" style="width:100%">';
-    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Level</th><th>Remote</th><th>Salary</th><th>Source</th><th>Apply</th><th>First Seen</th></tr></thead><tbody>';
+    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th></tr></thead><tbody>';
     foreach ($jobs as $j) {
         $source_url = esc_url(get_post_meta($j->ID, 'source_url', true));
         $apply_url = esc_url(get_post_meta($j->ID, 'apply_url', true));
@@ -293,27 +409,36 @@ add_shortcode('job_table', function() {
         $remote_conf = get_post_meta($j->ID, 'remote_confidence', true);
         $salary = esc_html(get_post_meta($j->ID, 'salary_range', true));
         $salary_conf = get_post_meta($j->ID, 'salary_confidence', true);
+        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
 
         echo '<tr>';
         echo '<td>' . $t . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
         echo '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
+        // Phase I (R2): Category column
+        echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
         echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
         echo '<td>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
-        echo '<td>' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        // Phase H (R2): data-order so DataTables sorts by salary_min numerically
+        echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        // Phase D (R2): Relevance column (llm_classification)
+        echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
         echo '<td>' . esc_html(get_post_meta($j->ID, 'source_name', true)) . '</td>';
         $apply_cell = $apply_url ? '<a class="jm-apply-btn" href="' . $apply_url . '" target="_blank" rel="noopener">Apply &rarr;</a>' : '';
         echo '<td>' . $apply_cell . '</td>';
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'first_seen_date', true)) . '</td>';
+        // Phase B (R2): Posted column with freshness + NEW badge
+        echo jm_freshness_cell(
+            get_post_meta($j->ID, 'date_posted', true),
+            get_post_meta($j->ID, 'first_seen_date', true)
+        );
         echo '</tr>';
     }
     echo '</tbody>';
-    // <tfoot> holds filter controls populated by DataTables initComplete
-    echo '<tfoot><tr>' . str_repeat('<th></th>', 9) . '</tr></tfoot>';
     echo '</table>';
     $init = jm_datatables_init_complete_js();
-    echo "<script>jQuery(function(\$){\$('#jm-table').DataTable({responsive:true,order:[[8,'desc']],pageLength:50,{$init}});});</script>";
+    echo "<script>jQuery(function(\$){\$('#jm-table').DataTable({responsive:true,order:[[10,'asc']],pageLength:50,{$init}});});</script>";
+    echo '</div>';  // .jm-wrapper
     $html = ob_get_clean();
 
     set_transient('jm_active_jobs_html', $html, 12 * HOUR_IN_SECONDS);
@@ -337,8 +462,10 @@ add_shortcode('job_archive_table', function() {
     ]);
     ob_start();
     echo jm_inline_styles();
+    echo '<div class="jm-wrapper">';
+    echo jm_filter_bar_html('archive', ['Category', 'Level', 'Remote', 'Relevance', 'Source']);
     echo '<table id="jm-archive" class="display nowrap" style="width:100%">';
-    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Level</th><th>Remote</th><th>Salary</th><th>Source</th><th>Apply</th><th>Days Active</th><th>Archived</th></tr></thead><tbody>';
+    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th><th>Days Active</th><th>Archived</th></tr></thead><tbody>';
     foreach ($jobs as $j) {
         $source_url = esc_url(get_post_meta($j->ID, 'source_url', true));
         $apply_url = esc_url(get_post_meta($j->ID, 'apply_url', true));
@@ -352,27 +479,38 @@ add_shortcode('job_archive_table', function() {
         $remote_conf = get_post_meta($j->ID, 'remote_confidence', true);
         $salary = esc_html(get_post_meta($j->ID, 'salary_range', true));
         $salary_conf = get_post_meta($j->ID, 'salary_confidence', true);
+        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
 
         echo '<tr>';
         echo '<td>' . $t . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
         echo '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
+        // Phase I (R2): Category column
+        echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
         echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
         echo '<td>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
-        echo '<td>' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        // Phase H (R2): data-order so DataTables sorts by salary_min numerically
+        echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        // Phase D (R2): Relevance column (llm_classification)
+        echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
         echo '<td>' . esc_html(get_post_meta($j->ID, 'source_name', true)) . '</td>';
         $apply_cell = $apply_url ? '<a class="jm-apply-btn" href="' . $apply_url . '" target="_blank" rel="noopener">Apply &rarr;</a>' : '';
         echo '<td>' . $apply_cell . '</td>';
+        // Phase B (R2): Posted column with freshness + NEW badge
+        echo jm_freshness_cell(
+            get_post_meta($j->ID, 'date_posted', true),
+            get_post_meta($j->ID, 'first_seen_date', true)
+        );
         echo '<td>' . esc_html(get_post_meta($j->ID, 'days_active', true)) . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'archived_date', true)) . '</td>';
         echo '</tr>';
     }
     echo '</tbody>';
-    echo '<tfoot><tr>' . str_repeat('<th></th>', 10) . '</tr></tfoot>';
     echo '</table>';
     $init = jm_datatables_init_complete_js();
-    echo "<script>jQuery(function(\$){\$('#jm-archive').DataTable({responsive:true,order:[[9,'desc']],pageLength:50,{$init}});});</script>";
+    echo "<script>jQuery(function(\$){\$('#jm-archive').DataTable({responsive:true,order:[[12,'desc']],pageLength:50,{$init}});});</script>";
+    echo '</div>';  // .jm-wrapper
     $html = ob_get_clean();
     set_transient('jm_archived_jobs_html', $html, 12 * HOUR_IN_SECONDS);
     return $html;

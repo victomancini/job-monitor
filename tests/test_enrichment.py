@@ -251,6 +251,165 @@ def test_enrich_batch_processes_each_and_sleeps_between():
     assert ms.call_count == 2
 
 
+# ──────────────────────── Phase A: redirect following ────────────────
+
+def _mock_resp_with_final_url(body: str, final_url: str, status: int = 200):
+    m = MagicMock()
+    m.status_code = status
+    m.text = body
+    m.url = final_url
+    return m
+
+
+def test_enrich_follows_redirect_off_aggregator_to_company():
+    """Aggregator URL that redirects to the employer domain → apply_url becomes the final URL."""
+    j = _job(source_url="https://jooble.org/desc/123",
+             apply_url="https://jooble.org/desc/123")
+    final = "https://careers.netflix.com/job/123"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>Fully remote</p>", final, 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == final
+
+
+def test_enrich_keeps_apply_url_when_redirect_stays_on_aggregator():
+    """Internal aggregator redirect (same domain) → apply_url unchanged."""
+    j = _job(source_url="https://jooble.org/desc/123",
+             apply_url="https://jooble.org/desc/123")
+    same_domain_final = "https://jooble.org/away/abc"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", same_domain_final, 200)):
+        en.enrich_job(j)
+    # Same aggregator host → no replacement
+    assert j["apply_url"] == "https://jooble.org/desc/123"
+
+
+def test_enrich_keeps_apply_url_when_origin_not_aggregator():
+    """Origin URL is already a direct employer page (not on the known aggregator list):
+    don't overwrite even if redirect lands elsewhere."""
+    j = _job(source_url="https://careers.netflix.com/job/1",
+             apply_url="https://careers.netflix.com/job/1")
+    final = "https://careers.netflix.com/job/1-renamed"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", final, 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/job/1"
+
+
+# ──────────────────────── Phase J: three-pass enrichment ────────────
+
+def test_pre_enrich_extracts_salary_from_description():
+    j = _job(description="Compensation: $120,000 - $180,000 per year.")
+    en._pre_enrich_from_description(j)
+    assert j["salary_min"] == 120000.0
+    assert j["salary_max"] == 180000.0
+    assert j["salary_confidence"] == "inferred"
+
+
+def test_pre_enrich_extracts_remote_from_description():
+    j = _job(description="This is a fully remote role.")
+    en._pre_enrich_from_description(j)
+    assert j["is_remote"] == "remote"
+    assert j["remote_confidence"] == "inferred"
+
+
+def test_pre_enrich_extracts_location_from_description():
+    j = _job(description="Location: Austin, TX. Onsite presence expected.")
+    j["location"] = ""  # empty aggregator location
+    en._pre_enrich_from_description(j)
+    assert j["location"] == "Austin, TX"
+    assert j["location_confidence"] == "inferred"
+
+
+def test_pre_enrich_preserves_existing_aggregator_values():
+    j = _job(description="Remote position with $50K-$60K compensation.")
+    j["is_remote"] = "hybrid"           # aggregator said hybrid
+    j["salary_min"] = 150000            # aggregator gave salary
+    j["location"] = "Los Gatos, CA"     # aggregator gave location
+    en._pre_enrich_from_description(j)
+    # None of these should be overwritten
+    assert j["is_remote"] == "hybrid"
+    assert j["salary_min"] == 150000
+    assert j["location"] == "Los Gatos, CA"
+    assert "remote_confidence" not in j
+    assert "salary_confidence" not in j
+    assert "location_confidence" not in j
+
+
+def test_assumed_default_sets_onsite_when_remote_missing():
+    j = _job(is_remote="unknown")
+    en._apply_assumed_defaults(j)
+    assert j["is_remote"] == "onsite"
+    assert j["remote_confidence"] == "assumed"
+
+
+def test_assumed_default_skipped_when_remote_known():
+    j = _job(is_remote="remote")
+    en._apply_assumed_defaults(j)
+    assert j["is_remote"] == "remote"
+    assert "remote_confidence" not in j
+
+
+def test_apply_llm_hints_remote_normalizes_dash():
+    j = _job(is_remote="unknown")
+    j["_llm_remote"] = "on-site"
+    en._apply_llm_hints(j)
+    assert j["is_remote"] == "onsite"
+    assert j["remote_confidence"] == "inferred"
+
+
+def test_apply_llm_hints_salary_parses_range():
+    j = _job()
+    j["_llm_salary_hint"] = "$120K-$180K"
+    en._apply_llm_hints(j)
+    assert j["salary_min"] == 120000.0
+    assert j["salary_max"] == 180000.0
+    assert j["salary_confidence"] == "inferred"
+
+
+def test_apply_llm_hints_ignored_when_aggregator_has_data():
+    j = _job(is_remote="remote")
+    j["_llm_remote"] = "onsite"
+    en._apply_llm_hints(j)
+    assert j["is_remote"] == "remote"  # aggregator value preserved
+    assert "remote_confidence" not in j
+
+
+def test_three_pass_flow_end_to_end():
+    """Description supplies salary (inferred). Source page corroborates salary
+    (upgrade to confirmed) AND is the first to say 'remote' (confirmed).
+    No-URL branch plays assumed default for is_remote when silent."""
+    j = _job(description="Salary range: $120,000 - $180,000.")
+    page = "<p>Salary: $120,000 - $180,000</p><p>This is a fully remote role.</p>"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp(page, 200)):
+        en.enrich_job(j)
+    assert j["salary_min"] == 120000.0
+    assert j["salary_confidence"] == "confirmed"  # inferred → confirmed
+    assert j["is_remote"] == "remote"
+    assert j["remote_confidence"] == "confirmed"
+
+
+def test_no_url_applies_assumed_default():
+    j = _job(source_url="", apply_url="", is_remote="unknown")
+    en.enrich_job(j)
+    assert j["enrichment_source"] == "aggregator"
+    assert j["is_remote"] == "onsite"
+    assert j["remote_confidence"] == "assumed"
+
+
+def test_http_failure_still_applies_description_inferences_and_default():
+    j = _job(description="Hybrid role with 3 days in the office.",
+             is_remote="unknown")
+    with patch("src.processors.enrichment.requests.get",
+               side_effect=requests.ConnectionError("boom")):
+        en.enrich_job(j)
+    # Description set is_remote; assumed default does not apply because remote is set
+    assert j["is_remote"] == "hybrid"
+    assert j["remote_confidence"] == "inferred"
+    assert j["enrichment_source"] == "aggregator"
+
+
 def test_enrich_batch_continues_past_individual_failures():
     jobs = [_job(external_id=f"t{i}") for i in range(3)]
     responses = [

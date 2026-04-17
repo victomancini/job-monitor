@@ -92,6 +92,27 @@ def test_wordpress_payload_includes_phase_f_fields():
     assert payload["enrichment_source"] == "source_page"
 
 
+def test_wordpress_payload_includes_date_posted_and_seniority_confidence():
+    """Phase B/F (R2): date_posted + seniority_confidence in WP payload."""
+    j = _job()
+    j.update({
+        "date_posted": "2026-04-14",
+        "seniority_confidence": "inferred",
+    })
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert payload["date_posted"] == "2026-04-14"
+    assert payload["seniority_confidence"] == "inferred"
+
+
 def test_wordpress_update_existing_not_duplicate(conn):
     """Same external_id → endpoint returns 'updated', not 'created'."""
     body = {"created": 0, "updated": 1, "errors": 0, "post_ids": {"jsearch_1": 101}}

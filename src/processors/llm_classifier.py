@@ -26,8 +26,11 @@ OPENAI_CALL_DELAY_SEC = 1.0
 _VALID_CLASSIFICATIONS = {"RELEVANT", "PARTIALLY_RELEVANT", "NOT_RELEVANT"}
 _VALID_SENIORITIES = {
     "Executive", "VP", "Senior Director", "Director",
-    "Senior Manager", "Manager", "Senior IC", "IC", "Unknown",
+    "Senior Manager", "Manager", "Senior IC", "IC",
+    "Intern",  # Phase F (R2)
+    "Unknown",
 }
+_VALID_REMOTE_STATUSES = {"remote", "hybrid", "onsite", "unknown"}
 
 PROMPT_TEMPLATE = """You are classifying job postings for the employee listening and people analytics field. US job market focus.
 
@@ -76,10 +79,14 @@ Title: "Employee Experience Coordinator" | Company: Panorama Mountain Resort -> 
 Title: "Patient Experience Program Manager" | Company: Hennepin Healthcare -> NOT_RELEVANT (confidence: 15) — Patient-focused, not employee-focused
 Title: "Account Executive, Employee Experience" | Company: Qualtrics -> NOT_RELEVANT (confidence: 40) — EL vendor sales role, not research/analytics
 
-Also extract the seniority level from the title. Use one of: Executive, VP, Senior Director, Director, Senior Manager, Manager, Senior IC, IC, Unknown.
+Also extract the seniority level from the title. Use one of: Executive, VP, Senior Director, Director, Senior Manager, Manager, Senior IC, IC, Intern, Unknown.
+
+If the title/description mention them, also extract:
+- "remote_status": "remote" | "hybrid" | "onsite" | "unknown"
+- "salary_hint": "$XXK-$XXK" format, or null if no salary range mentioned
 
 Respond ONLY with JSON — no markdown, no explanation:
-{{"classification": "RELEVANT|PARTIALLY_RELEVANT|NOT_RELEVANT", "confidence": 0-100, "reasoning": "one sentence", "seniority": "Executive|VP|Senior Director|Director|Senior Manager|Manager|Senior IC|IC|Unknown"}}
+{{"classification": "RELEVANT|PARTIALLY_RELEVANT|NOT_RELEVANT", "confidence": 0-100, "reasoning": "one sentence", "seniority": "Executive|VP|Senior Director|Director|Senior Manager|Manager|Senior IC|IC|Intern|Unknown", "remote_status": "remote|hybrid|onsite|unknown", "salary_hint": "$XXK-$XXK or null"}}
 
 JOB TO CLASSIFY:
 Title: "{title}"
@@ -121,11 +128,22 @@ def _parse_json(text: str) -> dict[str, Any] | None:
     reasoning = str(data.get("reasoning", ""))[:500]
     seniority_raw = data.get("seniority")
     seniority = seniority_raw if seniority_raw in _VALID_SENIORITIES else None
+    # Phase J (R2): optional remote_status + salary_hint fields
+    remote_raw = data.get("remote_status")
+    if isinstance(remote_raw, str):
+        remote_norm = remote_raw.replace("-", "").replace("_", "").lower()
+        remote_status = remote_norm if remote_norm in _VALID_REMOTE_STATUSES else None
+    else:
+        remote_status = None
+    salary_hint_raw = data.get("salary_hint")
+    salary_hint = salary_hint_raw if isinstance(salary_hint_raw, str) and salary_hint_raw.strip() else None
     return {
         "classification": cls,
         "confidence": conf,
         "reasoning": reasoning,
         "seniority": seniority,
+        "remote_status": remote_status,
+        "salary_hint": salary_hint,
     }
 
 
@@ -189,6 +207,8 @@ def _keyword_fallback(job: dict[str, Any]) -> dict[str, Any]:
         "confidence": conf,
         "reasoning": f"keyword-only fallback (score={score})",
         "seniority": None,
+        "remote_status": None,
+        "salary_hint": None,
     }
 
 
@@ -245,6 +265,12 @@ def classify_job(
     # The collector applies regex first, then overrides with this if present.
     if result.get("seniority"):
         job["_llm_seniority"] = result["seniority"]
+    # Phase J (R2): stash LLM-extracted remote_status + salary_hint for the
+    # enrichment pre-pass (Pass 0). Ignored when keyword_fallback returns None.
+    if result.get("remote_status"):
+        job["_llm_remote"] = result["remote_status"]
+    if result.get("salary_hint"):
+        job["_llm_salary_hint"] = result["salary_hint"]
     return {**result, "provider": provider_used}
 
 

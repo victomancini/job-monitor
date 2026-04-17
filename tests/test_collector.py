@@ -342,6 +342,43 @@ def test_apply_seniority_llm_override_wins():
     assert jobs[0]["seniority"] == "Director"  # LLM wins over regex "Manager"
 
 
+def test_apply_seniority_salary_fallback_when_title_unknown():
+    """Phase F (R2): regex returns Unknown, no LLM hint, but salary_min is $175K →
+    infer Senior Manager and mark seniority_confidence='inferred'."""
+    jobs = [{"title": "Opaque Job Title", "salary_min": 175_000}]
+    collector.apply_seniority(jobs)
+    assert jobs[0]["seniority"] == "Senior Manager"
+    assert jobs[0]["seniority_confidence"] == "inferred"
+
+
+def test_apply_seniority_salary_fallback_skipped_when_title_wins():
+    """Title regex wins; salary fallback doesn't fire."""
+    jobs = [{"title": "Senior Manager, People Analytics", "salary_min": 60_000}]
+    collector.apply_seniority(jobs)
+    assert jobs[0]["seniority"] == "Senior Manager"
+    assert "seniority_confidence" not in jobs[0]  # regex match, not inferred
+
+
+def test_apply_seniority_intern_from_title():
+    jobs = [{"title": "People Analytics Intern"}]
+    collector.apply_seniority(jobs)
+    assert jobs[0]["seniority"] == "Intern"
+
+
+def test_apply_category_assigns_per_job():
+    jobs = [
+        {"title": "Employee Listening Manager", "company": "Netflix", "description": ""},
+        {"title": "HRIS Analyst", "company": "Deloitte", "description": ""},
+        {"title": "Senior Associate", "company": "Deloitte", "description": ""},
+        {"title": "Random Role", "company": "Random Corp", "description": ""},
+    ]
+    collector.apply_category(jobs)
+    assert jobs[0]["category"] == "Employee Listening"
+    assert jobs[1]["category"] == "HRIS & Systems"
+    assert jobs[2]["category"] == "Consulting"
+    assert jobs[3]["category"] == "General PA"
+
+
 def test_apply_enrichment_returns_stats(monkeypatch):
     def fake_enrich_batch(jobs, **kw):
         jobs[0]["enrichment_source"] = "source_page"
@@ -477,6 +514,83 @@ def test_pipeline_enrichment_stats_in_healthcheck_meta(env_ok, conn, monkeypatch
 
 
 # ──────────────── Phase G: end-to-end integration ────────────────
+
+def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypatch):
+    """Phase G (R2) integration: verify Phase A-F fields flow collector → Turso → WP.
+    Covers: apply_url upgrade by dedup, location merge, seniority salary fallback,
+    date_posted, Relevance (llm_classification)."""
+    # Two same-company duplicates across cities (Phase E) + aggregator vs direct URL (Phase A)
+    job1 = _sample_job("a", title="Opaque Role", company="Deloitte",
+                       source="jsearch")
+    job1["apply_url"] = "https://jooble.org/desc/a"  # aggregator URL
+    job1["location"] = "New York, NY"
+    job1["salary_min"] = 175_000
+    job1["salary_max"] = 225_000
+    job1["date_posted"] = "2026-04-14"
+    job2 = _sample_job("b", title="Opaque Role", company="Deloitte",
+                       source="adzuna")
+    job2["apply_url"] = "https://careers.deloitte.com/jobs/b"  # direct
+    job2["location"] = "Chicago, IL"
+    job2["salary_min"] = 175_000
+    job2["salary_max"] = 225_000
+    job2["date_posted"] = "2026-04-14"
+
+    monkeypatch.setattr(collector, "collect_sources", lambda: (
+        [job1, job2],
+        {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 1,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
+    captured: list[dict] = []
+    def fake_publish(jobs, **kw):
+        from src.publishers.wordpress import _payload
+        captured.extend(_payload(j) for j in jobs)
+        return {"created": len(jobs), "updated": 0, "errors": 0, "queued": 0, "batches": 1}
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+
+    collector.run(dry_run=False)
+
+    # Only one row in the DB (Deloitte dupe collapsed) and it's the one with the direct URL
+    rows = conn.execute(
+        "SELECT external_id, apply_url, location, seniority, seniority_confidence, "
+        "date_posted, llm_classification FROM jobs"
+    ).fetchall()
+    assert len(rows) == 1
+    ext_id, apply_url, loc, seniority, sen_conf, date_posted, llm_cls = rows[0]
+    assert ext_id == "b"  # direct URL wins
+    assert apply_url == "https://careers.deloitte.com/jobs/b"
+    assert "New York, NY" in loc and "Chicago, IL" in loc
+    assert seniority == "Senior Manager"  # inferred from $175K salary_min
+    assert sen_conf == "inferred"
+    assert date_posted == "2026-04-14"
+    assert llm_cls == "RELEVANT"
+
+    # WP payload side
+    assert len(captured) == 1
+    p = captured[0]
+    assert p["apply_url"] == "https://careers.deloitte.com/jobs/b"
+    assert p["seniority"] == "Senior Manager"
+    assert p["seniority_confidence"] == "inferred"
+    assert p["date_posted"] == "2026-04-14"
+    assert p["llm_classification"] == "RELEVANT"
+
 
 def test_pipeline_confidence_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypatch):
     """Walks a single job through: collect → filter → LLM → seniority → dedup → enrichment → upsert → WP.

@@ -27,6 +27,10 @@ _WP_FIELDS = [
     # Phase F6: enrichment + confidence fields
     "location_confidence", "salary_confidence", "remote_confidence",
     "enrichment_source",
+    # Phase B (R2): freshness display + ordering in WP table
+    "date_posted",
+    # Phase F (R2): seniority confidence badge
+    "seniority_confidence",
 ]
 
 

@@ -24,7 +24,7 @@ def _map(raw: dict[str, Any], country: str) -> dict[str, Any] | None:
         return None
     location = (raw.get("location") or {}).get("display_name") or ""
     redirect = raw.get("redirect_url") or ""
-    return build_job(
+    job = build_job(
         source_name="adzuna",
         external_id=f"adzuna_{jid}",
         title=title,
@@ -39,6 +39,10 @@ def _map(raw: dict[str, Any], country: str) -> dict[str, Any] | None:
         date_posted=raw.get("created"),
         raw_data=raw,
     )
+    # Phase A: Adzuna `redirect_url` always goes through its own tracker — mark
+    # so enrichment prefers the final URL after following redirects.
+    job["_apply_url_is_redirect"] = True
+    return job
 
 
 def fetch(

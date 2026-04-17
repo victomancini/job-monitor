@@ -4,9 +4,91 @@ from __future__ import annotations
 import logging
 import re
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 import rapidfuzz
 from rapidfuzz import fuzz, utils
+
+# Phase A: hosts we treat as "aggregator redirect" — a direct company URL is preferred.
+_AGGREGATOR_HOSTS = {
+    "jooble.org", "www.jooble.org",
+    "adzuna.com", "www.adzuna.com", "adzuna.co.uk",
+    "indeed.com", "www.indeed.com",
+    "google.com", "www.google.com", "jobs.google.com",
+    "linkedin.com", "www.linkedin.com",
+    "ziprecruiter.com", "www.ziprecruiter.com",
+    "glassdoor.com", "www.glassdoor.com",
+}
+
+
+def _apply_url_score(url: str) -> int:
+    """Score an apply_url on quality: higher is better.
+    3 = direct company URL over HTTPS
+    2 = direct company URL over HTTP (rare)
+    1 = aggregator redirect
+    0 = empty / unparseable
+    """
+    if not url:
+        return 0
+    try:
+        parsed = urlparse(url)
+    except Exception:  # noqa: BLE001
+        return 0
+    host = (parsed.netloc or "").lower()
+    if not host:
+        return 0
+    is_aggregator = host in _AGGREGATOR_HOSTS
+    if is_aggregator:
+        return 1
+    # Direct company URL
+    return 3 if parsed.scheme == "https" else 2
+
+
+def _better_apply_url(a: dict[str, Any], b: dict[str, Any]) -> dict[str, Any]:
+    """Return whichever job dict has the higher-quality apply_url (ties → a)."""
+    return a if _apply_url_score(a.get("apply_url", "")) >= _apply_url_score(b.get("apply_url", "")) else b
+
+
+def _company_similarity(a: dict[str, Any], b: dict[str, Any]) -> float:
+    return fuzz.WRatio(
+        normalize_company(a.get("company", "")),
+        normalize_company(b.get("company", "")),
+        processor=utils.default_process,
+    )
+
+
+def _effective_threshold(a: dict[str, Any], b: dict[str, Any]) -> float:
+    """Phase E: use the lower 75 threshold when companies match near-exactly."""
+    if _company_similarity(a, b) >= SAME_COMPANY_MIN_SIM:
+        return SAME_COMPANY_THRESHOLD
+    return DUPLICATE_THRESHOLD
+
+
+def _merge_locations(primary: str, new: str) -> str:
+    """Merge a new location into a primary (possibly already-merged) location string.
+    Rules:
+      - empty/blank inputs are no-ops
+      - already in the list → no change
+      - "Multiple Locations (N)" form: can't recover individual cities, so increment N
+      - 1–MERGE_LOCATIONS_DISPLAY_LIMIT cities → join with "; "
+      - >MERGE_LOCATIONS_DISPLAY_LIMIT cities → collapse to "Multiple Locations (N)"
+    """
+    new = (new or "").strip()
+    primary = (primary or "").strip()
+    if not new:
+        return primary
+    if not primary:
+        return new
+    m = re.match(r"Multiple Locations \((\d+)\)$", primary)
+    if m:
+        return f"Multiple Locations ({int(m.group(1)) + 1})"
+    existing = [s.strip() for s in primary.split(";") if s.strip()]
+    if new in existing:
+        return "; ".join(existing)
+    existing.append(new)
+    if len(existing) > MERGE_LOCATIONS_DISPLAY_LIMIT:
+        return f"Multiple Locations ({len(existing)})"
+    return "; ".join(existing)
 
 log = logging.getLogger(__name__)
 
@@ -21,6 +103,13 @@ _TITLE_ABBREV = [
 
 DUPLICATE_THRESHOLD = 85
 FLAG_THRESHOLD = 70
+# Phase E (R2): lower the dupe threshold when the company is a near-exact match
+# so we catch same-role-different-city repeats (Deloitte × 4 cities, etc.).
+SAME_COMPANY_THRESHOLD = 75
+SAME_COMPANY_MIN_SIM = 95
+# When three or more unique locations merge into one row, swap to a "Multiple
+# Locations (N)" label rather than a long semicolon list.
+MERGE_LOCATIONS_DISPLAY_LIMIT = 3
 
 
 def normalize_company(raw: str) -> str:
@@ -96,15 +185,49 @@ def deduplicate(
     new_jobs: list[dict[str, Any]],
     active_db_rows: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Return (kept, skipped). `kept` includes 'flag' (70-84) and unique; `skipped` is >=85 dupes."""
+    """Return (kept, skipped). `kept` includes 'flag' (70-84) and unique; `skipped` is >=85 dupes.
+
+    Phase A: when a duplicate is against a batch peer (already in `kept`), we keep
+    whichever job has the better-quality apply_url (direct company URL > aggregator redirect).
+    Duplicates against DB rows still win for the DB row — apply_url upgrades on existing records
+    happen via upsert when the new record is not flagged as a dupe."""
     active_db_rows = active_db_rows or []
     kept: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     comparison_pool = list(active_db_rows)
     for job in new_jobs:
         match, score = find_duplicate(job, comparison_pool + kept)
-        if match is not None and score >= DUPLICATE_THRESHOLD:
-            skipped.append({**job, "_dedup_score": score, "_dedup_against": match.get("external_id")})
+        threshold = _effective_threshold(job, match) if match is not None else DUPLICATE_THRESHOLD
+        if match is not None and score >= threshold:
+            # Is this match a batch peer (already in kept)?
+            match_idx = next(
+                (i for i, k in enumerate(kept)
+                 if k.get("external_id") == match.get("external_id")),
+                None,
+            )
+            if match_idx is not None:
+                # Phase E: merge locations across the duplicate group
+                merged_loc = _merge_locations(
+                    kept[match_idx].get("location", ""),
+                    job.get("location", ""),
+                )
+                if _better_apply_url(kept[match_idx], job) is job:
+                    # Newer job has a better apply_url → it becomes the primary,
+                    # inheriting the merged location so earlier peers aren't lost.
+                    displaced = kept[match_idx]
+                    skipped.append({**displaced, "_dedup_score": score,
+                                    "_dedup_against": job.get("external_id")})
+                    kept[match_idx] = {**job, "location": merged_loc}
+                else:
+                    # Keep the existing primary, but update its location.
+                    kept[match_idx] = {**kept[match_idx], "location": merged_loc}
+                    skipped.append({**job, "_dedup_score": score,
+                                    "_dedup_against": match.get("external_id")})
+            else:
+                # Duplicate against a DB row — we don't touch DB locations from here;
+                # just drop the incoming duplicate.
+                skipped.append({**job, "_dedup_score": score,
+                                "_dedup_against": match.get("external_id")})
             continue
         if match is not None and score >= FLAG_THRESHOLD:
             job = {**job, "_dedup_flag": True, "_dedup_score": score}

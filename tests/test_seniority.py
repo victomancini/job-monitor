@@ -95,3 +95,60 @@ def test_html_entity_preprocessing():
 def test_none_or_blank_title():
     assert extract_seniority("") == "Unknown"
     assert extract_seniority("   ") == "Unknown"
+
+
+# ───────────── Phase F (R2): PA/EL-specific patterns ───────────────
+
+def test_intern_classified_as_intern():
+    assert extract_seniority("People Analytics Intern") == "Intern"
+    assert extract_seniority("PhD Intern, Workforce Research") == "Intern"
+
+
+def test_internship_also_intern():
+    assert extract_seniority("Summer Internship — People Science") == "Intern"
+
+
+def test_internal_is_not_intern():
+    """'Internal Communications Manager' must not collide with the intern pattern."""
+    # "internal" has 'a' after "intern" → \bintern\b requires non-word boundary
+    assert extract_seniority("Internal Communications Manager") == "Manager"
+
+
+def test_managing_director_is_executive():
+    assert extract_seniority("Managing Director, Human Capital Consulting") == "Executive"
+
+
+def test_managing_director_not_director():
+    """Must beat the plain \\bdirector\\b pattern."""
+    assert extract_seniority("Managing Director") == "Executive"
+
+
+def test_fellow_is_senior_ic():
+    assert extract_seniority("AI-Driven People Analytics Fellow") == "Senior IC"
+
+
+def test_staff_program_manager_is_senior_ic():
+    assert extract_seniority("Staff Program Manager, Employee Listening") == "Senior IC"
+
+
+# ───────────── Phase F (R2): salary-based fallback ─────────────────
+
+from src.processors.seniority import infer_seniority_from_salary
+
+
+@pytest.mark.parametrize("salary,expected", [
+    (None, None),
+    (0, None),
+    (-5, None),
+    (50_000, "Intern"),
+    (75_000, "IC"),
+    (120_000, "Manager"),
+    (175_000, "Senior Manager"),
+    (220_000, "Director"),
+    (500_000, "Director"),
+    # treat <1000 as already-in-thousands
+    (120, "Manager"),
+    (200, "Director"),
+])
+def test_infer_seniority_from_salary(salary, expected):
+    assert infer_seniority_from_salary(salary) == expected

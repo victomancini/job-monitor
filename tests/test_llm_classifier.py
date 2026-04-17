@@ -83,6 +83,45 @@ def test_classify_job_skips_llm_seniority_hint_when_absent():
     assert "_llm_seniority" not in j
 
 
+# ───────────── Phase J (R2): remote_status + salary_hint ───────────
+
+def test_parse_json_extracts_remote_status_and_salary_hint():
+    r = lc._parse_json(
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x",'
+        ' "remote_status": "remote", "salary_hint": "$120K-$180K"}'
+    )
+    assert r["remote_status"] == "remote"
+    assert r["salary_hint"] == "$120K-$180K"
+
+
+def test_parse_json_remote_status_normalizes_dashes():
+    r = lc._parse_json(
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x",'
+        ' "remote_status": "on-site"}'
+    )
+    assert r["remote_status"] == "onsite"
+
+
+def test_parse_json_remote_status_invalid_is_none():
+    r = lc._parse_json(
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x",'
+        ' "remote_status": "maybe"}'
+    )
+    assert r["remote_status"] is None
+
+
+def test_classify_job_stashes_llm_remote_and_salary_hint():
+    j = job()
+    payload = (
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x",'
+        ' "remote_status": "hybrid", "salary_hint": "$150K-$200K"}'
+    )
+    with patch("openai.OpenAI", return_value=_mock_groq_result(payload)):
+        lc.classify_job(j, groq_key="g", gemini_key="", openai_key="")
+    assert j["_llm_remote"] == "hybrid"
+    assert j["_llm_salary_hint"] == "$150K-$200K"
+
+
 # ──────────────────────────── 4-tier fallback chain ─────────────────
 
 def _mock_groq_result(text):
