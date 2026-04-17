@@ -30,7 +30,7 @@ GOOD_TITLES = [
     "VP People Analytics",
     "Senior Director of People Analytics",
     "Employee Listening Strategy Lead",
-    "Continuous Listening Manager",
+    "Continuous Employee Listening Manager",  # Phase B7: co-term "employee" promotes to T1
     "Workforce Sensing Lead",
     "Human Capital Analytics Director",
     "Talent Analytics Manager",
@@ -123,22 +123,29 @@ def test_hyphenated_term_matches_hyphen():
 # ───────────── Company boost (Tier 1/2 vendor adds +15) ─────────────────────
 
 def test_company_boost_tier1_vendor():
-    """Generic-titled role at Perceptyx gets +15 to cross into llm_review."""
-    r = kf.classify(job("Senior Manager", company="Perceptyx"))
-    assert r["score"] >= 15
-    # Should move to at least llm_review zone
+    """Positive-keyword role at Perceptyx gets +10 (B3: boost gated on positive match)."""
+    r = kf.classify(job("People Analytics Manager", company="Perceptyx"))
+    # T1 title (50) + boost (10) = 60
+    assert r["score"] >= 60
     assert r["decision"] in ("llm_review", "auto_include")
 
 
 def test_company_boost_handles_corp_suffix():
-    """'Perceptyx Inc' still matches Perceptyx entry."""
-    r = kf.classify(job("Senior Manager", company="Perceptyx Inc"))
-    assert r["score"] >= 15
+    """'Perceptyx Inc' still matches Perceptyx entry and applies boost."""
+    r = kf.classify(job("People Analytics Manager", company="Perceptyx Inc"))
+    assert r["score"] >= 60
+
+
+def test_company_boost_requires_positive_keyword():
+    """Phase B3: 'Senior Manager' at Perceptyx gets NO boost (no positive match)."""
+    r = kf.classify(job("Senior Manager", company="Perceptyx"))
+    assert r["score"] == 0
+    assert r["decision"] == "low_score"
 
 
 def test_no_boost_for_unknown_company():
     r = kf.classify(job("Senior Manager", company="Random Startup LLC"))
-    assert r["score"] < 15
+    assert r["score"] < 10
 
 
 # ───────────── google_alerts: always LLM ────────────────────────────────────
@@ -189,7 +196,574 @@ def test_job_mutation_adds_keyword_fields():
 # ───────────── HRIS admin in reducer list (not auto-reject, just penalized) ─
 
 def test_hris_admin_penalty():
-    """HRIS admin is -15 reducer — but since there are no positives, score is 0 after reducer.
+    """HRIS admin is a hard reducer — no positives, score is 0 after reducer.
     Decision should be low_score (no negative_auto_reject matched)."""
     r = kf.classify(job("HRIS Analyst"))
     assert r["decision"] == "low_score"
+
+
+# ───────────── Preprocessing tests (Phase A) ───────────────────────────────
+
+def test_preprocess_html_entities():
+    r = kf.classify(job("Employee Listening Manager &amp; Director",
+                        description="People analytics team&nbsp;mission"))
+    assert r["score"] >= 50
+
+
+def test_preprocess_smart_quotes():
+    """Smart quotes should be normalized so matching still works."""
+    r = kf.classify(job("\u201cPeople Analytics\u201d Manager"))
+    assert r["score"] >= 50
+
+
+def test_preprocess_non_breaking_hyphen():
+    """Non-breaking hyphen U+2011 between words should normalize to ASCII hyphen."""
+    r = kf.classify(job("Industrial\u2011Organizational Psychologist"))
+    assert r["score"] >= 10
+
+
+def test_preprocess_html_tags_stripped():
+    r = kf.classify(job("<b>People Analytics</b> Manager",
+                        description="<p>Lead our <span>employee listening</span> team</p>"))
+    assert r["score"] >= 50
+
+
+def test_preprocess_possessive_stripped():
+    """Possessive 's should be stripped so 'Google's people analytics team' still matches.
+    (This test asserts possessives don't block matching downstream terms.)"""
+    r = kf.classify(job("People Analytics Manager",
+                        description="Join Netflix's people analytics team"))
+    assert r["score"] >= 50
+
+
+def test_preprocess_em_dash():
+    """Em-dash U+2014 should be normalized."""
+    r = kf.classify(job("People Analytics \u2014 Senior Manager"))
+    assert r["score"] >= 10
+
+
+def test_preprocess_collapses_whitespace():
+    r = kf.classify(job("People   Analytics\t\tManager"))
+    assert r["score"] >= 50
+
+
+# ───────────── Phase B: scoring recalibration ──────────────────────────────
+
+def test_b1_t2_desc_cap_at_16():
+    """Five T2 desc matches at 10 pts each would be 50 — must cap at 16."""
+    desc = ("pulse survey. engagement survey. employee sentiment. "
+            "eNPS program. turnover analytics across teams.")
+    # Title has no positives, so score = 0 + capped T2 desc (16)
+    r = kf.classify(job("Random Role", description=desc))
+    assert r["score"] == 16
+
+
+def test_b2_desc_only_50_routes_to_llm_review_not_auto_include():
+    """Phase B2: score >= 50 from description alone must route to llm_review, not auto_include."""
+    # Stack T1 desc (30) + T1 desc (30) via two distinct T1 desc terms
+    desc = "We are a voice of employee analytics team using Workday Peakon."
+    r = kf.classify(job("Random Role", description=desc))
+    assert r["score"] >= 50
+    assert r["decision"] == "llm_review"
+
+
+def test_b3_company_boost_only_with_positive_match():
+    # With positive match → boost applies
+    r1 = kf.classify(job("People Analytics Manager", company="Culture Amp"))
+    # Without positive match → no boost
+    r2 = kf.classify(job("Senior Manager", company="Culture Amp"))
+    assert r1["score"] >= 60  # 50 + 10
+    assert r2["score"] == 0
+
+
+def test_b4_ai_review_floor_is_15():
+    """T3-alone (5-7 pts) with co-signal no longer reaches AI review."""
+    # "people operations analyst" T3 (7) with co-signal in desc → 7 pts
+    r = kf.classify(job("People Operations Analyst",
+                        description="Work with analytics and data."))
+    assert r["score"] == 7
+    assert r["decision"] == "low_score"  # 7 < 15
+
+
+def test_b5_t3_title_requires_cosignal():
+    """T3 term without co-signal in description scores 0."""
+    # No analytics/insights/etc. co-signal
+    r = kf.classify(job("People Operations Analyst",
+                        description="Help with onboarding paperwork."))
+    assert r["score"] == 0
+
+
+def test_b5_t3_title_with_cosignal():
+    r = kf.classify(job("HR Reporting Manager",
+                        description="Build dashboards with Python and SQL."))
+    assert r["score"] == 7
+
+
+def test_b6_hard_reducer_40():
+    r = kf.classify(job("HRIS Analyst"))
+    # -40 hard reducer, no positives
+    assert r["score"] == -40
+    assert r["decision"] == "low_score"
+
+
+def test_b6_medium_reducer_25():
+    r = kf.classify(job("Market Research Director"))
+    assert r["score"] == -25
+
+
+def test_b6_standard_reducer_20():
+    r = kf.classify(job("Digital Marketing Specialist"))
+    assert r["score"] == -20
+
+
+def test_b6_cmc_gate_with_cotern_skips_penalty():
+    """'Change management consultant' with listening/analytics co-term: no penalty applied."""
+    r = kf.classify(job("Change Management Consultant",
+                        description="Lead employee listening and analytics programs."))
+    # No penalty applied (gate satisfied). T1 desc "employee listening" → 30 pts.
+    assert r["score"] >= 30
+
+
+def test_b6_cmc_without_coterm_gets_penalty():
+    r = kf.classify(job("Change Management Consultant"))
+    assert r["score"] == -25
+
+
+def test_b7_continuous_listening_bare_is_t2():
+    """'Continuous Listening Manager' alone is T2 (25), not T1 (50)."""
+    r = kf.classify(job("Continuous Listening Manager"))
+    assert r["score"] == 25
+    assert r["decision"] == "llm_review"
+
+
+def test_b7_continuous_listening_with_employee_is_t1():
+    """Proximity bumps score to 50."""
+    r = kf.classify(job("Continuous Employee Listening Manager"))
+    # Also matches "employee listening manager" in T1 — but continuous listening bump also fires.
+    # Either way score >= 50 and auto_include (title has positive).
+    assert r["score"] >= 50
+    assert r["decision"] == "auto_include"
+
+
+def test_b7_continuous_listening_with_workforce_is_t1():
+    r = kf.classify(job("Workforce Continuous Listening Lead"))
+    assert r["score"] >= 50
+
+
+def test_b8_employee_experience_requires_cosignal():
+    """'Employee Experience Manager' alone: no co-signal → 0 pts."""
+    r = kf.classify(job("Employee Experience Manager",
+                        description="Plan company events and swag."))
+    assert r["score"] == 0
+
+
+def test_b8_employee_experience_with_cosignal_scores_5():
+    r = kf.classify(job("Employee Experience Manager",
+                        description="Run pulse surveys and analytics."))
+    assert r["score"] == 5
+    assert r["decision"] == "low_score"  # 5 < 15
+
+
+def test_b8_workforce_planning_requires_cosignal():
+    r = kf.classify(job("Workforce Planning Manager",
+                        description="Manage nurse shift schedules."))
+    assert r["score"] == 0
+
+
+def test_b8_workforce_planning_with_cosignal_scores_5():
+    r = kf.classify(job("Workforce Planning Analyst",
+                        description="People analytics and data-driven insights."))
+    # "workforce planning" hits B8 (5) since co-signal in scope
+    assert r["score"] >= 5
+
+
+# ───────────── Phase C: keyword gating ─────────────────────────────────────
+
+def test_c1_bare_ona_no_longer_matches():
+    """Bare 'ONA' in desc should not trigger match."""
+    r = kf.classify(job("Generic Role", description="ONA is our favorite acronym."))
+    # No "organizational network analysis", so no positive match
+    assert r["score"] == 0
+
+
+def test_c1_organizational_network_analysis_matches():
+    r = kf.classify(job("Team Lead",
+                        description="We use organizational network analysis for ONA projects."))
+    # T1 desc: "organizational network analysis" = 30
+    assert r["score"] == 30
+
+
+def test_c1_british_spelling_matches():
+    r = kf.classify(job("Team Lead",
+                        description="We run organisational network analysis quarterly."))
+    assert r["score"] >= 30
+
+
+def test_c2_bare_glint_no_longer_matches():
+    r = kf.classify(job("Random Role", description="Glint was her nickname in school."))
+    assert r["score"] == 0
+
+
+def test_c2_viva_glint_matches():
+    r = kf.classify(job("Random Role",
+                        description="We administer Viva Glint surveys."))
+    assert r["score"] == 30
+
+
+def test_c2_microsoft_viva_glint_matches():
+    r = kf.classify(job("Random Role",
+                        description="Microsoft Viva Glint is our platform."))
+    assert r["score"] >= 30
+
+
+def test_c3_bare_medallia_no_longer_matches():
+    r = kf.classify(job("Random Role",
+                        description="Medallia has offices worldwide."))
+    # Should not match bare Medallia
+    assert r["score"] == 0
+
+
+def test_c3_medallia_ex_matches():
+    r = kf.classify(job("Random Role",
+                        description="We use Medallia EX for engagement surveys."))
+    assert r["score"] >= 30
+
+
+def test_c3_medallia_employee_matches():
+    r = kf.classify(job("Random Role",
+                        description="Our Medallia employee listening program."))
+    assert r["score"] >= 30
+
+
+def test_c3_qualtrics_employee_experience_matches():
+    r = kf.classify(job("Random Role",
+                        description="We run Qualtrics Employee Experience studies."))
+    assert r["score"] >= 30
+
+
+def test_c4_cultureamp_alias_matches():
+    r = kf.classify(job("Random Role",
+                        description="CultureAmp is our engagement platform."))
+    assert r["score"] >= 30
+
+
+def test_c4_culture_amp_matches():
+    r = kf.classify(job("Random Role",
+                        description="We use Culture Amp for pulse surveys."))
+    assert r["score"] >= 30
+
+
+def test_c5_xm_scientist_without_coterm_no_score():
+    r = kf.classify(job("XM Scientist",
+                        description="Drive customer experience research across channels."))
+    # No employee/EX/EE co-term → no score from XM scientist
+    assert r["score"] == 0
+
+
+def test_c5_xm_scientist_with_employee_coterm_scores_t2():
+    r = kf.classify(job("XM Scientist, Employee Experience",
+                        description="Lead employee experience measurement."))
+    # XM scientist T2 title = 25 (plus possibly employee experience T3 — but EE is T3 with co-signal gate)
+    assert r["score"] >= 25
+
+
+def test_c5_xm_scientist_with_desc_coterm_scores():
+    r = kf.classify(job("XM Scientist",
+                        description="Our employee listening team needs a researcher."))
+    # Co-term 'employee' in desc triggers gate; XM scientist T2 (25)
+    # Plus T1 desc "employee listening" (30); cross-field no overlap → 55
+    assert r["score"] >= 25
+
+
+def test_c6_cross_field_dedup_same_term():
+    """Phase C6: 'people analytics' in both title and desc counted once at higher score."""
+    r = kf.classify(job("People Analytics Manager",
+                        description="Lead people analytics initiatives."))
+    # Without dedup: 50 (t1_title "people analytics manager") + 50 (t1_title "people analytics")
+    #   + 30 (t1_desc "people analytics") = 130 (capped 100)
+    # With dedup:
+    #   maximal-munch in title: "people analytics manager" (50) covers "people analytics" (50) → keep 50
+    #   cross-field: "people analytics" desc (30) is a DIFFERENT term from "people analytics manager",
+    #                so both survive → 50 + 30 = 80
+    assert r["score"] == 80
+
+
+def test_c6_cross_field_dedup_exact_same_term():
+    """Same exact term in title and desc → keep only highest."""
+    r = kf.classify(job("People Analytics",
+                        description="people analytics is our focus area."))
+    # Title T1 "people analytics" (50). Desc T1 "people analytics" (30). Dedup → 50.
+    assert r["score"] == 50
+
+
+def test_c7_maximal_munch_title():
+    """'People Analytics Manager' matches both 'people analytics manager' and 'people analytics' in title.
+    Maximal-munch keeps only the longer span."""
+    r = kf.classify(job("People Analytics Manager"))
+    # Only 50, not 100
+    assert r["score"] == 50
+
+
+def test_c7_maximal_munch_with_director():
+    r = kf.classify(job("People Analytics Director"))
+    assert r["score"] == 50
+
+
+# ───────────── Phase D: positive keyword additions ────────────────────────
+
+@pytest.mark.parametrize("title", [
+    "Head of People Analytics",
+    "VP People Analytics",
+    "Chief People Analytics Officer",
+    "Global Head of People Analytics",
+    "Head of People Insights",
+    "Principal People Scientist",
+    "Senior People Scientist",
+    "Staff People Scientist",
+    "Lead People Scientist",
+    "People Research Scientist",
+    "Employee Listening Program Manager",
+    "Continuous Listening Program Manager",
+    "Listening Strategy Lead",
+    "Listening Architect",
+    "Pay Equity Analyst",
+    "Workplace Equity Analyst",
+    "Strategic Workforce Planning Manager",
+    "Talent Intelligence Analyst",
+    "Talent Intelligence Lead",
+])
+def test_d1_t1_title_additions(title):
+    r = kf.classify(job(title))
+    assert r["score"] >= 50
+    assert r["decision"] == "auto_include"
+
+
+def test_d1_research_scientist_people_with_comma():
+    r = kf.classify(job("Research Scientist, People Insights Team"))
+    assert r["score"] >= 50
+
+
+def test_d1_research_scientist_hr_with_comma():
+    r = kf.classify(job("Research Scientist, HR"))
+    assert r["score"] >= 50
+
+
+def test_d1_decision_scientist_people():
+    r = kf.classify(job("Decision Scientist, People"))
+    assert r["score"] >= 50
+
+
+def test_d2_behavioral_scientist_gate_without_coterm():
+    r = kf.classify(job("Behavioral Scientist",
+                        description="Design consumer experiments."))
+    # No HR/people/employee/workforce co-term → gated out
+    assert r["score"] == 0
+
+
+def test_d2_behavioral_scientist_gate_with_coterm():
+    r = kf.classify(job("Behavioral Scientist, People Team",
+                        description="Employee experience research."))
+    assert r["score"] >= 25
+
+
+def test_d2_survey_methodologist_matches():
+    r = kf.classify(job("Survey Methodologist"))
+    assert r["score"] >= 25
+
+
+def test_d2_labor_economist_gate_fails_without_context():
+    r = kf.classify(job("Labor Economist",
+                        description="Academic research on wage trends."))
+    assert r["score"] == 0
+
+
+def test_d2_labor_economist_gate_passes_with_context():
+    r = kf.classify(job("Labor Economist",
+                        description="Join our HR analytics team to model workforce trends."))
+    assert r["score"] >= 25
+
+
+def test_d2_partner_experience_analyst_gate_starbucks():
+    r = kf.classify(job("Partner Experience Analyst", company="Starbucks",
+                        description="Starbucks partner engagement analytics."))
+    assert r["score"] >= 25
+
+
+def test_d2_partner_experience_analyst_gate_fails_generic():
+    r = kf.classify(job("Partner Experience Analyst",
+                        description="Channel partner program analytics."))
+    assert r["score"] == 0
+
+
+def test_d2_colleague_experience_manager_matches():
+    r = kf.classify(job("Colleague Experience Manager"))
+    assert r["score"] >= 25
+
+
+@pytest.mark.parametrize("desc_term", [
+    "Workday Peakon Employee Voice",
+    "Viva Pulse",
+    "Viva Insights",
+    "Perceptyx Ask",
+    "Perceptyx Listen",
+    "Perceptyx Activate",
+    "Achievers Listen",
+    "WorkTango",
+    "Energage",
+    "Workhuman",
+    "Quantum Workplace",
+    "DecisionWise",
+    "Gallup Q12",
+    "Workvivo",
+    "Effectory",
+])
+def test_d3_t1_desc_vendor_additions(desc_term):
+    r = kf.classify(job("Random Role", description=f"We use {desc_term} daily."))
+    assert r["score"] >= 30
+
+
+@pytest.mark.parametrize("desc_term", [
+    "driver analysis",
+    "linkage research",
+    "always-on listening",
+    "passive listening",
+    "feedback intelligence",
+    "conversational surveys",
+    "moments that matter",
+    "pay equity",
+    "people intelligence",
+    "manager effectiveness",
+    "Syndio",
+    "Trusaic",
+    "Lightcast",
+    "Eightfold",
+    "Humanyze",
+    "Polinode",
+])
+def test_d4_t2_desc_additions(desc_term):
+    r = kf.classify(job("Random Role", description=f"Our team uses {desc_term}."))
+    # One T2 desc match = 10 points
+    assert r["score"] == 10
+
+
+# ───────────── Phase E: negative keyword additions ────────────────────────
+
+@pytest.mark.parametrize("title", [
+    "Voice of the Patient Program Manager",
+    "Voice of the Citizen Lead",
+    "Voice of the Veteran Coordinator",
+    "Patient Experience Analyst",
+    "Patient Experience Director",
+    "CX Analyst",
+    "CX Manager",
+    "CX Strategy Lead",
+    "Clinical Psychologist",
+    "Counseling Psychologist",
+    "Forensic Psychologist",
+    "School Psychologist",
+    "Neuropsychologist",
+    "Psychometrist",
+    "Speech-Language Pathologist",
+    "UX Researcher",
+    "Event Coordinator",
+    "Hospitality Coordinator",
+    "Customer Service Manager",
+    "Revenue Operations Analyst",
+])
+def test_e1_auto_reject_titles(title):
+    r = kf.classify(job(title))
+    assert r["decision"] == "auto_reject"
+    assert r["score"] == -100
+
+
+def test_e1_sirius_xm_company_rejected():
+    r = kf.classify(job("XM Scientist, Employee Experience",
+                        description="Radio broadcast strategy at Sirius XM."))
+    # Sirius XM in desc → auto-reject even with XM scientist match
+    # Note: positive match present, so goes to llm_review (conflict)
+    assert r["decision"] == "llm_review"
+
+
+def test_e2_hard_reducer_40_successfactors_administrator():
+    r = kf.classify(job("SuccessFactors Administrator"))
+    assert r["score"] == -40
+
+
+def test_e2_hard_reducer_40_assessment_scientist():
+    r = kf.classify(job("Assessment Scientist"))
+    assert r["score"] == -40
+
+
+def test_e2_hard_reducer_40_selection_scientist():
+    r = kf.classify(job("Selection Scientist"))
+    assert r["score"] == -40
+
+
+@pytest.mark.parametrize("title,expected", [
+    ("Instructional Designer", -20),
+    ("Curriculum Developer", -20),
+    ("Training Facilitator", -20),
+    ("LMS Administrator", -20),
+    ("Internal Communications Manager", -20),
+    ("Newsletter Manager", -20),
+    ("Compensation Consultant", -20),
+    ("Talent Acquisition Consultant", -20),
+])
+def test_e2_standard_reducer_20(title, expected):
+    r = kf.classify(job(title))
+    assert r["score"] == expected
+
+
+# ───────────── Phase G: canonical cases + integration ─────────────────────
+
+def test_g_staff_accountant_at_perceptyx_not_boosted():
+    """Canonical B3 case from the taxonomy audit: generic-role at EL vendor
+    should NOT reach AI review without a positive keyword."""
+    r = kf.classify(job("Staff Accountant", company="Perceptyx"))
+    assert r["score"] == 0
+    assert r["decision"] == "low_score"
+
+
+def test_g_people_analytics_mgr_at_perceptyx_boosted():
+    """Positive-kw role at EL vendor: T1 title (50) + boost (10) = 60, auto_include."""
+    r = kf.classify(job("People Analytics Manager", company="Perceptyx"))
+    assert r["score"] == 60
+    assert r["decision"] == "auto_include"
+
+
+def test_g_hospital_wfp_nurse_scheduler_not_matched():
+    """Phase B8 kills hospital workforce planning false positive."""
+    r = kf.classify(job("Workforce Planning Manager",
+                        description="Build nurse shift schedules and manage staffing ratios."))
+    assert r["score"] == 0
+    assert r["decision"] == "low_score"
+
+
+def test_g_realistic_employee_listening_job_auto_includes():
+    r = kf.classify(job(
+        "Senior Manager, Employee Listening",
+        company="Netflix",
+        description=(
+            "Build our employee listening program. You'll design pulse surveys, analyze sentiment, "
+            "run driver analysis, and partner with people analytics to drive action planning."
+        ),
+    ))
+    assert r["decision"] == "auto_include"
+    assert r["score"] >= 50
+
+
+def test_g_summary_scoring_row_counts():
+    """Sanity: key rows of the scoring summary table produce expected scores."""
+    # T1 Title alone
+    assert kf.classify(job("People Analytics Manager"))["score"] == 50
+    # T2 Title alone
+    assert kf.classify(job("Employee Engagement Manager"))["score"] == 25
+    # T3 Title alone (with co-signal) scores 7
+    assert kf.classify(job("HR Reporting Analyst",
+                           description="analytics dashboards in Python"))["score"] == 7
+    # Hard reducer
+    assert kf.classify(job("HRIS Analyst"))["score"] == -40
+    # Medium reducer
+    assert kf.classify(job("Market Research Lead"))["score"] == -25
+    # Standard reducer
+    assert kf.classify(job("Digital Marketing Specialist"))["score"] == -20

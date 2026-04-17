@@ -10,7 +10,8 @@ tier1_title:
     - "voice of the employee"
     - "employee voice"
     - "workforce sensing"
-    - "continuous listening"
+    # "continuous listening" moved to tier2_title (Phase B7); promoted to 50 only when
+    # "employee" or "workforce" appears within 60 chars in the title (handled in code)
     - "people science"
     - "people scientist"
     - "human capital analytics"
@@ -26,6 +27,30 @@ tier1_title:
     - "people analytics director"
     - "people analytics lead"
     - "people analytics senior"
+    - "organisational network analysis"  # Phase C1: British spelling
+    # Phase D1: leadership + program-manager titles
+    - "head of people analytics"
+    - "VP people analytics"
+    - "chief people analytics officer"
+    - "global head of people analytics"
+    - "head of people insights"
+    - "principal people scientist"
+    - "senior people scientist"
+    - "staff people scientist"
+    - "lead people scientist"
+    - "people research scientist"
+    - "research scientist, people"
+    - "research scientist, HR"
+    - "employee listening program manager"
+    - "continuous listening program manager"
+    - "listening strategy lead"
+    - "listening architect"
+    - "pay equity analyst"
+    - "workplace equity analyst"
+    - "strategic workforce planning manager"
+    - "talent intelligence analyst"
+    - "talent intelligence lead"
+    - "decision scientist, people"
 
 tier1_description:
   score: 30
@@ -41,19 +66,42 @@ tier1_description:
     - "Perceptyx"
     - "Qualtrics EX"
     - "Qualtrics EmployeeXM"
+    - "Qualtrics Employee Experience"  # Phase C3
     - "Culture Amp"
+    - "CultureAmp"                     # Phase C4: alias
     - "Viva Glint"
-    - "Medallia"
+    - "Microsoft Viva Glint"           # Phase C2
+    # Phase C3: "Medallia" bare removed; only qualified forms remain
+    - "Medallia EX"
+    - "Medallia employee"
     - "employee experience analytics"
     - "organizational network analysis"
+    - "organisational network analysis"  # Phase C1: British spelling
     - "Lattice engagement"
     - "15Five"
     - "Leapsome"
     - "Betterworks"
+    # Phase D3: vendor/product names
+    - "Workday Peakon Employee Voice"
+    - "Viva Pulse"
+    - "Viva Insights"
+    - "Perceptyx Ask"
+    - "Perceptyx Listen"
+    - "Perceptyx Activate"
+    - "Achievers Listen"
+    - "WorkTango"
+    - "Energage"
+    - "Workhuman"
+    - "Quantum Workplace"
+    - "DecisionWise"
+    - "Gallup Q12"
+    - "Workvivo"
+    - "Effectory"
 
 tier2_title:
   score: 25
   terms:
+    - "continuous listening"
     - "people insights"
     - "employee insights"
     - "organizational insights"
@@ -93,6 +141,20 @@ tier2_title:
     - "engagement analytics"
     - "listening strategy"
     - "EX transformation"
+    # Phase D2: additional T2 titles (some gated in code — see T2_TITLE_GATES)
+    - "behavioral scientist"            # gated: require HR/people/employee/workforce co-term
+    - "survey methodologist"
+    - "people data engineer"
+    - "labor economist"                 # gated: require corporate/HR context
+    - "workforce economist"
+    - "skills intelligence analyst"
+    - "manager effectiveness analyst"
+    - "employee experience advisor"
+    - "associate experience manager"
+    - "associate experience analyst"
+    - "colleague experience manager"
+    - "partner experience analyst"      # gated: require Starbucks or HR context
+    - "workforce strategy consultant"
 
 tier2_description:
   score: 10
@@ -124,19 +186,41 @@ tier2_description:
     - "turnover analytics"
     - "retention analytics"
     - "Perceptyx"
-    - "CultureAmp"
-    - "Glint"
-    - "Medallia"
-    - "ONA"
-    - "Viva Pulse"
+    # Phase C2/C3/C4: bare "Glint", "Medallia", "ONA", "CultureAmp" removed (too ambiguous).
+    # Qualified forms live in tier1_description: Viva Glint, Medallia EX, Medallia employee,
+    # organizational/organisational network analysis, CultureAmp alias alongside Culture Amp.
+    # Phase D3: "Viva Pulse" moved to tier1_description
     - "Visier"
     - "organizational health"
     - "Workday Peakon"
     - "sentiment analysis"
     - "action planning"
+    # Phase D4: methodology terms + additional vendors
+    - "driver analysis"
+    - "linkage research"
+    - "always-on listening"
+    - "passive listening"
+    - "feedback intelligence"
+    - "conversational surveys"
+    - "moments that matter"
+    - "skills intelligence"
+    - "pay equity"
+    - "workforce intelligence"
+    - "people intelligence"
+    - "manager effectiveness"
+    - "Syndio"
+    - "Trusaic"
+    - "Lightcast"
+    - "Eightfold"
+    - "Worklytics"
+    - "Humanyze"
+    - "Polinode"
 
 tier3_title:
-  score: 10
+  # Phase B5: base score 7, requires co-signal in description (analytics/insights/data/etc.).
+  # Phase B8: "employee experience" and "workforce planning" score 5 with narrower co-signal
+  # (analytics/insights/data/survey/listening) in title or first 400 chars of description.
+  score: 7
   terms:
     - "people operations analyst"
     - "people & culture analyst"
@@ -188,24 +272,79 @@ negative_auto_reject:
     - "listening therapy"
     # Security
     - "threat intelligence"
+    # Phase E1: additional auto-reject terms
+    # Non-employee "voice of"
+    - "voice of the patient"
+    - "voice of the citizen"
+    - "voice of the veteran"
+    # Patient experience
+    - "patient experience analyst"
+    - "patient experience director"
+    - "patient satisfaction"
+    - "Press Ganey"
+    # Customer experience (CX) roles
+    - "CX analyst"
+    - "CX manager"
+    - "CX strategy"
+    # Clinical / counseling psychologists (not I-O)
+    - "clinical psychologist"
+    - "counseling psychologist"
+    - "forensic psychologist"
+    - "school psychologist"
+    - "neuropsychologist"
+    - "psychometrist"
+    - "speech-language pathologist"
+    # Other non-HR research/service
+    - "UX researcher"
+    - "event coordinator"
+    - "hospitality coordinator"
+    - "customer service manager"
+    - "revenue operations analyst"
+    # Sirius/XM Radio (to avoid false positive on "XM")
+    - "Sirius XM"
+    - "XM Radio"
 
 negative_score_reducers:
-  score: -15
-  terms:
-    - "customer engagement"
-    - "digital marketing"
-    - "market research"
-    - "brand strategy"
-    - "revenue analytics"
-    - "product analytics"
-    - "web analytics"
-    - "campaign analytics"
-    - "user analytics"
-    - "growth analytics"
-    - "HRIS analyst"
-    - "HRIS administrator"
+  # Phase B6: graduated reducers (hard / medium / standard)
+  hard:
+    score: -40
+    terms:
+      - "HRIS analyst"
+      - "HRIS administrator"
+      - "Workday HCM configurator"
+      - "SuccessFactors admin"
+      - "SuccessFactors administrator"   # Phase E2
+      - "assessment scientist"            # Phase E2
+      - "selection scientist"             # Phase E2
+  medium:
+    score: -25
+    terms:
+      - "market research"
+      - "brand strategy"
+      # "change management consultant" only penalized without listening/analytics co-term
+      - "change management consultant"
+  standard:
+    score: -20
+    terms:
+      - "customer engagement"
+      - "digital marketing"
+      - "revenue analytics"
+      - "product analytics"
+      - "web analytics"
+      - "campaign analytics"
+      - "user analytics"
+      - "growth analytics"
+      # Phase E2: additional standard reducers
+      - "instructional designer"
+      - "curriculum developer"
+      - "training facilitator"
+      - "LMS administrator"
+      - "internal communications manager"
+      - "newsletter manager"
+      - "compensation consultant"
+      - "talent acquisition consultant"
 
 thresholds:
   auto_include: 50
-  llm_review_min: 10
+  llm_review_min: 15  # Phase B4: raised from 10
   auto_reject: 10

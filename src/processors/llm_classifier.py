@@ -31,7 +31,14 @@ WHAT THIS FIELD IS:
 Employee listening = systematic collection and analysis of employee feedback through surveys (engagement, pulse, lifecycle, 360), text analytics on open-ended responses, organizational network analysis, or continuous listening platforms. People analytics = using quantitative employee data to improve HR decisions: workforce planning, attrition modeling, engagement measurement, talent analytics, human capital analytics.
 
 KNOWN VENDORS IN THIS SPACE (roles at these companies touching employee data are likely RELEVANT):
-Perceptyx, Qualtrics (EmployeeXM/EX), Culture Amp, Workday (Peakon), Microsoft (Viva Glint, Viva Pulse), Medallia (employee side), Gallup (workplace division), Lattice, 15Five, Leapsome, Betterworks, Quantum Workplace, DecisionWise, Visier, One Model, Crunchr, Confirm, Orgnostic, Kincentric, Mercer (employee listening practice), Insight222, Humu (acquired by Perceptyx).
+Perceptyx, Qualtrics (EmployeeXM/EX), Culture Amp, Workday (Peakon), Microsoft (Viva Glint, Viva Pulse, Viva Insights), Medallia (employee side), Gallup (workplace division), Lattice, 15Five, Leapsome, Betterworks, Quantum Workplace, DecisionWise, Workhuman, Achievers, WorkTango, Workvivo, Energage, Effectory, WorkBuzz, TINYpulse, Syndio, Trusaic, Worklytics, Polinode, Visier, One Model, Crunchr, Confirm, Orgnostic, Kincentric, Mercer (employee listening practice), Insight222. Adjacent / talent-intelligence vendors: Lightcast, Eightfold AI, Gloat, Revelio Labs, TechWolf, SkyHive, Fuel50, Dayforce.
+
+RENAME / ACQUISITION NOTES (historical names you may see):
+- Humu → now part of Perceptyx
+- Glint → now Microsoft Viva Glint
+- Peakon → now Workday Peakon Employee Voice
+- Kazoo → now WorkTango
+- Orgnostic → now part of Culture Amp
 
 CLASSIFY as one of:
 - RELEVANT: Primary function is employee listening, people analytics, or closely related. Includes: survey methodology for employee surveys, employee experience research, workforce insights, HR data science, I-O psychologist at an EL vendor, people scientist roles.
@@ -58,6 +65,12 @@ Title: "Senior Associate — Workforce Transformation" | Company: PwC -> PARTIAL
 Title: "People Analytics & Total Rewards Manager" | Company: Visa -> PARTIALLY_RELEVANT (confidence: 65) — Hybrid role, PA is partial focus
 Title: "NLP Engineer" | Company: Startup Inc -> NOT_RELEVANT (confidence: 75) — NLP without employee-feedback context is likely product engineering
 Title: "Senior Manager" | Company: Perceptyx -> RELEVANT (confidence: 85) — Known EL vendor, any manager-level role likely touches employee data
+Title: "People Research Scientist, Future of Work" | Company: Meta -> RELEVANT (confidence: 92) — People-science research role at major employer
+Title: "Principal People Scientist" | Company: Workvivo -> RELEVANT (confidence: 95) — Principal role at core EL/EX vendor
+Title: "Staff Program Manager, Employee Listening & Performance Cycles" | Company: Intuit -> RELEVANT (confidence: 85) — Senior EL program lead at enterprise
+Title: "Employee Experience Coordinator" | Company: Panorama Mountain Resort -> NOT_RELEVANT (confidence: 30) — Hospitality coordinator, not analytics/listening
+Title: "Patient Experience Program Manager" | Company: Hennepin Healthcare -> NOT_RELEVANT (confidence: 15) — Patient-focused, not employee-focused
+Title: "Account Executive, Employee Experience" | Company: Qualtrics -> NOT_RELEVANT (confidence: 40) — EL vendor sales role, not research/analytics
 
 Respond ONLY with JSON — no markdown, no explanation:
 {{"classification": "RELEVANT|PARTIALLY_RELEVANT|NOT_RELEVANT", "confidence": 0-100, "reasoning": "one sentence"}}
