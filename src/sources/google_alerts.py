@@ -60,6 +60,7 @@ def _map(entry: Any) -> dict[str, Any] | None:
         title=title,
         company=company,
         source_url=link,
+        apply_url=link,
         description=summary,
         description_is_snippet=True,
         date_posted=published,

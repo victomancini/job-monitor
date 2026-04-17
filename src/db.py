@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     salary_max REAL,
     salary_range TEXT,
     source_url TEXT,
+    apply_url TEXT,
     source_name TEXT NOT NULL,
     is_remote TEXT DEFAULT 'unknown',
     category TEXT,
@@ -49,6 +50,11 @@ CREATE TABLE IF NOT EXISTS jobs (
     llm_provider TEXT,
     llm_reasoning TEXT,
     fit_score INTEGER DEFAULT 0,
+    location_confidence TEXT DEFAULT 'unverified',
+    salary_confidence TEXT DEFAULT 'unverified',
+    remote_confidence TEXT DEFAULT 'unverified',
+    enrichment_source TEXT,
+    enrichment_date TEXT,
     date_posted TEXT,
     first_seen_date TEXT NOT NULL,
     last_seen_date TEXT NOT NULL,
@@ -96,11 +102,27 @@ CREATE TABLE IF NOT EXISTS retry_queue (
 _JOB_COLUMNS = [
     "external_id", "title", "company", "company_normalized", "location",
     "location_country", "work_arrangement", "description", "description_snippet",
-    "salary_min", "salary_max", "salary_range", "source_url", "source_name",
-    "is_remote", "category", "seniority", "keyword_score", "keywords_matched",
+    "salary_min", "salary_max", "salary_range", "source_url", "apply_url",
+    "source_name", "is_remote", "category", "seniority",
+    "keyword_score", "keywords_matched",
     "llm_classification", "llm_confidence", "llm_provider", "llm_reasoning",
-    "fit_score", "date_posted", "first_seen_date", "last_seen_date",
+    "fit_score",
+    "location_confidence", "salary_confidence", "remote_confidence",
+    "enrichment_source", "enrichment_date",
+    "date_posted", "first_seen_date", "last_seen_date",
     "is_active", "wp_post_id", "raw_data",
+]
+
+# Phase A: idempotent column migrations. Each tuple is (column_name, DDL fragment
+# appended after ADD COLUMN). Re-running is safe — duplicate-column errors are
+# caught silently.
+_ADD_COLUMN_MIGRATIONS = [
+    ("apply_url", "apply_url TEXT"),
+    ("location_confidence", "location_confidence TEXT DEFAULT 'unverified'"),
+    ("salary_confidence", "salary_confidence TEXT DEFAULT 'unverified'"),
+    ("remote_confidence", "remote_confidence TEXT DEFAULT 'unverified'"),
+    ("enrichment_source", "enrichment_source TEXT"),
+    ("enrichment_date", "enrichment_date TEXT"),
 ]
 
 
@@ -116,12 +138,27 @@ def connect(url: str | None = None, auth_token: str | None = None):
 
 
 def migrate(conn) -> None:
-    """Apply schema (idempotent — all statements use IF NOT EXISTS)."""
+    """Apply schema (idempotent). Runs CREATE TABLE IF NOT EXISTS for the base
+    schema, then ALTER TABLE ADD COLUMN for each Phase A column so databases
+    that pre-date the new columns get upgraded on next boot.
+
+    SQLite has no `ADD COLUMN IF NOT EXISTS`, so duplicate-column errors are
+    swallowed."""
     for stmt in SCHEMA.strip().split(";"):
         stmt = stmt.strip()
         if stmt:
             conn.execute(stmt)
     conn.commit()
+
+    for _col, ddl in _ADD_COLUMN_MIGRATIONS:
+        try:
+            conn.execute(f"ALTER TABLE jobs ADD COLUMN {ddl}")
+            conn.commit()
+        except Exception as e:  # noqa: BLE001 — SQLite/libsql raise different types
+            msg = str(e).lower()
+            if "duplicate column" in msg or "already exists" in msg:
+                continue
+            raise
 
 
 def upsert_job(conn, job: dict[str, Any]) -> str:
@@ -140,11 +177,14 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
 
     if row is None:
         values["first_seen_date"] = today
-        cols = ", ".join(values.keys())
-        placeholders = ", ".join(["?"] * len(values))
+        # Drop None values so schema DEFAULTs apply (is_remote='unknown',
+        # *_confidence='unverified', etc.).
+        insert_vals = {k: v for k, v in values.items() if v is not None}
+        cols = ", ".join(insert_vals.keys())
+        placeholders = ", ".join(["?"] * len(insert_vals))
         conn.execute(
             f"INSERT INTO jobs ({cols}) VALUES ({placeholders})",
-            tuple(values.values()),
+            tuple(insert_vals.values()),
         )
         conn.commit()
         return "created"

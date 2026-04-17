@@ -254,6 +254,110 @@ def test_google_alerts_deduplicates_within_batch():
     assert len(jobs) == 1
 
 
+# ────────────────────── Phase C: apply_url extraction ──────────────
+
+def test_jsearch_apply_url_prefers_direct_link():
+    body = {"data": [{
+        "job_id": "abc",
+        "job_title": "PA Manager",
+        "employer_name": "X",
+        "job_apply_link": "https://careers.x.com/apply/abc",
+        "job_google_link": "https://google.com/jobs?q=abc",
+    }]}
+    with patch("src.sources.jsearch.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = jsearch.fetch("k", queries=[{"query": "q"}])
+    assert jobs[0]["apply_url"] == "https://careers.x.com/apply/abc"
+
+
+def test_jsearch_apply_url_falls_back_to_google_link():
+    body = {"data": [{
+        "job_id": "abc",
+        "job_title": "PA Manager",
+        "employer_name": "X",
+        "job_google_link": "https://google.com/jobs?q=abc",
+    }]}
+    with patch("src.sources.jsearch.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = jsearch.fetch("k", queries=[{"query": "q"}])
+    assert jobs[0]["apply_url"] == "https://google.com/jobs?q=abc"
+
+
+def test_jooble_apply_url_is_link():
+    body = {"jobs": [{"id": 1, "title": "T", "company": "C", "link": "https://jooble.org/desc/1"}]}
+    with patch("src.sources.jooble.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = jooble.fetch("k", queries=[{"keywords": "x", "location": "United States"}])
+    assert jobs[0]["apply_url"] == "https://jooble.org/desc/1"
+
+
+def test_adzuna_apply_url_is_redirect_url():
+    body = {"results": [{
+        "id": "1", "title": "T",
+        "company": {"display_name": "C"},
+        "redirect_url": "https://adzuna.com/redirect/1",
+    }]}
+    with patch("src.sources.adzuna.retry_request", return_value=_mock_resp(body)), \
+         patch("src.sources.adzuna.time.sleep"):
+        jobs, _, _ = adzuna.fetch("id", "k", queries=[{"what": "q"}], countries=["us"])
+    assert jobs[0]["apply_url"] == "https://adzuna.com/redirect/1"
+
+
+def test_usajobs_apply_url_is_position_uri():
+    body = {"SearchResult": {"SearchResultItems": [{
+        "MatchedObjectId": "123",
+        "MatchedObjectDescriptor": {
+            "PositionTitle": "Analyst",
+            "OrganizationName": "OPM",
+            "PositionURI": "https://usajobs.gov/GetJob/123",
+        },
+    }]}}
+    with patch("src.sources.usajobs.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = usajobs.fetch("me@x.com", "k", keywords=["q"])
+    assert jobs[0]["apply_url"] == "https://usajobs.gov/GetJob/123"
+
+
+def test_google_alerts_apply_url_is_link():
+    e = MagicMock()
+    e.get = lambda k, default=None: {
+        "link": "https://example.com/job/42",
+        "title": "Employee Listening Manager - Example",
+        "summary": "",
+        "published": None,
+    }.get(k, default)
+    e.source = None
+    e.published_parsed = None
+    feed = MagicMock()
+    feed.entries = [e]
+    feed.bozo = False
+    with patch("src.sources.google_alerts.feedparser.parse", return_value=feed):
+        jobs, _, _ = google_alerts.fetch(feed_urls=["https://fake/rss"])
+    assert jobs[0]["apply_url"] == "https://example.com/job/42"
+
+
+def test_build_job_apply_url_defaults_to_source_url():
+    from src.shared import build_job
+    j = build_job(
+        source_name="test",
+        external_id="t1",
+        title="T",
+        company="C",
+        source_url="https://example.com/job/1",
+    )
+    assert j["apply_url"] == "https://example.com/job/1"
+
+
+def test_build_job_apply_url_explicit_wins():
+    from src.shared import build_job
+    j = build_job(
+        source_name="test",
+        external_id="t1",
+        title="T",
+        company="C",
+        source_url="https://aggregator.com/redirect/1",
+        apply_url="https://careers.c.com/apply/1",
+    )
+    assert j["apply_url"] == "https://careers.c.com/apply/1"
+    assert j["source_url"] == "https://aggregator.com/redirect/1"
+
+
 # ────────────────────── All-sources dict contract ──────────────────
 
 def test_all_sources_return_standardized_shape():

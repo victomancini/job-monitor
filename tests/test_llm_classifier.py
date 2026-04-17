@@ -48,6 +48,41 @@ def test_parse_json_confidence_non_int_rejected():
     assert lc._parse_json('{"classification": "RELEVANT", "confidence": "high", "reasoning": "x"}') is None
 
 
+def test_parse_json_extracts_seniority():
+    r = lc._parse_json(
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x", "seniority": "Senior Manager"}'
+    )
+    assert r["seniority"] == "Senior Manager"
+
+
+def test_parse_json_seniority_absent_is_none():
+    r = lc._parse_json('{"classification": "RELEVANT", "confidence": 90, "reasoning": "x"}')
+    assert r["seniority"] is None
+
+
+def test_parse_json_seniority_invalid_value_is_none():
+    r = lc._parse_json(
+        '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x", "seniority": "Emperor"}'
+    )
+    assert r["seniority"] is None
+
+
+def test_classify_job_sets_llm_seniority_hint():
+    j = job()
+    payload = '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x", "seniority": "Director"}'
+    with patch("openai.OpenAI", return_value=_mock_groq_result(payload)):
+        lc.classify_job(j, groq_key="g", gemini_key="", openai_key="")
+    assert j.get("_llm_seniority") == "Director"
+
+
+def test_classify_job_skips_llm_seniority_hint_when_absent():
+    j = job()
+    payload = '{"classification": "RELEVANT", "confidence": 90, "reasoning": "x"}'
+    with patch("openai.OpenAI", return_value=_mock_groq_result(payload)):
+        lc.classify_job(j, groq_key="g", gemini_key="", openai_key="")
+    assert "_llm_seniority" not in j
+
+
 # ──────────────────────────── 4-tier fallback chain ─────────────────
 
 def _mock_groq_result(text):

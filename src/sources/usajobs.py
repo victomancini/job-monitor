@@ -49,6 +49,8 @@ def _map(item: dict[str, Any]) -> dict[str, Any] | None:
     salary_min, salary_max = _extract_salary(descriptor)
     desc = descriptor.get("QualificationSummary") or descriptor.get("UserArea", {}).get("Details", {}).get("JobSummary", "")
     date_posted = descriptor.get("PublicationStartDate")
+    # USAJobs PositionURI is always the direct federal listing — no redirect.
+    position_uri = descriptor.get("PositionURI") or ""
     return build_job(
         source_name="usajobs",
         external_id=f"usajobs_{mid}",
@@ -59,7 +61,8 @@ def _map(item: dict[str, Any]) -> dict[str, Any] | None:
         description=desc or "",
         salary_min=salary_min,
         salary_max=salary_max,
-        source_url=descriptor.get("PositionURI") or "",
+        source_url=position_uri,
+        apply_url=position_uri,
         is_remote=_remote_flag(descriptor),
         date_posted=date_posted,
         raw_data=item,

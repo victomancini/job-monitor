@@ -53,6 +53,8 @@ def _map(raw: dict[str, Any], country_label: str) -> dict[str, Any] | None:
     if not title:
         return None
     salary_min, salary_max = _parse_salary(raw.get("salary"))
+    link = raw.get("link") or ""
+    # Jooble only exposes its own redirect URL; apply_url == source_url for this source.
     job = build_job(
         source_name="jooble",
         external_id=f"jooble_{jid}",
@@ -64,7 +66,8 @@ def _map(raw: dict[str, Any], country_label: str) -> dict[str, Any] | None:
         description_is_snippet=True,
         salary_min=salary_min,
         salary_max=salary_max,
-        source_url=raw.get("link") or "",
+        source_url=link,
+        apply_url=link,
         date_posted=raw.get("updated"),
         raw_data=raw,
     )

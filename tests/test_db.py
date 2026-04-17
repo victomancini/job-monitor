@@ -150,6 +150,104 @@ def test_retry_queue_success_removes(conn):
     assert db.fetch_retry_queue(conn) == []
 
 
+# ───────────── Phase A: enrichment schema columns ─────────────────────────
+
+PHASE_A_COLUMNS = [
+    "apply_url",
+    "location_confidence",
+    "salary_confidence",
+    "remote_confidence",
+    "enrichment_source",
+    "enrichment_date",
+]
+
+
+def _column_names(conn, table="jobs"):
+    return {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def test_phase_a_columns_exist(conn):
+    cols = _column_names(conn)
+    for c in PHASE_A_COLUMNS:
+        assert c in cols, f"missing column: {c}"
+
+
+def test_phase_a_confidence_defaults_unverified(conn):
+    db.upsert_job(conn, sample_job())
+    row = conn.execute(
+        "SELECT location_confidence, salary_confidence, remote_confidence, "
+        "apply_url, enrichment_source, enrichment_date "
+        "FROM jobs WHERE external_id=?",
+        ("test_1",),
+    ).fetchone()
+    assert row[0] == "unverified"
+    assert row[1] == "unverified"
+    assert row[2] == "unverified"
+    # Optional columns default to NULL
+    assert row[3] is None
+    assert row[4] is None
+    assert row[5] is None
+
+
+def test_phase_a_enrichment_fields_upsert():
+    c = sqlite3.connect(":memory:")
+    db.migrate(c)
+    job = sample_job()
+    job["apply_url"] = "https://careers.netflix.com/apply/123"
+    job["location_confidence"] = "confirmed"
+    job["salary_confidence"] = "aggregator_only"
+    job["remote_confidence"] = "confirmed"
+    job["enrichment_source"] = "source_page"
+    job["enrichment_date"] = "2026-04-17"
+    db.upsert_job(c, job)
+    row = c.execute(
+        "SELECT apply_url, location_confidence, salary_confidence, "
+        "remote_confidence, enrichment_source, enrichment_date "
+        "FROM jobs WHERE external_id=?",
+        ("test_1",),
+    ).fetchone()
+    assert row == (
+        "https://careers.netflix.com/apply/123",
+        "confirmed", "aggregator_only", "confirmed",
+        "source_page", "2026-04-17",
+    )
+    c.close()
+
+
+def test_phase_a_migration_adds_columns_to_pre_migration_db():
+    """Simulate a database that pre-dates Phase A and verify migrate() adds all
+    the new columns without raising duplicate-column errors."""
+    c = sqlite3.connect(":memory:")
+    # Pre-Phase-A schema (has is_active, etc., just missing the new columns)
+    c.execute(
+        "CREATE TABLE jobs ("
+        "  id INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "  external_id TEXT NOT NULL UNIQUE,"
+        "  title TEXT NOT NULL,"
+        "  company TEXT NOT NULL,"
+        "  source_name TEXT NOT NULL,"
+        "  is_active INTEGER DEFAULT 1,"
+        "  company_normalized TEXT,"
+        "  last_seen_date TEXT NOT NULL,"
+        "  first_seen_date TEXT NOT NULL"
+        ")"
+    )
+    c.commit()
+    cols_before = _column_names(c)
+    for col in PHASE_A_COLUMNS:
+        assert col not in cols_before, f"sanity: {col} should not exist yet"
+
+    # Running migrate on an existing, partially-populated schema must succeed
+    db.migrate(c)
+    cols = _column_names(c)
+    for col in PHASE_A_COLUMNS:
+        assert col in cols, f"migration did not add: {col}"
+
+    # And must be idempotent — second run with the columns already present
+    db.migrate(c)
+    c.close()
+
+
 def test_log_run_and_consecutive_zeros(conn):
     db.log_run(conn, {
         "run_date": "2026-04-15",

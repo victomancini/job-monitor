@@ -40,6 +40,10 @@ def _map(raw: dict[str, Any]) -> dict[str, Any] | None:
         location = city
     else:
         location = raw.get("job_location") or ""
+    # JSearch returns job_apply_link (direct employer URL) and job_google_link (Google
+    # for Jobs redirect). Prefer the direct link for apply_url.
+    direct = raw.get("job_apply_link") or ""
+    google = raw.get("job_google_link") or ""
     return build_job(
         source_name="jsearch",
         external_id=f"jsearch_{jid}",
@@ -50,7 +54,8 @@ def _map(raw: dict[str, Any]) -> dict[str, Any] | None:
         description=raw.get("job_description") or "",
         salary_min=raw.get("job_min_salary"),
         salary_max=raw.get("job_max_salary"),
-        source_url=raw.get("job_apply_link") or raw.get("job_google_link") or "",
+        source_url=direct or google,
+        apply_url=direct or google,
         is_remote=_remote_flag(raw),
         work_arrangement=raw.get("job_employment_type") or "",
         date_posted=raw.get("job_posted_at_datetime_utc"),

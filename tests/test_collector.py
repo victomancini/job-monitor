@@ -161,6 +161,10 @@ def test_full_pipeline_dry_run(env_ok, conn, monkeypatch):
         return [], {"groq": len(jobs)}
     monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
 
+    # Patch enrichment so tests don't hit real URLs
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
     wp_mock = MagicMock()
     monkeypatch.setattr(collector.wordpress, "publish", wp_mock)
     monkeypatch.setattr(collector.wordpress, "process_retry_queue", wp_mock)
@@ -193,6 +197,8 @@ def test_full_pipeline_publishes_when_not_dry(env_ok, conn, monkeypatch):
         return [], {"groq": len(jobs)}
     monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
 
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
     wp_publish = MagicMock(return_value={"created": 1, "updated": 0, "errors": 0, "queued": 0, "batches": 1})
     wp_retry = MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0})
     monkeypatch.setattr(collector.wordpress, "publish", wp_publish)
@@ -312,3 +318,232 @@ def test_shadow_log_never_raises(env_ok, monkeypatch):
     monkeypatch.setattr(collector, "SHADOW_LOG_PATH", "/nonexistent_path_xxx/shadow.jsonl")
     # Should not raise
     collector._shadow_log({"stage": "test"})
+
+
+# ──────────────── Phase E: seniority + enrichment integration ────────
+
+def test_apply_seniority_regex_only():
+    jobs = [
+        {"title": "Senior Manager, People Analytics"},
+        {"title": "Principal People Scientist"},
+        {"title": "Random Role"},
+    ]
+    collector.apply_seniority(jobs)
+    assert jobs[0]["seniority"] == "Senior Manager"
+    assert jobs[1]["seniority"] == "Senior IC"
+    assert jobs[2]["seniority"] == "Unknown"
+
+
+def test_apply_seniority_llm_override_wins():
+    jobs = [
+        {"title": "People Analytics Manager", "_llm_seniority": "Director"},
+    ]
+    collector.apply_seniority(jobs)
+    assert jobs[0]["seniority"] == "Director"  # LLM wins over regex "Manager"
+
+
+def test_apply_enrichment_returns_stats(monkeypatch):
+    def fake_enrich_batch(jobs, **kw):
+        jobs[0]["enrichment_source"] = "source_page"
+        jobs[1]["enrichment_source"] = "aggregator"
+        return jobs
+    monkeypatch.setattr(collector.enrichment, "enrich_batch", fake_enrich_batch)
+    jobs = [{"external_id": "a"}, {"external_id": "b"}]
+    stats = collector.apply_enrichment(jobs)
+    assert stats == {"enriched_from_source": 1, "aggregator_only": 1}
+
+
+def test_apply_enrichment_empty_short_circuits(monkeypatch):
+    called = MagicMock()
+    monkeypatch.setattr(collector.enrichment, "enrich_batch", called)
+    stats = collector.apply_enrichment([])
+    assert stats == {"enriched_from_source": 0, "aggregator_only": 0}
+    called.assert_not_called()
+
+
+def test_pipeline_enrichment_runs_between_dedup_and_publish(env_ok, conn, monkeypatch):
+    """Order check: deduplicator.deduplicate must be called BEFORE enrichment.enrich_batch,
+    and enrichment BEFORE wordpress.publish."""
+    call_order: list[str] = []
+
+    def spy(name, real):
+        def wrapper(*a, **kw):
+            call_order.append(name)
+            return real(*a, **kw)
+        return wrapper
+
+    monkeypatch.setattr(collector, "collect_sources", lambda: (
+        [_sample_job("j1")],
+        {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
+        [], {},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+
+    def fake_dedupe(jobs, active_db_rows=None):
+        call_order.append("dedupe")
+        return jobs, []
+    monkeypatch.setattr(collector.deduplicator, "deduplicate", fake_dedupe)
+
+    def fake_enrich_batch(jobs, **kw):
+        call_order.append("enrich")
+        return jobs
+    monkeypatch.setattr(collector.enrichment, "enrich_batch", fake_enrich_batch)
+
+    wp_publish = MagicMock(return_value={"created": 1, "updated": 0, "errors": 0, "queued": 0, "batches": 1},
+                           side_effect=lambda *a, **kw: (
+                               call_order.append("publish"),
+                               {"created": 1, "updated": 0, "errors": 0, "queued": 0, "batches": 1},
+                           )[1])
+    monkeypatch.setattr(collector.wordpress, "publish", wp_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+
+    collector.run(dry_run=False)
+
+    assert call_order.index("dedupe") < call_order.index("enrich")
+    assert call_order.index("enrich") < call_order.index("publish")
+
+
+def test_pipeline_seniority_populated_on_output(env_ok, conn, monkeypatch):
+    monkeypatch.setattr(collector, "collect_sources", lambda: (
+        [_sample_job("j1", title="Senior Manager, People Analytics")],
+        {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
+        [], {},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+
+    collector.run(dry_run=True)
+
+    # Verify seniority landed in DB for the published job
+    row = conn.execute("SELECT seniority FROM jobs WHERE external_id=?", ("j1",)).fetchone()
+    assert row[0] == "Senior Manager"
+
+
+def test_pipeline_enrichment_stats_in_healthcheck_meta(env_ok, conn, monkeypatch):
+    # Two distinct jobs so the deduplicator keeps both
+    monkeypatch.setattr(collector, "collect_sources", lambda: (
+        [
+            _sample_job("j1", title="People Analytics Manager", company="Netflix"),
+            _sample_job("j2", title="Employee Listening Director", company="Atlassian"),
+        ],
+        {"jsearch_found": 2, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
+        [], {},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+
+    def fake_enrich_batch(jobs, **kw):
+        if jobs:
+            jobs[0]["enrichment_source"] = "source_page"
+        if len(jobs) > 1:
+            jobs[1]["enrichment_source"] = "aggregator"
+        return jobs
+    monkeypatch.setattr(collector.enrichment, "enrich_batch", fake_enrich_batch)
+
+    hc_mock = MagicMock()
+    monkeypatch.setattr(collector, "ping_healthcheck", hc_mock)
+
+    collector.run(dry_run=True)
+
+    meta = hc_mock.call_args.kwargs["meta"]
+    assert meta["enriched_from_source"] == 1
+    assert meta["aggregator_only"] == 1
+
+
+# ──────────────── Phase G: end-to-end integration ────────────────
+
+def test_pipeline_confidence_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypatch):
+    """Walks a single job through: collect → filter → LLM → seniority → dedup → enrichment → upsert → WP.
+    Verifies apply_url + confidence fields survive every hop."""
+    source_job = _sample_job("j1", title="Senior Manager, People Analytics", company="Netflix")
+    source_job["apply_url"] = "https://careers.netflix.com/job/1"
+    # Aggregator had these, but not confirmed from source page yet:
+    source_job["is_remote"] = "hybrid"
+    monkeypatch.setattr(collector, "collect_sources", lambda: (
+        [source_job],
+        {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
+        [], {},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+
+    def fake_enrich_batch(jobs, **kw):
+        for j in jobs:
+            j["salary_confidence"] = "confirmed"
+            j["remote_confidence"] = "confirmed"
+            j["location_confidence"] = "aggregator_only"
+            j["enrichment_source"] = "source_page"
+            j["enrichment_date"] = "2026-04-17"
+        return jobs
+    monkeypatch.setattr(collector.enrichment, "enrich_batch", fake_enrich_batch)
+
+    captured_payloads: list[dict] = []
+    def fake_publish(jobs, **kw):
+        # Replay the publisher's _payload construction so we see what would be posted to WP
+        from src.publishers.wordpress import _payload
+        captured_payloads.extend(_payload(j) for j in jobs)
+        return {"created": len(jobs), "updated": 0, "errors": 0, "queued": 0, "batches": 1}
+
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+
+    collector.run(dry_run=False)
+
+    # DB side
+    row = conn.execute(
+        "SELECT apply_url, seniority, salary_confidence, remote_confidence, "
+        "location_confidence, enrichment_source FROM jobs WHERE external_id=?",
+        ("j1",),
+    ).fetchone()
+    assert row[0] == "https://careers.netflix.com/job/1"
+    assert row[1] == "Senior Manager"
+    assert row[2] == "confirmed"
+    assert row[3] == "confirmed"
+    assert row[4] == "aggregator_only"
+    assert row[5] == "source_page"
+
+    # WP payload side
+    assert len(captured_payloads) == 1
+    p = captured_payloads[0]
+    assert p["apply_url"] == "https://careers.netflix.com/job/1"
+    assert p["seniority"] == "Senior Manager"
+    assert p["salary_confidence"] == "confirmed"
+    assert p["remote_confidence"] == "confirmed"
+    assert p["location_confidence"] == "aggregator_only"
+    assert p["enrichment_source"] == "source_page"

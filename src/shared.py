@@ -55,6 +55,7 @@ def build_job(
     title: str,
     company: str,
     source_url: str,
+    apply_url: str = "",
     location: str = "",
     location_country: str = "",
     description: str = "",
@@ -66,7 +67,9 @@ def build_job(
     date_posted: str | None = None,
     raw_data: Any = None,
 ) -> dict[str, Any]:
-    """Return a standardized job dict populated by sources."""
+    """Return a standardized job dict populated by sources.
+
+    `apply_url` — best direct application link. Falls back to `source_url` if empty."""
     return {
         "external_id": external_id,
         "title": (title or "").strip(),
@@ -79,6 +82,7 @@ def build_job(
         "salary_max": salary_max,
         "salary_range": format_salary_range(salary_min, salary_max),
         "source_url": source_url,
+        "apply_url": apply_url or source_url,
         "source_name": source_name,
         "is_remote": is_remote,
         "work_arrangement": work_arrangement,

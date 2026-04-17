@@ -23,6 +23,7 @@ def _map(raw: dict[str, Any], country: str) -> dict[str, Any] | None:
     if not title or not company:
         return None
     location = (raw.get("location") or {}).get("display_name") or ""
+    redirect = raw.get("redirect_url") or ""
     return build_job(
         source_name="adzuna",
         external_id=f"adzuna_{jid}",
@@ -33,7 +34,8 @@ def _map(raw: dict[str, Any], country: str) -> dict[str, Any] | None:
         description=raw.get("description") or "",
         salary_min=raw.get("salary_min"),
         salary_max=raw.get("salary_max"),
-        source_url=raw.get("redirect_url") or "",
+        source_url=redirect,
+        apply_url=redirect,
         date_posted=raw.get("created"),
         raw_data=raw,
     )

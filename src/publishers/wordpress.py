@@ -20,10 +20,13 @@ BETWEEN_BATCHES_SEC = 1.0
 # Subset of job dict sent to WordPress — we don't dump raw_data or LLM internals
 _WP_FIELDS = [
     "external_id", "title", "company", "location", "location_country",
-    "salary_min", "salary_max", "salary_range", "source_url", "source_name",
-    "is_remote", "work_arrangement", "description", "description_snippet",
+    "salary_min", "salary_max", "salary_range", "source_url", "apply_url",
+    "source_name", "is_remote", "work_arrangement", "description", "description_snippet",
     "keyword_score", "keywords_matched", "llm_classification", "llm_confidence",
     "llm_provider", "fit_score", "category", "seniority",
+    # Phase F6: enrichment + confidence fields
+    "location_confidence", "salary_confidence", "remote_confidence",
+    "enrichment_source",
 ]
 
 

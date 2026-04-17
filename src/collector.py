@@ -19,7 +19,8 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import db
-from src.processors import deduplicator, keyword_filter, llm_classifier
+from src.processors import deduplicator, enrichment, keyword_filter, llm_classifier
+from src.processors.seniority import extract_seniority
 from src.publishers import archiver, notifier, wordpress
 from src.shared import env, validate_required_env
 from src.sources import adzuna, google_alerts, jooble, jsearch, usajobs
@@ -126,6 +127,26 @@ def apply_keyword_filter(jobs: list[dict[str, Any]]) -> tuple[list[dict[str, Any
         else:
             candidates.append(job)
     return candidates, rejects
+
+
+def apply_seniority(jobs: list[dict[str, Any]]) -> None:
+    """Extract seniority from title (regex); LLM answer overrides if provided."""
+    for job in jobs:
+        job["seniority"] = extract_seniority(job.get("title", ""))
+        llm_hint = job.get("_llm_seniority")
+        if llm_hint:
+            job["seniority"] = llm_hint
+
+
+def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
+    """Fetch source/apply URLs and extract salary/remote/location. Returns stats dict."""
+    if not jobs:
+        return {"enriched_from_source": 0, "aggregator_only": 0}
+    enrichment.enrich_batch(jobs)
+    return {
+        "enriched_from_source": sum(1 for j in jobs if j.get("enrichment_source") == "source_page"),
+        "aggregator_only": sum(1 for j in jobs if j.get("enrichment_source") == "aggregator"),
+    }
 
 
 def apply_llm(candidates: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, int], list[str]]:
@@ -252,11 +273,19 @@ def run(dry_run: bool = False) -> int:
     errors.extend(llm_errors)
     log.info("llm: %d to publish / providers=%s", len(to_publish), provider_counts)
 
+    # 5b. Seniority extraction (regex first, LLM may override via _llm_seniority hint)
+    apply_seniority(to_publish)
+
     # 6. Deduplicator (batch + DB)
     log.info("=== Phase 4: deduplicator ===")
     active_rows = db.get_active_jobs_for_dedup(conn)
     to_publish, skipped_dupes = deduplicator.deduplicate(to_publish, active_db_rows=active_rows)
     log.info("deduplicator: %d kept / %d skipped as dupes", len(to_publish), len(skipped_dupes))
+
+    # 6.5. Enrichment — fetch source pages to confirm salary/remote/location
+    log.info("=== Phase 4.5: enrichment ===")
+    enrichment_stats = apply_enrichment(to_publish)
+    log.info("enrichment: %s", enrichment_stats)
 
     # Upsert everything into Turso (even dry-run — local state tracking)
     for job in to_publish:
@@ -331,7 +360,7 @@ def run(dry_run: bool = False) -> int:
         archived=arch_result["archived"],
         duration_s=duration,
         provider_counts=provider_counts,
-        meta=source_meta,
+        meta={**source_meta, **enrichment_stats},
     )
     log.info("=== DONE in %.1fs ===", duration)
     # Non-zero exit when canary tripped so the workflow-level ping also fails

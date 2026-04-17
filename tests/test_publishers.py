@@ -63,6 +63,35 @@ def test_wordpress_publish_one_job(conn):
     assert row[0] == 101
 
 
+def test_wordpress_payload_includes_phase_f_fields():
+    """Phase F6: apply_url, seniority, *_confidence, enrichment_source must be sent to WP."""
+    j = _job()
+    j.update({
+        "apply_url": "https://careers.netflix.com/job/1",
+        "seniority": "Senior Manager",
+        "location_confidence": "confirmed",
+        "salary_confidence": "aggregator_only",
+        "remote_confidence": "confirmed",
+        "enrichment_source": "source_page",
+    })
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert payload["apply_url"] == "https://careers.netflix.com/job/1"
+    assert payload["seniority"] == "Senior Manager"
+    assert payload["location_confidence"] == "confirmed"
+    assert payload["salary_confidence"] == "aggregator_only"
+    assert payload["remote_confidence"] == "confirmed"
+    assert payload["enrichment_source"] == "source_page"
+
+
 def test_wordpress_update_existing_not_duplicate(conn):
     """Same external_id → endpoint returns 'updated', not 'created'."""
     body = {"created": 0, "updated": 1, "errors": 0, "post_ids": {"jsearch_1": 101}}

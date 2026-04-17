@@ -24,6 +24,10 @@ GEMINI_CALL_DELAY_SEC = 4.0  # 15 RPM → 4s between calls
 OPENAI_CALL_DELAY_SEC = 1.0
 
 _VALID_CLASSIFICATIONS = {"RELEVANT", "PARTIALLY_RELEVANT", "NOT_RELEVANT"}
+_VALID_SENIORITIES = {
+    "Executive", "VP", "Senior Director", "Director",
+    "Senior Manager", "Manager", "Senior IC", "IC", "Unknown",
+}
 
 PROMPT_TEMPLATE = """You are classifying job postings for the employee listening and people analytics field. US job market focus.
 
@@ -72,8 +76,10 @@ Title: "Employee Experience Coordinator" | Company: Panorama Mountain Resort -> 
 Title: "Patient Experience Program Manager" | Company: Hennepin Healthcare -> NOT_RELEVANT (confidence: 15) — Patient-focused, not employee-focused
 Title: "Account Executive, Employee Experience" | Company: Qualtrics -> NOT_RELEVANT (confidence: 40) — EL vendor sales role, not research/analytics
 
+Also extract the seniority level from the title. Use one of: Executive, VP, Senior Director, Director, Senior Manager, Manager, Senior IC, IC, Unknown.
+
 Respond ONLY with JSON — no markdown, no explanation:
-{{"classification": "RELEVANT|PARTIALLY_RELEVANT|NOT_RELEVANT", "confidence": 0-100, "reasoning": "one sentence"}}
+{{"classification": "RELEVANT|PARTIALLY_RELEVANT|NOT_RELEVANT", "confidence": 0-100, "reasoning": "one sentence", "seniority": "Executive|VP|Senior Director|Director|Senior Manager|Manager|Senior IC|IC|Unknown"}}
 
 JOB TO CLASSIFY:
 Title: "{title}"
@@ -113,7 +119,14 @@ def _parse_json(text: str) -> dict[str, Any] | None:
         return None
     conf = max(0, min(100, conf))
     reasoning = str(data.get("reasoning", ""))[:500]
-    return {"classification": cls, "confidence": conf, "reasoning": reasoning}
+    seniority_raw = data.get("seniority")
+    seniority = seniority_raw if seniority_raw in _VALID_SENIORITIES else None
+    return {
+        "classification": cls,
+        "confidence": conf,
+        "reasoning": reasoning,
+        "seniority": seniority,
+    }
 
 
 # ──────────────────────────── Providers ──────────────────────────
@@ -175,6 +188,7 @@ def _keyword_fallback(job: dict[str, Any]) -> dict[str, Any]:
         "classification": cls,
         "confidence": conf,
         "reasoning": f"keyword-only fallback (score={score})",
+        "seniority": None,
     }
 
 
@@ -227,6 +241,10 @@ def classify_job(
     job["llm_confidence"] = int(result["confidence"])
     job["llm_provider"] = provider_used
     job["llm_reasoning"] = result["reasoning"]
+    # Phase B: stash LLM-extracted seniority as an internal override hint.
+    # The collector applies regex first, then overrides with this if present.
+    if result.get("seniority"):
+        job["_llm_seniority"] = result["seniority"]
     return {**result, "provider": provider_used}
 
 
