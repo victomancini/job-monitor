@@ -113,6 +113,22 @@ def test_wordpress_payload_includes_date_posted_and_seniority_confidence():
     assert payload["seniority_confidence"] == "inferred"
 
 
+def test_wordpress_payload_includes_vendors_mentioned():
+    """Phase 5 (R3): vendors_mentioned is sent as a comma-separated string."""
+    j = _job()
+    j["vendors_mentioned"] = "Qualtrics,Medallia,Python,SQL"
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    assert captured["jobs"][0]["vendors_mentioned"] == "Qualtrics,Medallia,Python,SQL"
+
+
 def test_wordpress_update_existing_not_duplicate(conn):
     """Same external_id → endpoint returns 'updated', not 'created'."""
     body = {"created": 0, "updated": 1, "errors": 0, "post_ids": {"jsearch_1": 101}}
@@ -253,8 +269,9 @@ def test_notify_orchestrator_both_channels():
 # ────────────────────── Archiver ──────────────────────
 
 def test_archiver_marks_stale(conn):
+    """Phase 6 (R3): archival threshold moved to 21 days (7-day `likely_closed` + 14)."""
     db.upsert_job(conn, _job("stale_a"))
-    old = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%d")
+    old = (datetime.now(timezone.utc) - timedelta(days=22)).strftime("%Y-%m-%d")
     conn.execute("UPDATE jobs SET last_seen_date=? WHERE external_id=?", (old, "stale_a"))
     conn.commit()
 
@@ -280,8 +297,8 @@ def test_archiver_ignores_fresh_jobs(conn):
 def test_archiver_days_active_computed(conn):
     """days_active = last_seen_date - first_seen_date."""
     db.upsert_job(conn, _job("x"))
-    first = (datetime.now(timezone.utc) - timedelta(days=20)).strftime("%Y-%m-%d")
-    last = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%d")
+    first = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+    last = (datetime.now(timezone.utc) - timedelta(days=22)).strftime("%Y-%m-%d")
     conn.execute(
         "UPDATE jobs SET first_seen_date=?, last_seen_date=? WHERE external_id=?",
         (first, last, "x"),
@@ -289,4 +306,4 @@ def test_archiver_days_active_computed(conn):
     conn.commit()
     archiver.archive_stale(conn)
     row = conn.execute("SELECT days_active FROM jobs WHERE external_id=?", ("x",)).fetchone()
-    assert row[0] == 10
+    assert row[0] == 8

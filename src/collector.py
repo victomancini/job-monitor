@@ -19,12 +19,16 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import db
-from src.processors import deduplicator, enrichment, keyword_filter, llm_classifier
+from src.processors import deduplicator, enrichment, keyword_filter, llm_classifier, stats_aggregator
 from src.processors.category import classify_category
 from src.processors.seniority import extract_seniority, infer_seniority_from_salary
+from src.processors.vendor_extractor import extract_vendors, vendors_to_str
 from src.publishers import archiver, notifier, wordpress
 from src.shared import env, validate_required_env
-from src.sources import adzuna, google_alerts, jooble, jsearch, usajobs
+from src.sources import (
+    adzuna, ashby, google_alerts, greenhouse, included_ai, jobspy_source,
+    jooble, jsearch, lever, onemodel, siop, usajobs,
+)
 from src.sources._http import retry_request
 
 log = logging.getLogger("collector")
@@ -51,10 +55,12 @@ def _shadow_log(event: dict[str, Any]) -> None:
 
 # ──────────────────────────── Source collection ──────────────────────
 
-def collect_sources() -> tuple[list[dict[str, Any]], dict[str, int], list[str], dict[str, Any]]:
+def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], list[str], dict[str, Any]]:
     """Run all sources. Each is independently fault-tolerant.
     Returns (all_jobs, per_source_counts, errors, meta).
-    """
+
+    `conn` (Phase 2 R3): optional Turso connection — enables ATS slug caching so
+    we don't re-fetch known-404 boards on every run."""
     all_jobs: list[dict[str, Any]] = []
     counts: dict[str, int] = {}
     errors: list[str] = []
@@ -97,6 +103,46 @@ def collect_sources() -> tuple[list[dict[str, Any]], dict[str, int], list[str], 
     errors.extend(errs)
     if m.get("stale_feeds"):
         meta["stale_feeds"] = m["stale_feeds"]
+
+    # Phase 2 (R3): direct ATS sources — Greenhouse / Lever / Ashby (daily)
+    jobs, errs, _ = greenhouse.fetch(conn=conn)
+    counts["greenhouse_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+
+    jobs, errs, _ = lever.fetch(conn=conn)
+    counts["lever_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+
+    jobs, errs, _ = ashby.fetch(conn=conn)
+    counts["ashby_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+
+    # Phase 3 (R3): JobSpy (LinkedIn / Indeed / Glassdoor / ZipRecruiter)
+    jobs, errs, jm = jobspy_source.fetch()
+    counts["jobspy_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+    if jm.get("available") is False:
+        meta["jobspy_unavailable"] = True
+
+    # Phase 4 (R3): niche PA boards (One Model / Included.ai / SIOP)
+    jobs, errs, _ = onemodel.fetch(conn=conn)
+    counts["onemodel_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+
+    jobs, errs, _ = included_ai.fetch(conn=conn)
+    counts["included_ai_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
+
+    jobs, errs, _ = siop.fetch(conn=conn)
+    counts["siop_found"] = len(jobs)
+    all_jobs.extend(jobs)
+    errors.extend(errs)
 
     return all_jobs, counts, errors, meta
 
@@ -157,6 +203,13 @@ def apply_category(jobs: list[dict[str, Any]]) -> None:
         )
 
 
+def apply_vendor_mentions(jobs: list[dict[str, Any]]) -> None:
+    """Phase 5 (R3): extract tool/vendor mentions from each job's description
+    and store as a comma-separated string."""
+    for job in jobs:
+        job["vendors_mentioned"] = vendors_to_str(extract_vendors(job.get("description", "")))
+
+
 def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
     """Fetch source/apply URLs and extract salary/remote/location. Returns stats dict."""
     if not jobs:
@@ -166,6 +219,15 @@ def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
         "enriched_from_source": sum(1 for j in jobs if j.get("enrichment_source") == "source_page"),
         "aggregator_only": sum(1 for j in jobs if j.get("enrichment_source") == "aggregator"),
     }
+
+
+def apply_defaults(jobs: list[dict[str, Any]]) -> None:
+    """Phase 1 (R3) / Phase J fallback: if is_remote is still unknown after all
+    extraction passes, default to 'onsite' with confidence='assumed'."""
+    for job in jobs:
+        if job.get("is_remote") in (None, "", "unknown"):
+            job["is_remote"] = "onsite"
+            job["remote_confidence"] = "assumed"
 
 
 def apply_llm(candidates: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, int], list[str]]:
@@ -269,7 +331,7 @@ def run(dry_run: bool = False) -> int:
 
     # 3. Sources
     log.info("=== Phase 1: sources ===")
-    all_jobs, source_counts, errors, source_meta = collect_sources()
+    all_jobs, source_counts, errors, source_meta = collect_sources(conn=conn)
     log.info("sources: %s", source_counts)
 
     # Zero-results canary
@@ -296,6 +358,8 @@ def run(dry_run: bool = False) -> int:
     apply_seniority(to_publish)
     # 5c. Category classification (Phase I R2) for UI filtering
     apply_category(to_publish)
+    # 5d. Vendor/tool mentions (Phase 5 R3)
+    apply_vendor_mentions(to_publish)
 
     # 6. Deduplicator (batch + DB)
     log.info("=== Phase 4: deduplicator ===")
@@ -307,6 +371,8 @@ def run(dry_run: bool = False) -> int:
     log.info("=== Phase 4.5: enrichment ===")
     enrichment_stats = apply_enrichment(to_publish)
     log.info("enrichment: %s", enrichment_stats)
+    # Phase 1 (R3): apply assumed defaults after all extraction passes
+    apply_defaults(to_publish)
 
     # Upsert everything into Turso (even dry-run — local state tracking)
     for job in to_publish:
@@ -358,9 +424,15 @@ def run(dry_run: bool = False) -> int:
 
     # 10. Log run + healthcheck ping
     duration = time.monotonic() - started
+    # run_log only has a fixed set of source-count columns; keep the historical
+    # columns, and stash Phase 2 (R3) ATS counts in the healthcheck meta only.
     db.log_run(conn, {
         "run_date": _today(),
-        **source_counts,
+        "jsearch_found": source_counts.get("jsearch_found", 0),
+        "jooble_found": source_counts.get("jooble_found", 0),
+        "adzuna_found": source_counts.get("adzuna_found", 0),
+        "usajobs_found": source_counts.get("usajobs_found", 0),
+        "alerts_found": source_counts.get("alerts_found", 0),
         "total_passed_filter": len(candidates),
         "total_published": published,
         "total_archived": arch_result["archived"],
@@ -369,6 +441,27 @@ def run(dry_run: bool = False) -> int:
         "duration_seconds": round(duration, 1),
         "consecutive_zero_runs": consecutive_zero,
     })
+
+    # Phase 7 (R3): aggregate today's slice into monthly_stats before pinging
+    try:
+        stats_agg = stats_aggregator.aggregate_daily_stats(conn)
+        log.info("stats_aggregator: %s", stats_agg)
+    except Exception as e:  # noqa: BLE001
+        log.warning("stats_aggregator failed: %s", e)
+
+    # Phase 8 (R3): push dashboard payload to WordPress (skipped in dry-run)
+    if not dry_run:
+        try:
+            payload = stats_aggregator.build_dashboard_payload(conn)
+            dash_result = wordpress.publish_dashboard_stats(
+                payload,
+                wp_url=env("WP_URL"),
+                username=env("WP_USERNAME"),
+                app_password=env("WP_APP_PASSWORD"),
+            )
+            log.info("dashboard_stats: %s", dash_result)
+        except Exception as e:  # noqa: BLE001
+            log.warning("dashboard_stats publish failed: %s", e)
 
     canary_tripped = consecutive_zero >= ZERO_RUN_ALERT_THRESHOLD
     log.info("=== Phase 8: healthcheck ping ===")

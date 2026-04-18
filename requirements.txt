@@ -7,3 +7,6 @@ feedparser>=6.0.12
 pyyaml>=6.0.1
 python-dateutil>=2.8.2
 pytest>=8.0.0
+# Round 3 additions
+beautifulsoup4>=4.12.0  # Phase 4 HTML scrapers (lazy-imported; regex fallback works without it)
+python-jobspy>=1.1.0  # Phase 3 LinkedIn/Indeed/Glassdoor/ZipRecruiter scraping

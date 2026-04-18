@@ -53,6 +53,14 @@ jobs:
           TALKWALKER_RSS_2: ${{ secrets.TALKWALKER_RSS_2 }}
           TALKWALKER_RSS_3: ${{ secrets.TALKWALKER_RSS_3 }}
         run: python src/collector.py
+      - name: Upload shadow log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-log-${{ github.run_number }}
+          path: shadow_log.jsonl
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Ping healthcheck (success)
         if: success()
         run: curl -fsS -m 10 --retry 5 ${{ secrets.HEALTHCHECK_URL }}

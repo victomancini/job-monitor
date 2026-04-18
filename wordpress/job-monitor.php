@@ -48,7 +48,11 @@ add_action('init', function() {
         'location_confidence','salary_confidence','remote_confidence',
         'enrichment_source','enrichment_date',
         // Phase B/F (R2): date_posted for freshness; seniority_confidence for badge
-        'date_posted','seniority_confidence'];
+        'date_posted','seniority_confidence',
+        // Phase 5 (R3): comma-separated vendor/tool mentions from description
+        'vendors_mentioned',
+        // Phase 6 (R3): lifecycle state ('active' | 'likely_closed')
+        'lifecycle_status'];
     foreach ($fields as $field) {
         register_post_meta('job_listing', $field, [
             'show_in_rest' => true,
@@ -71,6 +75,12 @@ add_action('rest_api_init', function() {
         'methods' => 'GET',
         'callback' => 'jm_get_stats',
         'permission_callback' => '__return_true',
+    ]);
+    // Phase 8 (R3): dashboard stats ingestion endpoint
+    register_rest_route('jobmonitor/v1', '/dashboard-stats', [
+        'methods' => 'POST',
+        'callback' => 'jm_update_dashboard_stats',
+        'permission_callback' => function() { return current_user_can('edit_posts'); },
     ]);
 });
 
@@ -108,7 +118,11 @@ function jm_batch_update($request) {
             'location_confidence','salary_confidence','remote_confidence',
             'enrichment_source','enrichment_date',
             // Phase B/F (R2): date_posted for freshness; seniority_confidence for badge
-            'date_posted','seniority_confidence'];
+            'date_posted','seniority_confidence',
+            // Phase 5 (R3): comma-separated vendor/tool mentions from description
+            'vendors_mentioned',
+            // Phase 6 (R3): lifecycle state ('active' | 'likely_closed')
+            'lifecycle_status'];
         $meta = [];
         foreach ($allowed as $k) {
             if (isset($job[$k])) {
@@ -161,6 +175,17 @@ function jm_get_stats($request) {
     ], 200);
 }
 
+// Phase 8 (R3): stash the dashboard payload as a 48-hour transient so the
+// [job_dashboard] shortcode can read it without hitting the DB.
+function jm_update_dashboard_stats($request) {
+    $data = $request->get_json_params();
+    if (!is_array($data)) {
+        return new WP_REST_Response(['error' => 'invalid payload'], 400);
+    }
+    set_transient('jm_dashboard_stats', $data, 48 * HOUR_IN_SECONDS);
+    return new WP_REST_Response(['ok' => true, 'stored_at' => current_time('c')], 200);
+}
+
 // ── Daily Archival Cron ───────────────────────────────────
 add_action('wp', function() {
     if (!wp_next_scheduled('jm_daily_archive')) {
@@ -206,12 +231,12 @@ function jm_confidence_badge($confidence) {
     if ($confidence === 'aggregator_only') {
         return ' <span class="confidence-aggregator" title="Aggregator data, not confirmed">&#8226;</span>';
     }
-    // Phase J (R2): inferred from description / LLM; assumed default ("onsite" fallback)
+    // Phase J (R2) / Phase 1 (R3): inferred from description/LLM; assumed default (onsite fallback)
     if ($confidence === 'inferred') {
-        return ' <span class="confidence-inferred" title="Inferred from description">~</span>';
+        return ' <span class="confidence-inferred" title="Extracted from description">~</span>';
     }
     if ($confidence === 'assumed') {
-        return ' <span class="confidence-assumed" title="Assumed default (no source mentioned it)">?</span>';
+        return ' <span class="confidence-assumed" title="No data found; assumed on-site">?</span>';
     }
     return '';
 }
@@ -246,6 +271,10 @@ tfoot input, tfoot select { width:100%; box-sizing:border-box; font-size:0.85em;
 .jm-chip.jm-chip-off { opacity:0.5; background:#e9ecef; }
 .jm-text-filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .jm-text-filters input { padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; font-size:0.85em; }
+/* Phase 6 (R3): muted styling for likely-closed jobs */
+tr.likely-closed { opacity:0.55; }
+tr.likely-closed td { font-style:italic; }
+.label-likely-closed { color:#6c757d; font-size:0.75em; font-style:italic; margin-left:4px; }
 </style>
 CSS;
 }
@@ -262,6 +291,84 @@ function jm_relevance_cell($classification) {
         default:
             return '<td><span style="color:#6c757d">Auto</span></td>';
     }
+}
+
+// Phase 9 (R3): build a Schema.org JobPosting object for JSON-LD emission.
+// Returns an associative array that json_encode()s cleanly. Callers should skip
+// emission when the job lacks title or company.
+function jm_build_job_posting_jsonld($post_id, $post_title) {
+    $company = get_post_meta($post_id, 'company', true);
+    if (!$post_title || !$company) return null;
+
+    $doc = [
+        '@context' => 'https://schema.org',
+        '@type'    => 'JobPosting',
+        'title'    => $post_title,
+        'hiringOrganization' => [
+            '@type' => 'Organization',
+            'name'  => $company,
+        ],
+    ];
+    $desc = get_post_meta($post_id, 'description_snippet', true);
+    if (!$desc) {
+        $desc = get_the_content(null, false, $post_id);
+    }
+    if ($desc) {
+        $doc['description'] = wp_strip_all_tags(mb_substr($desc, 0, 500));
+    }
+    $date_posted = get_post_meta($post_id, 'date_posted', true);
+    if (!$date_posted) $date_posted = get_post_meta($post_id, 'first_seen_date', true);
+    if ($date_posted) {
+        $doc['datePosted'] = $date_posted;
+    }
+    // Employment type — default FULL_TIME for PA roles; intern titles get INTERN
+    $seniority = get_post_meta($post_id, 'seniority', true);
+    $doc['employmentType'] = ($seniority === 'Intern') ? 'INTERN' : 'FULL_TIME';
+
+    // jobLocation / jobLocationType
+    $is_remote = get_post_meta($post_id, 'is_remote', true);
+    $location = get_post_meta($post_id, 'location', true);
+    if ($is_remote === 'remote') {
+        $doc['jobLocationType'] = 'TELECOMMUTE';
+    }
+    if ($location && $is_remote !== 'remote') {
+        $doc['jobLocation'] = [
+            '@type' => 'Place',
+            'address' => [
+                '@type' => 'PostalAddress',
+                'addressLocality' => $location,
+            ],
+        ];
+    }
+
+    // baseSalary
+    $salary_min = get_post_meta($post_id, 'salary_min', true);
+    $salary_max = get_post_meta($post_id, 'salary_max', true);
+    if ($salary_min) {
+        $value = [
+            '@type' => 'QuantitativeValue',
+            'minValue' => (int) $salary_min,
+            'unitText' => 'YEAR',
+        ];
+        if ($salary_max) {
+            $value['maxValue'] = (int) $salary_max;
+        }
+        $doc['baseSalary'] = [
+            '@type' => 'MonetaryAmount',
+            'currency' => 'USD',
+            'value' => $value,
+        ];
+    }
+
+    // validThrough: heuristic — 30 days past date_posted / first_seen_date
+    if ($date_posted) {
+        $ts = strtotime($date_posted);
+        if ($ts) {
+            $doc['validThrough'] = date('c', $ts + 30 * 86400);
+        }
+    }
+
+    return $doc;
 }
 
 // Phase B (R2): render the Posted column with freshness color coding.
@@ -396,11 +503,15 @@ add_shortcode('job_table', function() {
     echo jm_filter_bar_html('active', ['Category', 'Level', 'Remote', 'Relevance', 'Source']);
     echo '<table id="jm-table" class="display nowrap" style="width:100%">';
     echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th></tr></thead><tbody>';
+    $jsonld_docs = [];  // Phase 9 (R3): accumulate JSON-LD per job
     foreach ($jobs as $j) {
         $source_url = esc_url(get_post_meta($j->ID, 'source_url', true));
         $apply_url = esc_url(get_post_meta($j->ID, 'apply_url', true));
         if (!$apply_url) $apply_url = $source_url;
         $title = esc_html($j->post_title);
+        // Phase 9 (R3): build JSON-LD for this posting (skip if it lacks title/company)
+        $doc = jm_build_job_posting_jsonld($j->ID, $j->post_title);
+        if ($doc !== null) $jsonld_docs[] = $doc;
         $t = $source_url ? '<a href="' . $source_url . '" target="_blank" rel="noopener">' . $title . '</a>' : $title;
 
         $location = esc_html(get_post_meta($j->ID, 'location', true));
@@ -411,9 +522,14 @@ add_shortcode('job_table', function() {
         $salary_conf = get_post_meta($j->ID, 'salary_confidence', true);
         $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
+        // Phase 6 (R3): muted styling + "may be closed" label for stale jobs
+        $lifecycle = get_post_meta($j->ID, 'lifecycle_status', true);
+        $tr_class = ($lifecycle === 'likely_closed') ? ' class="likely-closed"' : '';
+        $closed_label = ($lifecycle === 'likely_closed')
+            ? ' <span class="label-likely-closed">(may be closed)</span>' : '';
 
-        echo '<tr>';
-        echo '<td>' . $t . '</td>';
+        echo '<tr' . $tr_class . '>';
+        echo '<td>' . $t . $closed_label . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
         echo '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
         // Phase I (R2): Category column
@@ -436,6 +552,10 @@ add_shortcode('job_table', function() {
     }
     echo '</tbody>';
     echo '</table>';
+    // Phase 9 (R3): emit one JSON-LD block per job for SEO / Google for Jobs indexing
+    foreach ($jsonld_docs as $doc) {
+        echo '<script type="application/ld+json">' . wp_json_encode($doc, JSON_UNESCAPED_SLASHES) . '</script>';
+    }
     $init = jm_datatables_init_complete_js();
     echo "<script>jQuery(function(\$){\$('#jm-table').DataTable({responsive:true,order:[[10,'asc']],pageLength:50,{$init}});});</script>";
     echo '</div>';  // .jm-wrapper
@@ -514,6 +634,91 @@ add_shortcode('job_archive_table', function() {
     $html = ob_get_clean();
     set_transient('jm_archived_jobs_html', $html, 12 * HOUR_IN_SECONDS);
     return $html;
+});
+
+// ── Phase 8 (R3): [job_dashboard] — ApexCharts-rendered stats ─────
+add_shortcode('job_dashboard', function() {
+    $stats = get_transient('jm_dashboard_stats');
+    if (!is_array($stats)) {
+        return '<p>Dashboard data not available yet. The next pipeline run will populate it.</p>';
+    }
+    $payload = wp_json_encode($stats);
+    ob_start();
+    ?>
+    <div class="jm-dashboard">
+        <p style="margin-bottom:16px;color:#6c757d;font-size:0.9em">
+            Snapshot date: <strong><?php echo esc_html($stats['snapshot_date'] ?? 'n/a'); ?></strong>
+        </p>
+        <div class="jm-dash-grid">
+            <div class="jm-dash-card"><h3>Jobs by Category</h3><div id="jm-chart-category"></div></div>
+            <div class="jm-dash-card"><h3>Seniority Distribution</h3><div id="jm-chart-seniority"></div></div>
+            <div class="jm-dash-card"><h3>Remote / Hybrid / On-site</h3><div id="jm-chart-remote"></div></div>
+            <div class="jm-dash-card"><h3>Top Hiring Companies</h3><div id="jm-chart-companies"></div></div>
+            <div class="jm-dash-card jm-dash-wide"><h3>Posting Volume Over Time</h3><div id="jm-chart-volume"></div></div>
+            <div class="jm-dash-card jm-dash-wide"><h3>Most Mentioned Tools</h3><div id="jm-chart-tools"></div></div>
+        </div>
+    </div>
+    <style>
+    .jm-dashboard { max-width:1200px; margin:0 auto; }
+    .jm-dash-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .jm-dash-wide { grid-column:1 / span 2; }
+    .jm-dash-card { background:#fff; border:1px solid #dee2e6; border-radius:8px; padding:16px; }
+    .jm-dash-card h3 { margin:0 0 12px; font-size:1em; color:#343a40; font-weight:600; }
+    @media (max-width:780px) { .jm-dash-grid { grid-template-columns:1fr; } .jm-dash-wide { grid-column:auto; } }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.53.0/dist/apexcharts.min.js"></script>
+    <script>
+    (function() {
+        var stats = <?php echo $payload; ?>;
+        function kvToXY(obj) {
+            var keys = Object.keys(obj || {}).sort(function(a, b) { return obj[b] - obj[a]; });
+            return { labels: keys, values: keys.map(function(k) { return obj[k]; }) };
+        }
+        function listToXY(list, limit) {
+            var items = (list || []).slice(0, limit || 10);
+            return { labels: items.map(function(i) { return i.name; }),
+                     values: items.map(function(i) { return i.count; }) };
+        }
+        function renderBar(el, title, data) {
+            new ApexCharts(document.querySelector(el), {
+                chart: { type: 'bar', height: 320, toolbar: { show: false } },
+                series: [{ name: title, data: data.values }],
+                xaxis: { categories: data.labels },
+                plotOptions: { bar: { horizontal: true, borderRadius: 3 } },
+                dataLabels: { enabled: true },
+                colors: ['#2271b1'],
+            }).render();
+        }
+        function renderDonut(el, data) {
+            new ApexCharts(document.querySelector(el), {
+                chart: { type: 'donut', height: 320 },
+                series: data.values,
+                labels: data.labels,
+                legend: { position: 'bottom' },
+            }).render();
+        }
+        var cat = kvToXY(stats.category_count);
+        renderBar('#jm-chart-category', 'Jobs', cat);
+        var sen = kvToXY(stats.seniority_count);
+        renderDonut('#jm-chart-seniority', sen);
+        var rem = kvToXY(stats.remote_count);
+        renderDonut('#jm-chart-remote', rem);
+        renderBar('#jm-chart-companies', 'Jobs', listToXY(stats.company_count, 10));
+        renderBar('#jm-chart-tools', 'Mentions', listToXY(stats.vendor_count, 15));
+        // Volume trend (line)
+        var trend = stats.total_active_trend || [];
+        new ApexCharts(document.querySelector('#jm-chart-volume'), {
+            chart: { type: 'line', height: 300, toolbar: { show: false } },
+            series: [{ name: 'Active jobs', data: trend.map(function(p) { return p.count; }) }],
+            xaxis: { categories: trend.map(function(p) { return p.date; }) },
+            stroke: { curve: 'smooth', width: 3 },
+            colors: ['#2271b1'],
+            dataLabels: { enabled: false },
+        }).render();
+    })();
+    </script>
+    <?php
+    return ob_get_clean();
 });
 
 // ── Self-hosted DataTables enqueue ────────────────────────

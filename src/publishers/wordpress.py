@@ -31,6 +31,10 @@ _WP_FIELDS = [
     "date_posted",
     # Phase F (R2): seniority confidence badge
     "seniority_confidence",
+    # Phase 5 (R3): comma-separated vendor/tool mentions
+    "vendors_mentioned",
+    # Phase 6 (R3): lifecycle state — 'active' | 'likely_closed'
+    "lifecycle_status",
 ]
 
 
@@ -142,6 +146,31 @@ def _enqueue_all(conn, jobs: list[dict[str, Any]]) -> int:
         except Exception as e:  # noqa: BLE001
             log.warning("wordpress: retry_queue insert failed: %s", e)
     return n
+
+
+def publish_dashboard_stats(
+    stats: dict[str, Any],
+    *,
+    wp_url: str,
+    username: str,
+    app_password: str,
+) -> dict[str, Any]:
+    """Phase 8 (R3): POST aggregated stats to the WP dashboard REST endpoint.
+    Returns {'ok': bool, 'status': int|None} — never raises."""
+    if not wp_url or not username or not app_password:
+        return {"ok": False, "status": None, "reason": "credentials incomplete"}
+    endpoint = wp_url.rstrip("/") + "/wp-json/jobmonitor/v1/dashboard-stats"
+    headers = {
+        "Authorization": _auth_header(username, app_password),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    try:
+        resp = retry_request("POST", endpoint, headers=headers, json=stats, max_attempts=2)
+    except Exception as e:  # noqa: BLE001
+        log.warning("wordpress: dashboard-stats transport error: %s", e)
+        return {"ok": False, "status": None, "reason": str(e)}
+    return {"ok": 200 <= resp.status_code < 300, "status": resp.status_code}
 
 
 def process_retry_queue(

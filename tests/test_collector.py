@@ -77,13 +77,26 @@ def test_collect_sources_aggregates_all(env_ok, monkeypatch):
                         lambda a, b: ([_sample_job("adzuna_1", source="adzuna")], [], {}))
     monkeypatch.setattr(collector.google_alerts, "fetch",
                         lambda: ([], [], {"stale_feeds": ["https://x"]}))
+    # Phase 2 (R3) — ATS sources are direct-HTTP per slug; tests must not hit network.
+    monkeypatch.setattr(collector.greenhouse, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.lever, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.ashby, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.jobspy_source, "fetch", lambda **kw: ([], [], {"available": False}))
+    monkeypatch.setattr(collector.onemodel, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.included_ai, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.siop, "fetch", lambda **kw: ([], [], {}))
     # Not monday — usajobs skipped
     monkeypatch.setattr(collector, "_is_monday", lambda: False)
 
     jobs, counts, errors, meta = collector.collect_sources()
     assert len(jobs) == 3
-    assert counts == {"jsearch_found": 1, "jooble_found": 1, "adzuna_found": 1,
-                      "usajobs_found": 0, "alerts_found": 0}
+    assert counts == {
+        "jsearch_found": 1, "jooble_found": 1, "adzuna_found": 1,
+        "usajobs_found": 0, "alerts_found": 0,
+        "greenhouse_found": 0, "lever_found": 0, "ashby_found": 0,
+        "jobspy_found": 0,
+        "onemodel_found": 0, "included_ai_found": 0, "siop_found": 0,
+    }
     assert meta["jsearch_quota_remaining"] == 150
     assert meta["usajobs_skipped_not_monday"] is True
     assert meta["stale_feeds"] == ["https://x"]
@@ -94,6 +107,13 @@ def test_collect_sources_runs_usajobs_on_monday(env_ok, monkeypatch):
     monkeypatch.setattr(collector.jooble, "fetch", lambda k: ([], [], {}))
     monkeypatch.setattr(collector.adzuna, "fetch", lambda a, b: ([], [], {}))
     monkeypatch.setattr(collector.google_alerts, "fetch", lambda: ([], [], {}))
+    monkeypatch.setattr(collector.greenhouse, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.lever, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.ashby, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.jobspy_source, "fetch", lambda **kw: ([], [], {"available": False}))
+    monkeypatch.setattr(collector.onemodel, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.included_ai, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.siop, "fetch", lambda **kw: ([], [], {}))
     usajobs_mock = MagicMock(return_value=([_sample_job("usajobs_1", source="usajobs")], [], {}))
     monkeypatch.setattr(collector.usajobs, "fetch", usajobs_mock)
     monkeypatch.setattr(collector, "_is_monday", lambda: True)
@@ -147,7 +167,7 @@ def test_apply_llm_empty_candidates(env_ok):
 # ──────────────── Full pipeline (dry-run) ────────────────
 
 def test_full_pipeline_dry_run(env_ok, conn, monkeypatch):
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [_sample_job("j1"), _sample_job("j2", title="Customer Service Rep")],
         {"jsearch_found": 2, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -183,7 +203,7 @@ def test_full_pipeline_dry_run(env_ok, conn, monkeypatch):
 
 
 def test_full_pipeline_publishes_when_not_dry(env_ok, conn, monkeypatch):
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [_sample_job("j1")],
         {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -225,7 +245,7 @@ def test_zero_results_triggers_after_2_consecutive(env_ok, conn, monkeypatch):
         "errors": "", "llm_provider_used": "none", "duration_seconds": 1.0,
         "consecutive_zero_runs": 1,
     })
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [],
         {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -240,7 +260,7 @@ def test_zero_results_triggers_after_2_consecutive(env_ok, conn, monkeypatch):
 
 
 def test_single_zero_run_does_not_alert(env_ok, conn, monkeypatch):
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [],
         {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -365,6 +385,21 @@ def test_apply_seniority_intern_from_title():
     assert jobs[0]["seniority"] == "Intern"
 
 
+def test_apply_vendor_mentions_extracts_from_description():
+    jobs = [
+        {"description": "Experience with Qualtrics and Medallia required. Python, SQL."},
+        {"description": ""},
+        {},  # no description
+    ]
+    collector.apply_vendor_mentions(jobs)
+    assert "Qualtrics" in jobs[0]["vendors_mentioned"]
+    assert "Medallia" in jobs[0]["vendors_mentioned"]
+    assert "Python" in jobs[0]["vendors_mentioned"]
+    assert "SQL" in jobs[0]["vendors_mentioned"]
+    assert jobs[1]["vendors_mentioned"] == ""
+    assert jobs[2]["vendors_mentioned"] == ""
+
+
 def test_apply_category_assigns_per_job():
     jobs = [
         {"title": "Employee Listening Manager", "company": "Netflix", "description": ""},
@@ -390,6 +425,23 @@ def test_apply_enrichment_returns_stats(monkeypatch):
     assert stats == {"enriched_from_source": 1, "aggregator_only": 1}
 
 
+def test_apply_defaults_sets_onsite_assumed():
+    """Phase 1 (R3): unknown is_remote gets onsite/assumed after all other passes."""
+    jobs = [
+        {"external_id": "a", "is_remote": "unknown"},
+        {"external_id": "b", "is_remote": ""},
+        {"external_id": "c"},
+        {"external_id": "d", "is_remote": "remote"},  # already set — no change
+    ]
+    collector.apply_defaults(jobs)
+    assert jobs[0]["is_remote"] == "onsite"
+    assert jobs[0]["remote_confidence"] == "assumed"
+    assert jobs[1]["is_remote"] == "onsite"
+    assert jobs[2]["is_remote"] == "onsite"
+    assert jobs[3]["is_remote"] == "remote"
+    assert "remote_confidence" not in jobs[3]
+
+
 def test_apply_enrichment_empty_short_circuits(monkeypatch):
     called = MagicMock()
     monkeypatch.setattr(collector.enrichment, "enrich_batch", called)
@@ -409,7 +461,7 @@ def test_pipeline_enrichment_runs_between_dedup_and_publish(env_ok, conn, monkey
             return real(*a, **kw)
         return wrapper
 
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [_sample_job("j1")],
         {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -452,7 +504,7 @@ def test_pipeline_enrichment_runs_between_dedup_and_publish(env_ok, conn, monkey
 
 
 def test_pipeline_seniority_populated_on_output(env_ok, conn, monkeypatch):
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [_sample_job("j1", title="Senior Manager, People Analytics")],
         {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},
@@ -478,7 +530,7 @@ def test_pipeline_seniority_populated_on_output(env_ok, conn, monkeypatch):
 
 def test_pipeline_enrichment_stats_in_healthcheck_meta(env_ok, conn, monkeypatch):
     # Two distinct jobs so the deduplicator keeps both
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [
             _sample_job("j1", title="People Analytics Manager", company="Netflix"),
             _sample_job("j2", title="Employee Listening Director", company="Atlassian"),
@@ -535,7 +587,7 @@ def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypat
     job2["salary_max"] = 225_000
     job2["date_posted"] = "2026-04-14"
 
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [job1, job2],
         {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 1,
          "usajobs_found": 0, "alerts_found": 0},
@@ -599,7 +651,7 @@ def test_pipeline_confidence_fields_persist_to_db_and_wp_payload(env_ok, conn, m
     source_job["apply_url"] = "https://careers.netflix.com/job/1"
     # Aggregator had these, but not confirmed from source page yet:
     source_job["is_remote"] = "hybrid"
-    monkeypatch.setattr(collector, "collect_sources", lambda: (
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
         [source_job],
         {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0, "usajobs_found": 0, "alerts_found": 0},
         [], {},

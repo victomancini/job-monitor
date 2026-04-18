@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     category TEXT,
     seniority TEXT,
     seniority_confidence TEXT,
+    lifecycle_status TEXT DEFAULT 'active',
     keyword_score INTEGER DEFAULT 0,
     keywords_matched TEXT,
     llm_classification TEXT,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     remote_confidence TEXT DEFAULT 'unverified',
     enrichment_source TEXT,
     enrichment_date TEXT,
+    vendors_mentioned TEXT,
     date_posted TEXT,
     first_seen_date TEXT NOT NULL,
     last_seen_date TEXT NOT NULL,
@@ -98,6 +100,29 @@ CREATE TABLE IF NOT EXISTS retry_queue (
     last_attempt TEXT,
     created_at TEXT DEFAULT (datetime('now'))
 );
+
+-- Phase 7 (R3): daily stats snapshot, grouped by stat_type.
+CREATE TABLE IF NOT EXISTS monthly_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    stat_date TEXT NOT NULL,
+    stat_type TEXT NOT NULL,
+    stat_key TEXT NOT NULL,
+    stat_value INTEGER NOT NULL,
+    UNIQUE(stat_date, stat_type, stat_key)
+);
+CREATE INDEX IF NOT EXISTS idx_monthly_stats ON monthly_stats(stat_date, stat_type);
+
+-- Phase 2 (R3): ATS slug cache — avoids re-fetching known-404 slugs daily.
+CREATE TABLE IF NOT EXISTS ats_company_status (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    ats TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    status TEXT NOT NULL,
+    last_checked TEXT NOT NULL,
+    jobs_found INTEGER DEFAULT 0,
+    UNIQUE(ats, slug)
+);
+CREATE INDEX IF NOT EXISTS idx_ats_status ON ats_company_status(ats, slug);
 """
 
 _JOB_COLUMNS = [
@@ -105,11 +130,13 @@ _JOB_COLUMNS = [
     "location_country", "work_arrangement", "description", "description_snippet",
     "salary_min", "salary_max", "salary_range", "source_url", "apply_url",
     "source_name", "is_remote", "category", "seniority", "seniority_confidence",
+    "lifecycle_status",
     "keyword_score", "keywords_matched",
     "llm_classification", "llm_confidence", "llm_provider", "llm_reasoning",
     "fit_score",
     "location_confidence", "salary_confidence", "remote_confidence",
     "enrichment_source", "enrichment_date",
+    "vendors_mentioned",
     "date_posted", "first_seen_date", "last_seen_date",
     "is_active", "wp_post_id", "raw_data",
 ]
@@ -126,6 +153,10 @@ _ADD_COLUMN_MIGRATIONS = [
     ("enrichment_date", "enrichment_date TEXT"),
     # Phase F (R2): seniority-level confidence (for salary-inferred seniority)
     ("seniority_confidence", "seniority_confidence TEXT"),
+    # Phase 5 (R3): comma-separated vendor/tool mentions from description text
+    ("vendors_mentioned", "vendors_mentioned TEXT"),
+    # Phase 6 (R3): lifecycle state machine — 'active' | 'likely_closed'
+    ("lifecycle_status", "lifecycle_status TEXT DEFAULT 'active'"),
 ]
 
 
@@ -192,6 +223,10 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
         conn.commit()
         return "created"
 
+    # Phase 6 (R3): re-seeing a job proves it's still active, even if the source
+    # adapter didn't set lifecycle_status explicitly. Force it back to 'active'
+    # so 'likely_closed' rows recover on re-appearance.
+    values["lifecycle_status"] = "active"
     update_cols = [c for c in values.keys() if c != "first_seen_date"]
     set_clause = ", ".join(f"{c} = ?" for c in update_cols) + ", updated_at = datetime('now')"
     params = [values[c] for c in update_cols] + [job["external_id"]]
@@ -224,6 +259,31 @@ def get_stale_active_jobs(conn, days: int = 7) -> list[dict[str, Any]]:
     cur = conn.execute(
         "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "
         "FROM jobs WHERE is_active = 1 AND last_seen_date < ? LIMIT 100",
+        (cutoff,),
+    )
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def mark_job_likely_closed(conn, external_id: str) -> None:
+    """Phase 6 (R3): intermediate lifecycle state before full archive."""
+    conn.execute(
+        "UPDATE jobs SET lifecycle_status='likely_closed', "
+        "updated_at = datetime('now') WHERE external_id = ?",
+        (external_id,),
+    )
+    conn.commit()
+
+
+def get_active_stale_jobs(conn, days: int = 7) -> list[dict[str, Any]]:
+    """Active jobs unseen for `days` days that are still lifecycle_status='active'.
+    Used by the Phase 6 staleness pass (separate from archiver's full archive)."""
+    cutoff = _days_ago(days)
+    cur = conn.execute(
+        "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "
+        "FROM jobs WHERE is_active = 1 AND "
+        "(lifecycle_status = 'active' OR lifecycle_status IS NULL) "
+        "AND last_seen_date < ? LIMIT 100",
         (cutoff,),
     )
     cols = [d[0] for d in cur.description]
@@ -292,6 +352,45 @@ def log_run(conn, stats: dict[str, Any]) -> None:
         values,
     )
     conn.commit()
+
+
+# ────────────── Phase 2 (R3): ATS slug cache helpers ──────────────
+
+def get_ats_status(conn, ats: str, slug: str) -> dict[str, Any] | None:
+    """Return {'status', 'last_checked', 'jobs_found'} for an ATS/slug, or None."""
+    row = conn.execute(
+        "SELECT status, last_checked, jobs_found FROM ats_company_status WHERE ats=? AND slug=?",
+        (ats, slug),
+    ).fetchone()
+    if not row:
+        return None
+    return {"status": row[0], "last_checked": row[1], "jobs_found": row[2] or 0}
+
+
+def set_ats_status(conn, ats: str, slug: str, status: str, jobs_found: int = 0) -> None:
+    """Upsert the cache row for (ats, slug) with today's date."""
+    today = _today()
+    conn.execute(
+        "INSERT INTO ats_company_status (ats, slug, status, last_checked, jobs_found) "
+        "VALUES (?, ?, ?, ?, ?) "
+        "ON CONFLICT(ats, slug) DO UPDATE SET "
+        "status=excluded.status, last_checked=excluded.last_checked, jobs_found=excluded.jobs_found",
+        (ats, slug, status, today, jobs_found),
+    )
+    conn.commit()
+
+
+def should_skip_ats_slug(conn, ats: str, slug: str, not_found_ttl_days: int = 30) -> bool:
+    """Return True if a slug was marked 'not_found' within the last `not_found_ttl_days`.
+    Other statuses (active/empty/error) never skip — we re-check every run."""
+    info = get_ats_status(conn, ats, slug)
+    if info is None or info["status"] != "not_found":
+        return False
+    try:
+        when = datetime.strptime(info["last_checked"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except (TypeError, ValueError):
+        return False
+    return (datetime.now(timezone.utc) - when) < timedelta(days=not_found_ttl_days)
 
 
 def get_consecutive_zero_runs(conn) -> int:
