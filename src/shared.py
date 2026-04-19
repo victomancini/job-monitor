@@ -22,10 +22,27 @@ CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 # structured metadata rather than a truncated-mid-token string.
 RAW_DATA_MAX_BYTES = 50_000
 
-# Hosts we treat as aggregator redirects. Enrichment follows redirects off
-# these hosts and rewrites apply_url; deduplicator prefers direct company
-# URLs over aggregator URLs when merging candidates. Single source of truth —
-# if a new aggregator is onboarded, both modules pick it up automatically.
+# Root aggregator domains. Callers use `is_aggregator_host()` which returns
+# True for the root AND every subdomain — this catches regional variants like
+# `us.jooble.org`, `uk.jooble.org`, `link.adzuna.com`, `de.indeed.com`, which
+# the old exact-match `AGGREGATOR_HOSTS` set missed. A job arriving on one of
+# those variants previously bypassed the entire redirect-following path in
+# enrichment.py because `host in AGGREGATOR_HOSTS` was False.
+AGGREGATOR_ROOT_DOMAINS: frozenset[str] = frozenset({
+    "jooble.org",
+    "adzuna.com", "adzuna.co.uk",
+    "indeed.com",
+    "google.com",
+    "linkedin.com",
+    "ziprecruiter.com",
+    "glassdoor.com",
+    # Additional aggregator-ish forwarders observed in production
+    "rapidapi.com",
+})
+
+# Kept for backward compat: any code still doing `host in AGGREGATOR_HOSTS`
+# gets the same hits as the exact-match set. New code should call
+# `is_aggregator_host()` instead.
 AGGREGATOR_HOSTS: frozenset[str] = frozenset({
     "jooble.org", "www.jooble.org",
     "adzuna.com", "www.adzuna.com", "adzuna.co.uk",
@@ -35,6 +52,25 @@ AGGREGATOR_HOSTS: frozenset[str] = frozenset({
     "ziprecruiter.com", "www.ziprecruiter.com",
     "glassdoor.com", "www.glassdoor.com",
 })
+
+
+def is_aggregator_host(host: str) -> bool:
+    """Return True when `host` matches any aggregator root domain OR is a
+    subdomain of one. Case-insensitive. Empty/None → False.
+
+    Examples:
+      is_aggregator_host('jooble.org')      → True
+      is_aggregator_host('us.jooble.org')   → True
+      is_aggregator_host('link.adzuna.com') → True
+      is_aggregator_host('careers.acme.com')→ False
+    """
+    if not host:
+        return False
+    h = host.lower().strip()
+    for root in AGGREGATOR_ROOT_DOMAINS:
+        if h == root or h.endswith("." + root):
+            return True
+    return False
 
 
 @lru_cache(maxsize=None)

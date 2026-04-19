@@ -128,6 +128,48 @@ def test_validate_env_scheme_empty_urls_skip(monkeypatch):
     assert shared.validate_env_scheme() == []
 
 
+# ───── R9-Part-2: is_aggregator_host subdomain match ────────────
+
+def test_is_aggregator_host_matches_root():
+    assert shared.is_aggregator_host("jooble.org")
+    assert shared.is_aggregator_host("adzuna.com")
+    assert shared.is_aggregator_host("indeed.com")
+
+
+def test_is_aggregator_host_matches_regional_subdomains():
+    """R9-Part-2: this is the fix. Prior exact-match AGGREGATOR_HOSTS missed
+    us.jooble.org, uk.jooble.org, link.adzuna.com, de.indeed.com, etc. so
+    jobs arriving on those variants bypassed redirect following entirely."""
+    for h in [
+        "us.jooble.org", "uk.jooble.org", "de.jooble.org",
+        "www.adzuna.co.uk", "link.adzuna.com",
+        "uk.indeed.com", "www.indeed.com",
+        "jobs.google.com",
+    ]:
+        assert shared.is_aggregator_host(h), f"should match: {h}"
+
+
+def test_is_aggregator_host_rejects_company_domains():
+    for h in [
+        "careers.netflix.com", "boards.greenhouse.io",
+        "jobs.lever.co", "jobs.ashbyhq.com",
+        "acme-engineering.com", "careers.acme.com",
+    ]:
+        assert not shared.is_aggregator_host(h), f"should not match: {h}"
+
+
+def test_is_aggregator_host_case_insensitive_and_empty_safe():
+    assert shared.is_aggregator_host("US.JOOBLE.ORG")
+    assert not shared.is_aggregator_host("")
+    assert not shared.is_aggregator_host(None)
+
+
+def test_is_aggregator_host_doesnt_false_match_substring():
+    """A company named 'adzunalike.com' shouldn't match 'adzuna.com'."""
+    assert not shared.is_aggregator_host("adzunalike.com")
+    assert not shared.is_aggregator_host("notjooble.org")
+
+
 def test_validate_env_scheme_case_insensitive(monkeypatch):
     """HTTPS scheme match is case-insensitive per RFC 3986."""
     monkeypatch.setenv("WP_URL", "HTTPS://site.example/")

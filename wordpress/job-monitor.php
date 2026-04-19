@@ -334,16 +334,21 @@ tfoot input, tfoot select { width:100%; box-sizing:border-box; font-size:0.85em;
 .freshness-cool { color:#856404; opacity:0.7; }
 .freshness-stale { color:#6c757d; }
 .badge-new { background:#dc3545; color:#fff; padding:1px 5px; border-radius:3px; font-size:0.7em; vertical-align:middle; margin-left:4px; }
-/* Phase C (R2): multi-select filter bar */
-.jm-filters { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding:12px; background:#f8f9fa; border-radius:6px; }
-.jm-filter-group { display:flex; align-items:flex-start; gap:6px; }
-.jm-filter-group > label:first-child { font-weight:600; white-space:nowrap; padding-top:4px; }
-.jm-checkboxes { display:flex; flex-wrap:wrap; gap:4px; max-width:560px; }
-.jm-chip { display:inline-flex; align-items:center; gap:3px; padding:3px 8px; background:#fff; border:1px solid #dee2e6; border-radius:4px; font-size:0.82em; cursor:pointer; }
-.jm-chip input { margin:0; }
-.jm-chip.jm-chip-off { opacity:0.5; background:#e9ecef; }
-.jm-text-filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-.jm-text-filters input { padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; font-size:0.85em; }
+/* Phase C (R2) + R9-P1-F: multi-select filter bar.
+   !important on every layout prop is deliberate — WordPress themes routinely
+   inject .screen-reader-text-style rules or `input[type=checkbox]{opacity:0}`
+   visual-hiding patterns that nuke our chip checkboxes. We're defending the
+   DOM against unknown parent CSS. */
+.jm-filters { display:flex!important; flex-wrap:wrap!important; gap:12px!important; margin-bottom:16px!important; padding:12px!important; background:#f8f9fa!important; border-radius:6px!important; }
+.jm-filter-group { display:flex!important; align-items:flex-start!important; gap:6px!important; }
+.jm-filter-group > label:first-child { font-weight:600!important; white-space:nowrap!important; padding-top:4px!important; }
+.jm-checkboxes { display:flex!important; flex-wrap:wrap!important; gap:4px!important; max-width:560px!important; }
+.jm-chip { display:inline-flex!important; align-items:center!important; gap:3px!important; padding:3px 8px!important; background:#fff!important; border:1px solid #dee2e6!important; border-radius:4px!important; font-size:0.82em!important; cursor:pointer!important; }
+/* Force checkbox visibility against any theme rule that hides them. */
+.jm-chip input[type="checkbox"] { position:static!important; display:inline-block!important; opacity:1!important; width:auto!important; height:auto!important; margin:0!important; appearance:auto!important; -webkit-appearance:checkbox!important; -moz-appearance:checkbox!important; }
+.jm-chip.jm-chip-off { opacity:0.5!important; background:#e9ecef!important; }
+.jm-text-filters { display:flex!important; flex-direction:row!important; flex-wrap:wrap!important; gap:8px!important; align-items:center!important; }
+.jm-text-filters input { width:auto!important; max-width:180px!important; padding:4px 8px!important; border:1px solid #dee2e6!important; border-radius:4px!important; font-size:0.85em!important; }
 /* Phase 6 (R3) + R-audit Issue 2f: muted styling for likely-closed jobs.
    Opacity 0.5 per spec; "Check →" button is grayed out vs. the normal blue Apply. */
 tr.likely-closed { opacity:0.5; }
@@ -355,28 +360,32 @@ tr.likely-closed td { font-style:italic; }
 CSS;
 }
 
-// Phase D (R2): render the Relevance cell from llm_classification.
-// RELEVANT → Relevant (green), PARTIALLY_RELEVANT → Partial (amber),
-// anything else (including empty) → Auto (gray, keyword-only).
-// R8-H1: `data-filter` carries the plain logical value so the DataTables
-// chip filter matches on "Relevant" rather than the HTML string
-// "<span style='color:#155724;font-weight:600'>Relevant</span>".
-function jm_relevance_cell($classification) {
+// R9-P1-C: `data-search` is read natively by DataTables when building its
+// column search index. Substituting data-filter (custom row-filter) with
+// data-search lets us delete the custom filter plumbing entirely — plain
+// column.search() does the work. Returns the canonical display string so
+// the filter chip values match the cell values exactly.
+function jm_relevance_label($classification) {
     switch ($classification) {
-        case 'RELEVANT':
-            return '<td data-filter="Relevant"><span style="color:#155724;font-weight:600">Relevant</span></td>';
-        case 'PARTIALLY_RELEVANT':
-            return '<td data-filter="Partial"><span style="color:#856404;font-weight:600">Partial</span></td>';
-        default:
-            return '<td data-filter="Auto"><span style="color:#6c757d">Auto</span></td>';
+        case 'RELEVANT':           return 'Relevant';
+        case 'PARTIALLY_RELEVANT': return 'Partial';
+        default:                    return 'Auto';
     }
 }
 
-// R8-L12: source_name consolidation. Raw source_name values fragment into
-// 15+ chips (jobspy_linkedin, jobspy_indeed, jobspy_glassdoor, …). Map them
-// to a small set of friendly display names; filter chips operate on the
-// display name so the Source filter stays manageable.
-function jm_source_display_name($source_name) {
+function jm_relevance_cell($classification) {
+    $label = jm_relevance_label($classification);
+    $color = ($label === 'Relevant') ? '#155724' : (($label === 'Partial') ? '#856404' : '#6c757d');
+    $weight = ($label === 'Auto') ? '' : 'font-weight:600';
+    return '<td data-search="' . esc_attr($label) . '"><span style="color:' . $color . ';' . $weight . '">' . esc_html($label) . '</span></td>';
+}
+
+// R9-P1-A: source_name mapping for display + filter. Keeps ATS vendor names
+// (Greenhouse/Lever/Ashby) as distinct chips since which ATS a job posts
+// through is useful operational info. Collapses scrapers that produce noise
+// (onemodel/included_ai/siop → "Niche Board"; google_alerts/talkwalker →
+// "RSS Alert"). JobSpy siblings get their real brand names.
+function jm_display_source_name($source_name) {
     if (!$source_name) return 'Unknown';
     if (strpos($source_name, 'jobspy_') === 0) {
         $site = substr($source_name, 7);
@@ -388,9 +397,12 @@ function jm_source_display_name($source_name) {
         ];
         return isset($map[$site]) ? $map[$site] : ucfirst($site);
     }
-    if (in_array($source_name, ['greenhouse', 'lever', 'ashby'], true)) {
-        return 'Direct (ATS)';
-    }
+    $ats = [
+        'greenhouse' => 'Greenhouse',
+        'lever' => 'Lever',
+        'ashby' => 'Ashby',
+    ];
+    if (isset($ats[$source_name])) return $ats[$source_name];
     if (in_array($source_name, ['onemodel', 'included_ai', 'siop'], true)) {
         return 'Niche Board';
     }
@@ -515,16 +527,28 @@ function jm_freshness_cell($date_posted, $first_seen) {
     return '<td data-order="' . $days . '"><span class="' . esc_attr($class) . '">' . esc_html($text) . '</span>' . $badge . '</td>';
 }
 
-// Phase C (R2): multi-select filter bar HTML. Renders above the table. Init-complete
-// JS populates checkboxes from unique column values. `$id_suffix` disambiguates the two
-// shortcodes; `$categorical_cols` lists the header names that get checkbox filters.
-function jm_filter_bar_html($id_suffix, $categorical_cols = ['Level','Remote','Source']) {
+// R9-P1-B: server-rendered filter bar. `$filter_values` is a map of column
+// name → list of unique pre-sorted values the shortcode collected during its
+// render loop. We emit real <label><input checkbox> elements for every value
+// so the DOM is fully populated at page load — no JS needs to traverse
+// DataTables column data to build chips.
+//
+// Default state: every chip is checked, meaning "show all rows". A user
+// unchecking a chip triggers the post-init JS to call column.search() with
+// the remaining checked values.
+function jm_filter_bar_html($id_suffix, $filter_values) {
     $out = '<div id="jm-filters-' . esc_attr($id_suffix) . '" class="jm-filters">';
-    foreach ($categorical_cols as $col) {
+    foreach ($filter_values as $col => $values) {
         $out .= '<div class="jm-filter-group">';
         $out .= '<label>' . esc_html($col) . ':</label>';
-        $out .= '<div class="jm-checkboxes" data-column="' . esc_attr($col) . '"></div>';
-        $out .= '</div>';
+        $out .= '<div class="jm-checkboxes" data-column="' . esc_attr($col) . '">';
+        foreach ($values as $val) {
+            if ($val === '' || $val === null) continue;
+            $safe = esc_attr((string) $val);
+            $txt  = esc_html((string) $val);
+            $out .= '<label class="jm-chip"><input type="checkbox" value="' . $safe . '" checked> ' . $txt . '</label>';
+        }
+        $out .= '</div></div>';
     }
     $out .= '<div class="jm-filter-group"><div class="jm-text-filters">';
     foreach (['Title', 'Company', 'Location'] as $col) {
@@ -535,109 +559,61 @@ function jm_filter_bar_html($id_suffix, $categorical_cols = ['Level','Remote','S
     return $out;
 }
 
-// Phase C (R2): DataTables initComplete. Populates checkbox filter pills from each
-// categorical column's unique values and wires text filters to freeform columns.
+// R9-P1-D: event-only JS emitted AFTER DataTable() is created. No DOM
+// population, no custom row-filter function. Pure event wiring on
+// already-rendered chips. Reads `data-search` attributes on <td>s
+// natively — DataTables indexes them at init time, so column.search()
+// with a regex operates against the clean filter values we rendered
+// server-side.
 //
-// R8-H1/P5-2: filter values are now read from a `data-filter` attribute on each
-// cell (when present) rather than from stripped text. This is because cells with
-// a confidence badge (Remote) or styled wrapper (Relevance) render as
-// "remote <span>•</span>" / "<span>Relevant</span>" — stripping text produces
-// "remote •" / "Relevant" with no guarantee of round-trip equality against the
-// raw HTML that column.search() scans. A custom row-filter function checks the
-// cell node's `data-filter` attribute directly, so chip values and row values
-// are the same logical tokens ("remote", "Relevant", …).
-//
-// Uses nowdoc ('JS') so $ and \ are literal in the JS body.
-function jm_datatables_init_complete_js() {
-    return <<<'JS'
-initComplete: function() {
-    var api = this.api();
-    var tableNode = this.table().node();
-    var colIdxByName = {};
-    api.columns().every(function(i) {
-        colIdxByName[jQuery(this.header()).text().trim()] = i;
-    });
-    var $wrapper = jQuery(this.table().container()).parent();
-
-    // Read the filter value for a cell. Prefer `data-filter`, fall back to
-    // stripped text. Defined once and reused for both chip population and
-    // the row-match function.
-    function cellFilterValue(td) {
-        var $td = jQuery(td);
-        var v = $td.attr('data-filter');
-        if (v !== undefined) return v;
-        return jQuery('<div>').html($td.html()).text().trim();
-    }
-
-    // activeChipFilters: {colIdx: [values]}. Default = all chips checked
-    // (i.e., values = every unique value), so a row passes unless the user
-    // unchecks something.
-    var activeChipFilters = {};
-
-    // Custom row-level filter: for each configured column, check the row's
-    // cell filter value is in the active selection. Scoped to THIS table so
-    // two shortcodes on one page don't cross-filter.
-    jQuery.fn.dataTable.ext.search.push(function(settings, rowData, rowIdx) {
-        if (settings.nTable !== tableNode) return true;
-        for (var colIdx in activeChipFilters) {
-            var allowed = activeChipFilters[colIdx];
-            if (!allowed || allowed.length === 0) continue;
-            var cell = api.cell(rowIdx, colIdx).node();
-            if (!cell) continue;
-            var val = cellFilterValue(cell);
-            if (allowed.indexOf(val) === -1) return false;
+// Uses nowdoc ('JS') so PHP $ vars and \ escapes are literal inside the JS.
+function jm_filter_wire_js($table_selector) {
+    // Inline $table_selector as a single-quoted JS string literal.
+    $sel_js = "'" . str_replace("'", "\\'", $table_selector) . "'";
+    $prefix = "jQuery(function(){var tbl=jQuery($sel_js).DataTable();";
+    $body = <<<'JS'
+var wrapper = jQuery(tbl.table().container()).parent();
+var nameToIdx = {};
+tbl.columns().every(function(i){
+    nameToIdx[jQuery(this.header()).text().trim()] = i;
+});
+// Chip (multi-select) filters: build an alternation regex across the currently
+// checked values. All checked → empty search (show everything). Zero checked
+// → alternation with nothing, which returns no rows (expected).
+wrapper.find('.jm-checkboxes').each(function(){
+    var container = jQuery(this);
+    var colIdx = nameToIdx[container.data('column')];
+    if (typeof colIdx !== 'number') return;
+    var totalChips = container.find('input[type=checkbox]').length;
+    function applyFilter(){
+        var checked = [];
+        container.find('input:checked').each(function(){
+            checked.push(jQuery.fn.dataTable.util.escapeRegex(jQuery(this).val()));
+        });
+        var col = tbl.column(colIdx);
+        if (checked.length === 0 || checked.length === totalChips) {
+            if (col.search() !== '') col.search('').draw();
+        } else {
+            col.search('^(' + checked.join('|') + ')$', true, false).draw();
         }
-        return true;
+    }
+    container.on('change', 'input[type=checkbox]', function(){
+        jQuery(this).closest('.jm-chip').toggleClass('jm-chip-off', !jQuery(this).is(':checked'));
+        applyFilter();
     });
-
-    $wrapper.find('.jm-checkboxes').each(function() {
-        var $container = jQuery(this);
-        var colName = $container.data('column');
-        var colIdx = colIdxByName[colName];
-        if (typeof colIdx !== 'number') return;
-        var column = api.column(colIdx);
-
-        // Populate chips from data-filter (or fallback text) of each cell
-        var unique = {};
-        column.nodes().each(function(node) {
-            var v = cellFilterValue(node);
-            if (v) unique[v] = true;
-        });
-        var values = Object.keys(unique).sort();
-        Object.keys(unique).sort().forEach(function(val) {
-            var safeVal = val.replace(/"/g, '&quot;');
-            $container.append(
-                '<label class="jm-chip"><input type="checkbox" value="' + safeVal + '" checked> ' + val + '</label>'
-            );
-        });
-        // All chips checked by default → row filter is a pass-through.
-        activeChipFilters[colIdx] = values.slice();
-
-        $container.on('change', 'input[type=checkbox]', function() {
-            var $cb = jQuery(this);
-            $cb.closest('.jm-chip').toggleClass('jm-chip-off', !$cb.is(':checked'));
-            var checked = [];
-            $container.find('input:checked').each(function() {
-                checked.push(jQuery(this).val());
-            });
-            activeChipFilters[colIdx] = checked;
-            api.draw();
-        });
+});
+// Text filters: substring search on the target column.
+wrapper.find('.jm-text-filter').each(function(){
+    var input = jQuery(this);
+    var colIdx = nameToIdx[input.data('column')];
+    if (typeof colIdx !== 'number') return;
+    input.on('keyup change', function(){
+        var col = tbl.column(colIdx);
+        if (col.search() !== this.value) col.search(this.value).draw();
     });
-    $wrapper.find('.jm-text-filter').each(function() {
-        var $input = jQuery(this);
-        var colName = $input.data('column');
-        var colIdx = colIdxByName[colName];
-        if (typeof colIdx !== 'number') return;
-        var column = api.column(colIdx);
-        $input.on('keyup change', function() {
-            if (column.search() !== this.value) {
-                column.search(this.value).draw();
-            }
-        });
-    });
-}
+});
 JS;
+    return $prefix . $body . "});";
 }
 
 // ── Active Jobs Shortcode [job_table] ─────────────────────
@@ -677,19 +653,26 @@ add_shortcode('job_table', function() {
         return strcmp($b->post_date, $a->post_date);
     });
 
-    ob_start();
-    echo jm_inline_styles();
-    echo '<div class="jm-wrapper">';
-    echo jm_filter_bar_html('active', ['Category', 'Level', 'Remote', 'Relevance', 'Source']);
-    echo '<table id="jm-table" class="display nowrap" style="width:100%">';
-    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th></tr></thead><tbody>';
-    $jsonld_docs = [];  // Phase 9 (R3): accumulate JSON-LD per job
+    // R9-P1-E: two-pass render. Pass 1 builds every row's HTML into a string
+    // buffer AND collects distinct values for each filterable column. Pass 2
+    // emits the filter bar (now populated with real values) followed by the
+    // buffered rows. This puts a fully-populated DOM on the page at load and
+    // eliminates the JS-side chip-population step that broke 3× in R4-R6.
+    $filter_values = [
+        'Category' => [],
+        'Level'    => [],
+        'Remote'   => [],
+        'Relevance'=> [],
+        'Source'   => [],
+    ];
+    $rows_html = '';
+    $jsonld_docs = [];
+
     foreach ($jobs as $j) {
         $source_url = esc_url(get_post_meta($j->ID, 'source_url', true));
         $apply_url = esc_url(get_post_meta($j->ID, 'apply_url', true));
         if (!$apply_url) $apply_url = $source_url;
         $title = esc_html($j->post_title);
-        // Phase 9 (R3): build JSON-LD for this posting (skip if it lacks title/company)
         $doc = jm_build_job_posting_jsonld($j->ID, $j->post_title);
         if ($doc !== null) $jsonld_docs[] = $doc;
         $t = $source_url ? '<a href="' . $source_url . '" target="_blank" rel="noopener">' . $title . '</a>' : $title;
@@ -700,40 +683,39 @@ add_shortcode('job_table', function() {
         $remote_conf = get_post_meta($j->ID, 'remote_confidence', true);
         $salary = esc_html(get_post_meta($j->ID, 'salary_range', true));
         $salary_conf = get_post_meta($j->ID, 'salary_confidence', true);
-        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
+        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
-        // Phase 6 (R3): muted styling + "may be closed" label for stale jobs
         $lifecycle = get_post_meta($j->ID, 'lifecycle_status', true);
         $tr_class = ($lifecycle === 'likely_closed') ? ' class="likely-closed"' : '';
         $closed_label = ($lifecycle === 'likely_closed')
             ? ' <span class="label-likely-closed">(likely closed)</span>' : '';
 
-        // R8-H1: emit data-filter on cells that render HTML wrappers/badges so
-        // the initComplete chip filter matches the logical token, not the
-        // HTML-mangled display text.
-        $remote_logical = esc_attr(get_post_meta($j->ID, 'is_remote', true) ?: 'unknown');
-        // R8-L12: consolidate jobspy_* / ATS / niche / RSS source_name values
-        // into a handful of display names to keep the Source filter usable.
-        $source_raw = get_post_meta($j->ID, 'source_name', true);
-        $source_display = jm_source_display_name($source_raw);
+        // Collect filter values (logical tokens only — no HTML, no badges)
+        $category_v  = get_post_meta($j->ID, 'category', true) ?: 'General PA';
+        $level_v     = $seniority ?: 'Unknown';
+        $remote_v    = get_post_meta($j->ID, 'is_remote', true) ?: 'unknown';
+        $relevance_v = jm_relevance_label(get_post_meta($j->ID, 'llm_classification', true));
+        $source_v    = jm_display_source_name(get_post_meta($j->ID, 'source_name', true));
+        $filter_values['Category'][]  = $category_v;
+        $filter_values['Level'][]     = $level_v;
+        $filter_values['Remote'][]    = $remote_v;
+        $filter_values['Relevance'][] = $relevance_v;
+        $filter_values['Source'][]    = $source_v;
 
-        echo '<tr' . $tr_class . '>';
-        echo '<td>' . $t . $closed_label . '</td>';
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
-        echo '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
-        // Phase I (R2): Category column
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
-        echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
-        echo '<td data-filter="' . $remote_logical . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
-        // Phase H (R2): data-order so DataTables sorts by salary_min numerically
-        echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
-        // Phase D (R2): Relevance column (llm_classification) — helper emits data-filter
-        echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
-        echo '<td data-filter="' . esc_attr($source_display) . '">' . esc_html($source_display) . '</td>';
-        // R-audit Issue 2f + R8-P5-9: likely-closed jobs link to the company's
-        // careers root (derived from the apply_url hostname) rather than the
-        // specific posting URL, which is probably a 404 by now. Title attr
-        // warns on hover.
+        // R9-P1-C: data-search (native DataTables) on cells whose display HTML
+        // differs from the filter value. Category/Level/Apply/Posted have no
+        // such wrappers so they don't need data-search.
+        $r = '';
+        $r .= '<tr' . $tr_class . '>';
+        $r .= '<td>' . $t . $closed_label . '</td>';
+        $r .= '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
+        $r .= '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
+        $r .= '<td>' . esc_html($category_v) . '</td>';
+        $r .= '<td>' . esc_html($level_v) . '</td>';
+        $r .= '<td data-search="' . esc_attr($remote_v) . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        $r .= '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        $r .= jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
+        $r .= '<td data-search="' . esc_attr($source_v) . '">' . esc_html($source_v) . '</td>';
         if ($apply_url) {
             if ($lifecycle === 'likely_closed') {
                 $host = parse_url($apply_url, PHP_URL_HOST);
@@ -747,25 +729,41 @@ add_shortcode('job_table', function() {
         } else {
             $apply_cell = '';
         }
-        echo '<td>' . $apply_cell . '</td>';
-        // Phase B (R2): Posted column with freshness + NEW badge
-        echo jm_freshness_cell(
+        $r .= '<td>' . $apply_cell . '</td>';
+        $r .= jm_freshness_cell(
             get_post_meta($j->ID, 'date_posted', true),
             get_post_meta($j->ID, 'first_seen_date', true)
         );
-        echo '</tr>';
+        $r .= '</tr>';
+        $rows_html .= $r;
     }
-    echo '</tbody>';
-    echo '</table>';
+
+    // Dedup + sort each filter column
+    foreach ($filter_values as $k => $v) {
+        $v = array_unique($v);
+        sort($v);
+        $filter_values[$k] = array_values($v);
+    }
+
+    ob_start();
+    echo jm_inline_styles();
+    echo '<div class="jm-wrapper">';
+    echo jm_filter_bar_html('active', $filter_values);
+    echo '<table id="jm-table" class="display nowrap" style="width:100%">';
+    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th></tr></thead><tbody>';
+    echo $rows_html;
+    echo '</tbody></table>';
     // Phase 9 (R3): emit one JSON-LD block per job for SEO / Google for Jobs indexing.
     // JSON_HEX_* flags prevent `</script>` / `&` / quotes in job titles from breaking
-    // out of the <script> block (C5 fix).
+    // out of the <script> block.
     $jsonld_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
     foreach ($jsonld_docs as $doc) {
         echo '<script type="application/ld+json">' . wp_json_encode($doc, $jsonld_flags) . '</script>';
     }
-    $init = jm_datatables_init_complete_js();
-    echo "<script>jQuery(function(\$){\$('#jm-table').DataTable({responsive:true,order:[[10,'asc']],pageLength:50,{$init}});});</script>";
+    // R9-P1-D: DataTable init + separate event-wire script.
+    // dom:'lrtip' hides the default DataTables search box — we render our own.
+    echo "<script>jQuery(function(){jQuery('#jm-table').DataTable({responsive:true,order:[[10,'asc']],pageLength:50,dom:'lrtip'});});</script>";
+    echo '<script>' . jm_filter_wire_js('#jm-table') . '</script>';
     echo '</div>';  // .jm-wrapper
     $html = ob_get_clean();
 
@@ -794,12 +792,12 @@ add_shortcode('job_archive_table', function() {
     if (!empty($job_ids)) {
         update_meta_cache('post', $job_ids);
     }
-    ob_start();
-    echo jm_inline_styles();
-    echo '<div class="jm-wrapper">';
-    echo jm_filter_bar_html('archive', ['Category', 'Level', 'Remote', 'Relevance', 'Source']);
-    echo '<table id="jm-archive" class="display nowrap" style="width:100%">';
-    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th><th>Days Active</th><th>Archived</th></tr></thead><tbody>';
+    // R9-P1-E: two-pass render (mirror of the active shortcode).
+    $filter_values = [
+        'Category' => [], 'Level' => [], 'Remote' => [],
+        'Relevance'=> [], 'Source' => [],
+    ];
+    $rows_html = '';
     foreach ($jobs as $j) {
         $source_url = esc_url(get_post_meta($j->ID, 'source_url', true));
         $apply_url = esc_url(get_post_meta($j->ID, 'apply_url', true));
@@ -813,44 +811,59 @@ add_shortcode('job_archive_table', function() {
         $remote_conf = get_post_meta($j->ID, 'remote_confidence', true);
         $salary = esc_html(get_post_meta($j->ID, 'salary_range', true));
         $salary_conf = get_post_meta($j->ID, 'salary_confidence', true);
-        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
+        $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
 
-        // R8-H1 + R8-L12: same data-filter + source consolidation as the
-        // active shortcode so the archive table's chip filter behaves
-        // identically.
-        $remote_logical = esc_attr(get_post_meta($j->ID, 'is_remote', true) ?: 'unknown');
-        $source_display = jm_source_display_name(get_post_meta($j->ID, 'source_name', true));
+        $category_v  = get_post_meta($j->ID, 'category', true) ?: 'General PA';
+        $level_v     = $seniority ?: 'Unknown';
+        $remote_v    = get_post_meta($j->ID, 'is_remote', true) ?: 'unknown';
+        $relevance_v = jm_relevance_label(get_post_meta($j->ID, 'llm_classification', true));
+        $source_v    = jm_display_source_name(get_post_meta($j->ID, 'source_name', true));
+        $filter_values['Category'][]  = $category_v;
+        $filter_values['Level'][]     = $level_v;
+        $filter_values['Remote'][]    = $remote_v;
+        $filter_values['Relevance'][] = $relevance_v;
+        $filter_values['Source'][]    = $source_v;
 
-        echo '<tr>';
-        echo '<td>' . $t . '</td>';
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
-        echo '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
-        // Phase I (R2): Category column
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
-        echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
-        echo '<td data-filter="' . $remote_logical . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
-        // Phase H (R2): data-order so DataTables sorts by salary_min numerically
-        echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
-        // Phase D (R2): Relevance column (llm_classification) — helper emits data-filter
-        echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
-        echo '<td data-filter="' . esc_attr($source_display) . '">' . esc_html($source_display) . '</td>';
         $apply_cell = $apply_url ? '<a class="jm-apply-btn" href="' . $apply_url . '" target="_blank" rel="noopener">Apply &rarr;</a>' : '';
-        echo '<td>' . $apply_cell . '</td>';
-        // Phase B (R2): Posted column with freshness + NEW badge
-        echo jm_freshness_cell(
+
+        $r = '';
+        $r .= '<tr>';
+        $r .= '<td>' . $t . '</td>';
+        $r .= '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
+        $r .= '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
+        $r .= '<td>' . esc_html($category_v) . '</td>';
+        $r .= '<td>' . esc_html($level_v) . '</td>';
+        $r .= '<td data-search="' . esc_attr($remote_v) . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        $r .= '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
+        $r .= jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
+        $r .= '<td data-search="' . esc_attr($source_v) . '">' . esc_html($source_v) . '</td>';
+        $r .= '<td>' . $apply_cell . '</td>';
+        $r .= jm_freshness_cell(
             get_post_meta($j->ID, 'date_posted', true),
             get_post_meta($j->ID, 'first_seen_date', true)
         );
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'days_active', true)) . '</td>';
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'archived_date', true)) . '</td>';
-        echo '</tr>';
+        $r .= '<td>' . esc_html(get_post_meta($j->ID, 'days_active', true)) . '</td>';
+        $r .= '<td>' . esc_html(get_post_meta($j->ID, 'archived_date', true)) . '</td>';
+        $r .= '</tr>';
+        $rows_html .= $r;
     }
-    echo '</tbody>';
-    echo '</table>';
-    $init = jm_datatables_init_complete_js();
-    echo "<script>jQuery(function(\$){\$('#jm-archive').DataTable({responsive:true,order:[[12,'desc']],pageLength:50,{$init}});});</script>";
-    echo '</div>';  // .jm-wrapper
+    foreach ($filter_values as $k => $v) {
+        $v = array_unique($v); sort($v);
+        $filter_values[$k] = array_values($v);
+    }
+
+    ob_start();
+    echo jm_inline_styles();
+    echo '<div class="jm-wrapper">';
+    echo jm_filter_bar_html('archive', $filter_values);
+    echo '<table id="jm-archive" class="display nowrap" style="width:100%">';
+    echo '<thead><tr><th>Title</th><th>Company</th><th>Location</th><th>Category</th><th>Level</th><th>Remote</th><th>Salary</th><th>Relevance</th><th>Source</th><th>Apply</th><th>Posted</th><th>Days Active</th><th>Archived</th></tr></thead><tbody>';
+    echo $rows_html;
+    echo '</tbody></table>';
+    echo "<script>jQuery(function(){jQuery('#jm-archive').DataTable({responsive:true,order:[[12,'desc']],pageLength:50,dom:'lrtip'});});</script>";
+    echo '<script>' . jm_filter_wire_js('#jm-archive') . '</script>';
+    echo '</div>';
     $html = ob_get_clean();
     set_transient('jm_archived_jobs_html', $html, 12 * HOUR_IN_SECONDS);
     return $html;

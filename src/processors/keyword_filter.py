@@ -162,18 +162,66 @@ def _prune_covered_spans(
     return kept
 
 
+def _dedup_key(term: str) -> str:
+    """R8-shadow-B1: aggressive normalization for cross-field dedup. Lowercases
+    and strips all non-alphanumerics so synonym pairs ('Culture Amp' vs
+    'CultureAmp', 'organizational network analysis' vs 'organisational
+    network analysis') collapse to the same key and count once.
+
+    Previously used `term.lower()` which kept them separate — one Culture Amp
+    posting was scoring 30+30 pts for the two spellings of its own vendor
+    name, doubling the effective weight of a single semantic hit."""
+    return re.sub(r"[^a-z0-9]", "", term.lower())
+
+
 def _cross_field_dedup(
     hits: list[tuple[str, str, int, tuple[int, int]]],
 ) -> list[tuple[str, str, int, tuple[int, int]]]:
     """Phase C6: if the same (normalized) term matches in multiple fields, keep the
-    single highest-scoring hit. Distinct terms are always kept."""
+    single highest-scoring hit. Distinct terms are always kept.
+
+    R8-shadow-B1: now normalizes via `_dedup_key` so synonym variants
+    (Culture Amp / CultureAmp) also collapse."""
     best: dict[str, tuple[str, str, int, tuple[int, int]]] = {}
     for h in hits:
-        key = h[0].lower()
+        key = _dedup_key(h[0])
         cur = best.get(key)
         if cur is None or h[2] > cur[2] or (h[2] == cur[2] and h[1] == "title" and cur[1] == "desc"):
             best[key] = h
     return list(best.values())
+
+
+def _is_company_self_mention(term: str, company: str) -> bool:
+    """R8-shadow-B2: true when a tier1_description keyword equals the job's
+    own company name (after the deduplicator's suffix stripping + our
+    aggressive normalization). Used to suppress 'About Culture Amp' style
+    boilerplate hits on a Culture Amp job posting — those aren't real
+    signals that the role touches the PA field.
+
+    Exact-name match only (after normalization): 'Culture Amp' on a
+    Culture Amp posting → suppress. 'Microsoft Viva Glint' on a Microsoft
+    posting → kept (product name ≠ company name).
+    """
+    if not term or not company:
+        return False
+    # Lazy import to avoid circular dependency
+    from src.processors.deduplicator import normalize_company
+    nt = re.sub(r"[^a-z0-9]", "", term.lower())
+    nc = re.sub(r"[^a-z0-9]", "", normalize_company(company))
+    return bool(nt) and bool(nc) and nt == nc
+
+
+# R8-shadow-B3: cap score when the company is on the vendor boost list AND
+# the title has zero positive matches. Vendor postings routinely mention
+# industry terminology ("people analytics", "employee listening") in
+# product-boilerplate sections, which score 30+ each even when the role
+# has nothing to do with PA (SDR, Exec Assistant, Software Engineer).
+# Capping below llm_review_min prevents these from consuming LLM budget —
+# the shadow log showed 27 Culture Amp jobs in one run, all rejected by
+# the LLM with conf 85-95. Roles that pair a vendor with a legit title
+# positive (e.g., "Principal People Scientist @ Culture Amp") are
+# unaffected because `title_has_positive=True` short-circuits the cap.
+VENDOR_DESC_ONLY_CAP = 14  # below thresholds.llm_review_min=15
 
 
 def _has_any(text: str, terms: tuple[str, ...]) -> bool:
@@ -254,7 +302,14 @@ def classify(job: dict[str, Any]) -> dict[str, Any]:
             _push(term, "title", kw["tier1_title"]["score"], span, "t1_title")
 
     # ── T1 description ──
+    # R8-shadow-B2: skip hits where the tier1_description term literally IS
+    # the company's own name. 'About Culture Amp' boilerplate in a Culture
+    # Amp posting doesn't mean the role touches PA — it's product-page text
+    # on every one of their listings.
+    company_name = job.get("company", "")
     for term, span in _find_match_spans(desc, tuple(kw["tier1_description"]["terms"])):
+        if _is_company_self_mention(term, company_name):
+            continue
         _push(term, "desc", kw["tier1_description"]["score"], span, "t1_desc")
 
     # ── T2 title (with C5 XM-scientist gate and continuous-listening carve-out) ──
@@ -353,6 +408,18 @@ def classify(job: dict[str, Any]) -> dict[str, Any]:
         score += COMPANY_BOOST_POINTS
         matched.append(f"+:company:{job.get('company', '')}")
 
+    # ── R8-shadow-B3: vendor-boilerplate cap ──
+    # When the company is a known PA/EL vendor AND the title has no positive
+    # keyword, cap total score below llm_review_min. Desc-only hits on a
+    # vendor's own product terminology aren't evidence the role is PA-related.
+    # Applies only to scores that would otherwise reach the LLM-review floor,
+    # so low-signal jobs (score 0-14) are unaffected.
+    if (not title_has_positive
+            and score > VENDOR_DESC_ONLY_CAP
+            and _company_matches_boost_list(job.get("company", ""))):
+        matched.append(f"-VENDOR_CAP:{job.get('company', '')}")
+        score = VENDOR_DESC_ONLY_CAP
+
     # De-duplicate matched terms while preserving order
     seen: set[str] = set()
     matched_unique: list[str] = []
@@ -371,6 +438,15 @@ def classify(job: dict[str, Any]) -> dict[str, Any]:
 
     decision: str
     if has_any_negative and score < llm_review_min:
+        # R8-shadow-A: record the negative-auto-reject terms so the shadow log
+        # / keywords_matched column shows which term blocked the job.
+        # Previously the rejection was silent (matched=[]) which left 547
+        # rejects per day unattributable during audits.
+        for nterm in neg_auto_title:
+            matched_unique.append(f"-REJECT:{nterm}")
+        for nterm in neg_auto_desc:
+            if f"-REJECT:{nterm}" not in matched_unique:
+                matched_unique.append(f"-REJECT:{nterm}")
         # Pure negative, no meaningful positive → hard reject
         score = -100
         decision = "auto_reject"

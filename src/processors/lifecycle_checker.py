@@ -36,7 +36,7 @@ from urllib.parse import urlparse
 import requests
 
 from src import db
-from src.shared import AGGREGATOR_HOSTS
+from src.shared import AGGREGATOR_HOSTS, is_aggregator_host
 
 log = logging.getLogger(__name__)
 
@@ -340,7 +340,7 @@ def check_lifecycle_batch(
             continue
         apply_url = job.get("apply_url") or job.get("source_url") or ""
         host = _host(apply_url)
-        if not host or host in AGGREGATOR_HOSTS:
+        if not host or is_aggregator_host(host):
             # Category C: no authoritative signal available.
             _record(job["external_id"], "unknown")
             continue

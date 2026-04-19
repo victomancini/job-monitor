@@ -646,18 +646,25 @@ def test_pipeline_enrichment_stats_in_healthcheck_meta(env_ok, conn, monkeypatch
 def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypatch):
     """Phase G (R2) integration: verify Phase A-F fields flow collector → Turso → WP.
     Covers: apply_url upgrade by dedup, location merge, seniority salary fallback,
-    date_posted, Relevance (llm_classification)."""
+    date_posted, Relevance (llm_classification).
+
+    R8-shadow-B3: the earlier version used 'Deloitte' (a Tier 2 boost company)
+    with an 'Opaque Role' title; that combo now trips the vendor-boilerplate
+    cap because title_has_positive=False. Switched to a non-vendor company
+    so the test still exercises apply_url upgrade + location merge +
+    salary-based seniority inference without being short-circuited by B3.
+    """
     # Two same-company duplicates across cities (Phase E) + aggregator vs direct URL (Phase A)
-    job1 = _sample_job("a", title="Opaque Role", company="Deloitte",
+    job1 = _sample_job("a", title="Opaque Role", company="Acme Engineering",
                        source="jsearch")
     job1["apply_url"] = "https://jooble.org/desc/a"  # aggregator URL
     job1["location"] = "New York, NY"
     job1["salary_min"] = 175_000
     job1["salary_max"] = 225_000
     job1["date_posted"] = "2026-04-14"
-    job2 = _sample_job("b", title="Opaque Role", company="Deloitte",
+    job2 = _sample_job("b", title="Opaque Role", company="Acme Engineering",
                        source="adzuna")
-    job2["apply_url"] = "https://careers.deloitte.com/jobs/b"  # direct
+    job2["apply_url"] = "https://careers.acme-engineering.com/jobs/b"  # direct
     job2["location"] = "Chicago, IL"
     job2["salary_min"] = 175_000
     job2["salary_max"] = 225_000
@@ -703,7 +710,7 @@ def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypat
     assert len(rows) == 1
     ext_id, apply_url, loc, seniority, sen_conf, date_posted, llm_cls = rows[0]
     assert ext_id == "b"  # direct URL wins
-    assert apply_url == "https://careers.deloitte.com/jobs/b"
+    assert apply_url == "https://careers.acme-engineering.com/jobs/b"
     assert "New York, NY" in loc and "Chicago, IL" in loc
     assert seniority == "Senior Manager"  # inferred from $175K salary_min
     assert sen_conf == "inferred"
@@ -713,7 +720,7 @@ def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypat
     # WP payload side
     assert len(captured) == 1
     p = captured[0]
-    assert p["apply_url"] == "https://careers.deloitte.com/jobs/b"
+    assert p["apply_url"] == "https://careers.acme-engineering.com/jobs/b"
     assert p["seniority"] == "Senior Manager"
     assert p["seniority_confidence"] == "inferred"
     assert p["date_posted"] == "2026-04-14"

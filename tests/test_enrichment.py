@@ -392,6 +392,95 @@ def test_body_redirect_parsed_past_4kb_boundary():
     assert j["apply_url"] == "https://careers.netflix.com/job/late"
 
 
+# ───── R9-Part-2: regional-subdomain aggregator detection ─────
+
+def test_us_jooble_regional_subdomain_treated_as_aggregator():
+    """R9-Part-2: before the fix, us.jooble.org wasn't in AGGREGATOR_HOSTS
+    so the entire redirect-following path was skipped for jobs on the US
+    regional subdomain. Now is_aggregator_host() matches subdomains."""
+    j = _job(source_url="https://us.jooble.org/desc/regional123",
+             apply_url="https://us.jooble.org/desc/regional123")
+    final = "https://careers.netflix.com/job/regional123"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", final, 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == final
+
+
+def test_link_adzuna_subdomain_treated_as_aggregator():
+    j = _job(source_url="https://link.adzuna.com/redir/abc",
+             apply_url="https://link.adzuna.com/redir/abc")
+    final = "https://careers.example.com/jobs/abc"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", final, 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == final
+
+
+def test_js_redirect_on_regional_subdomain_parsed():
+    """R9-Part-2: JS redirect on a regional Jooble subdomain was previously
+    ignored because us.jooble.org didn't match AGGREGATOR_HOSTS."""
+    body = (
+        '<html><head><script>'
+        'window.location.href = "https://careers.netflix.com/jobs/42";'
+        '</script></head></html>'
+    )
+    j = _job(source_url="https://us.jooble.org/desc/42",
+             apply_url="https://us.jooble.org/desc/42")
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://us.jooble.org/desc/42", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/jobs/42"
+
+
+def test_meta_refresh_on_regional_subdomain_parsed():
+    body = (
+        '<html><head>'
+        '<meta http-equiv="refresh" content="0;url=https://careers.example.com/apply/7">'
+        '</head></html>'
+    )
+    j = _job(source_url="https://uk.jooble.org/desc/7",
+             apply_url="https://uk.jooble.org/desc/7")
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://uk.jooble.org/desc/7", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.example.com/apply/7"
+
+
+def test_unresolved_aggregator_url_triggers_warning_log(caplog):
+    """R9-Part-2-C: when apply_url is still on an aggregator host after all
+    enrichment passes, log a WARNING so ops can see how many slip through."""
+    import logging as _l
+    j = _job(source_url="https://us.jooble.org/desc/stuck",
+             apply_url="https://us.jooble.org/desc/stuck")
+    # Response gives no useful redirect — stays on aggregator
+    body = "<html><body>Opaque aggregator page, no redirect</body></html>"
+    with caplog.at_level(_l.WARNING, logger="src.processors.enrichment"), \
+         patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://us.jooble.org/desc/stuck", 200)), \
+         patch("src.processors.enrichment._head_final_url", return_value=""):
+        en.enrich_job(j)
+    # apply_url still aggregator → warning fired
+    assert any(
+        "apply_url not resolved" in rec.getMessage()
+        and "us.jooble.org" in rec.getMessage()
+        for rec in caplog.records
+    ), f"expected unresolved warning, got: {[r.getMessage() for r in caplog.records]}"
+
+
+def test_resolved_aggregator_url_does_NOT_trigger_warning(caplog):
+    """Flipside: when we DO resolve the URL, no warning fires."""
+    import logging as _l
+    j = _job(source_url="https://us.jooble.org/desc/ok",
+             apply_url="https://us.jooble.org/desc/ok")
+    final = "https://careers.netflix.com/jobs/ok"
+    with caplog.at_level(_l.WARNING, logger="src.processors.enrichment"), \
+         patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", final, 200)):
+        en.enrich_job(j)
+    assert not any("apply_url not resolved" in r.getMessage() for r in caplog.records)
+
+
 def test_head_fallback_fires_on_non_200_response():
     """If the original URL returned 403/500 (no usable body-redirect), HEAD
     fallback still gets a chance to resolve the aggregator URL."""

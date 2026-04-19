@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 import rapidfuzz
 from rapidfuzz import fuzz, utils
 
-from src.shared import AGGREGATOR_HOSTS
+from src.shared import AGGREGATOR_HOSTS, is_aggregator_host
 
 
 def _apply_url_score(url: str) -> int:
@@ -28,8 +28,7 @@ def _apply_url_score(url: str) -> int:
     host = (parsed.netloc or "").lower()
     if not host:
         return 0
-    is_aggregator = host in AGGREGATOR_HOSTS
-    if is_aggregator:
+    if is_aggregator_host(host):
         return 1
     # Direct company URL
     return 3 if parsed.scheme == "https" else 2

@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from src.shared import AGGREGATOR_HOSTS, format_salary_range
+from src.shared import AGGREGATOR_HOSTS, format_salary_range, is_aggregator_host
 
 log = logging.getLogger(__name__)
 
@@ -345,8 +345,12 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
 
     url = job.get("apply_url") or job.get("source_url")
     orig_apply = job.get("apply_url")
-    log.debug("enrich_job[%s] source=%s url_host=%s",
-              job.get("external_id"), job.get("source_name"), _host(url or ""))
+    # R9-Part-2: bumped from DEBUG to INFO so the apply-URL resolution path
+    # is visible in GitHub Actions logs without enabling verbose debug logging.
+    log.info("enrich_job[%s] source=%s url=%s host=%s aggregator=%s",
+             job.get("external_id"), job.get("source_name"),
+             (url or "")[:100], _host(url or ""),
+             is_aggregator_host(_host(url or "")))
     if not url:
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
@@ -370,13 +374,18 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
         _apply_assumed_defaults(job)
         return job
 
-    # Phase A: if we left the aggregator domain via redirect, store the final URL
-    # as the canonical apply_url.
+    # Phase A / R9-Part-2: HTTP redirect rewrite. `is_aggregator_host()`
+    # replaces exact-match `in AGGREGATOR_HOSTS`, so regional subdomains
+    # (us.jooble.org, link.adzuna.com) now trigger the same rewrite path.
     final_url = getattr(resp, "url", None) or url
     orig_host = _host(url)
     final_host = _host(final_url)
-    if final_url and final_url != url and final_host and final_host != orig_host \
-            and orig_host in AGGREGATOR_HOSTS:
+    redirected = bool(final_url and final_url != url and final_host and final_host != orig_host)
+    log.info("enrich_job[%s] HTTP status=%d redirected=%s final_host=%s",
+             job.get("external_id"), resp.status_code, redirected, final_host)
+    if redirected and is_aggregator_host(orig_host) and not is_aggregator_host(final_host):
+        log.info("enrich_job[%s] rewrote apply_url via HTTP redirect: %s -> %s",
+                 job.get("external_id"), url, final_url)
         job["apply_url"] = final_url
         url = final_url  # subsequent passes fetch the direct page instead
         orig_host = final_host
@@ -385,22 +394,25 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
         # R-audit: before giving up, try once more via HEAD — aggregators
         # sometimes 403 on GET but redirect on HEAD, or the original URL was
         # briefly flaky. If that resolves to a non-aggregator host, rewrite.
-        if orig_host in AGGREGATOR_HOSTS:
+        if is_aggregator_host(orig_host):
             resolved = _head_final_url(job.get("apply_url") or url)
-            if resolved and _host(resolved) not in AGGREGATOR_HOSTS:
+            if resolved and not is_aggregator_host(_host(resolved)):
+                log.info("enrich_job[%s] rewrote apply_url via HEAD fallback (non-200): %s",
+                         job.get("external_id"), resolved)
                 job["apply_url"] = resolved
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
+        _warn_if_still_aggregator(job)
         return job
 
-    # R-audit (Issue 1b): the aggregator returned 200 but may be bouncing via
-    # meta-refresh / JS. Scan the body for a redirect target and rewrite.
-    if orig_host in AGGREGATOR_HOSTS:
+    # R-audit (Issue 1b) / R9-Part-2: the aggregator returned 200 but may be
+    # bouncing via meta-refresh / JS. Scan the body for a redirect target.
+    if is_aggregator_host(orig_host):
         body_redirect = _extract_body_redirect(resp.text or "", url)
-        if body_redirect and _host(body_redirect) not in AGGREGATOR_HOSTS:
+        if body_redirect and not is_aggregator_host(_host(body_redirect)):
+            log.info("enrich_job[%s] body-redirect rewrote apply_url %s -> %s",
+                     job.get("external_id"), url, body_redirect)
             job["apply_url"] = body_redirect
-            log.debug("enrich_job[%s]: body-redirect rewrote apply_url %s -> %s",
-                      job.get("external_id"), url, body_redirect)
 
     text = _extract_text(resp.text or "")
 
@@ -453,22 +465,34 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
     job["enrichment_source"] = "source_page"
     job["enrichment_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
-    # R-audit (Issue 1c): last-chance fallback. If apply_url is still on an
-    # aggregator host after body-redirect parsing, do one HEAD request — some
-    # sites use multiple redirect hops that requests.get didn't fully chase.
+    # R-audit (Issue 1c) / R9-Part-2: last-chance fallback. If apply_url is
+    # still on an aggregator host after body-redirect parsing, do one HEAD
+    # request — some sites use multiple redirect hops that requests.get
+    # didn't fully chase.
     final_apply = job.get("apply_url") or ""
-    if _host(final_apply) in AGGREGATOR_HOSTS:
+    if is_aggregator_host(_host(final_apply)):
         resolved = _head_final_url(final_apply)
-        if resolved and _host(resolved) not in AGGREGATOR_HOSTS:
+        if resolved and not is_aggregator_host(_host(resolved)):
+            log.info("enrich_job[%s] HEAD fallback rewrote apply_url -> %s",
+                     job.get("external_id"), resolved)
             job["apply_url"] = resolved
-            log.debug("enrich_job[%s]: HEAD fallback rewrote apply_url -> %s",
-                      job.get("external_id"), resolved)
 
     _apply_assumed_defaults(job)
     if (job.get("apply_url") or "") != (orig_apply or ""):
-        log.debug("enrich_job[%s]: apply_url %s -> %s",
-                  job.get("external_id"), orig_apply, job.get("apply_url"))
+        log.info("enrich_job[%s] apply_url resolved: %s -> %s",
+                 job.get("external_id"), orig_apply, job.get("apply_url"))
+    _warn_if_still_aggregator(job)
     return job
+
+
+def _warn_if_still_aggregator(job: dict[str, Any]) -> None:
+    """R9-Part-2-C: after enrichment runs, log a warning if apply_url is
+    still on an aggregator host. Makes unresolved URLs visible in pipeline
+    logs so ops can see how many jobs slipped through redirect following."""
+    url = job.get("apply_url") or ""
+    if is_aggregator_host(_host(url)):
+        log.warning("apply_url not resolved for %s: %s",
+                    job.get("external_id"), url[:200])
 
 
 class _HostThrottle:

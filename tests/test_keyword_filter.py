@@ -96,6 +96,160 @@ def test_active_listening_in_description_rejected_when_no_positives():
     assert r["decision"] == "auto_reject"
 
 
+# ───── R8-shadow-A: auto_reject logs the triggering negative term ─────
+# 2026-04-19 shadow log had 547 auto_reject rows with matched=[] — unattributable.
+
+def test_auto_reject_records_triggering_negative_in_matched():
+    """The matched list must now include a -REJECT:<term> entry so ops can
+    see which negative_auto_reject keyword vetoed the job."""
+    r = kf.classify(job("Call Center Agent with Active Listening Skills"))
+    assert r["decision"] == "auto_reject"
+    # At least one -REJECT:<term> entry, naming the negative that fired
+    reject_entries = [m for m in r["matched"] if m.startswith("-REJECT:")]
+    assert reject_entries, f"no -REJECT:<term> in matched: {r['matched']}"
+    # The triggering term should mention "active listening"
+    assert any("active listening" in m.lower() for m in reject_entries)
+
+
+def test_auto_reject_from_description_records_negative():
+    r = kf.classify(job("Customer Service Rep",
+                        description="Requires active listening skills."))
+    assert r["decision"] == "auto_reject"
+    assert any(m.startswith("-REJECT:") for m in r["matched"])
+
+
+# ───── R8-shadow-B1: synonym dedup in cross_field_dedup ─────
+
+def test_culture_amp_synonym_pair_scores_once():
+    """Before the fix, a description mentioning both 'Culture Amp' and
+    'CultureAmp' (common boilerplate) scored 30+30 — doubling a single
+    semantic hit. After the fix, the two synonyms collapse to one hit at 30.
+
+    Uses Acme Engineering (NOT a boost-list company) so the B3 vendor cap
+    doesn't fire and mask the dedup result we're testing."""
+    r = kf.classify(job(
+        "Random Job",  # no title positives
+        company="Acme Engineering",  # not in companies.yaml → no B3 cap
+        description=(
+            "We partner with Culture Amp and CultureAmp for our engagement strategy."
+        ),
+    ))
+    # Expect a single T1 desc hit (30pts) for the Culture Amp synonym pair
+    ca_hits = [m for m in r["matched"] if "culture amp" in m.lower() or "cultureamp" in m.lower()]
+    assert len(ca_hits) == 1, f"synonym pair not deduped: {r['matched']}"
+    assert r["score"] == 30
+
+
+# ───── R8-shadow-B2: company self-mention suppression ─────
+
+def test_self_mention_of_culture_amp_at_culture_amp_suppressed():
+    """A Culture Amp posting with 'About Culture Amp' boilerplate should NOT
+    score tier1_description points for its own company name."""
+    r = kf.classify(job(
+        "Allbound SDR",
+        company="Culture Amp",
+        description="About Culture Amp: we build employee experience software.",
+    ))
+    # The Culture Amp hit is suppressed. "employee experience" in desc is a
+    # T3 (B8-gated) term in title only, so no points from desc. Net: 0.
+    # Only way this scores is via some other signal — and there isn't one.
+    assert r["score"] == 0, f"self-mention not suppressed: score={r['score']} matched={r['matched']}"
+
+
+def test_self_mention_only_suppresses_exact_company_name():
+    """A posting mentioning 'Microsoft Viva Glint' (product name, not company
+    name) still scores — the tier1_description hit survives B2 because the
+    product name isn't equal to the company name.
+
+    Uses a non-boost company for the test so B3 vendor cap doesn't fire.
+    The point being verified is B2's narrowness, not B3."""
+    r = kf.classify(job(
+        "Random Role",
+        company="Acme Engineering",  # non-vendor, no B3 cap
+        description="Experience with Microsoft Viva Glint required.",
+    ))
+    # "Microsoft Viva Glint" is a tier1_description term (score 30). Not
+    # suppressed because it doesn't match the company name.
+    assert r["score"] == 30
+
+
+def test_self_mention_handles_company_suffix_stripping():
+    """Normalized compare: 'Culture Amp Inc' → 'culture amp'; 'Culture Amp'
+    term → 'culture amp'. They match after suffix strip — still suppressed.
+
+    Description uses no other scoring terms so the suppression result is
+    visible as score=0."""
+    r = kf.classify(job(
+        "Executive Assistant",
+        company="Culture Amp Inc",
+        description="About Culture Amp. Handle calendars and travel.",
+    ))
+    assert r["score"] == 0
+
+
+def test_non_self_mention_still_scored():
+    """A Perceptyx posting mentioning 'Culture Amp' scores — that's a
+    genuine cross-vendor mention (competitor analysis, integration, etc.)."""
+    r = kf.classify(job(
+        "Random Role",
+        company="Perceptyx",  # different vendor
+        description="We compete with Culture Amp in the engagement space.",
+    ))
+    # Culture Amp hit is kept (not self-mention). Perceptyx mention in desc
+    # would also be a self-mention — suppressed. Net: 30 from Culture Amp.
+    # But then B3 vendor cap kicks in (Perceptyx is boost-list, no title
+    # positive), capping to 14.
+    assert r["score"] == 14
+    assert any("VENDOR_CAP" in m for m in r["matched"])
+
+
+# ───── R8-shadow-B3: vendor-boilerplate cap ─────
+
+def test_vendor_boilerplate_capped_when_title_has_no_positive():
+    """Culture Amp posting with 'people analytics' in desc but no title
+    positive: B3 caps score below llm_review_min, preventing a wasted LLM
+    call on what is almost certainly a vendor self-mention."""
+    r = kf.classify(job(
+        "Allbound SDR",  # no positive title keyword
+        company="Culture Amp",
+        description=(
+            "About Culture Amp: we're the people analytics platform. "
+            "Help us grow by qualifying leads in our engagement software."
+        ),
+    ))
+    # Score before cap: people analytics desc (+30), Culture Amp self-mention
+    # suppressed (B2). So 30. Then B3 fires: 30 → 14.
+    assert r["score"] == 14
+    assert r["decision"] == "low_score"
+    assert any("VENDOR_CAP" in m for m in r["matched"])
+
+
+def test_vendor_posting_with_title_positive_NOT_capped():
+    """Legit PA role at a vendor — title has a positive → B3 doesn't fire."""
+    r = kf.classify(job(
+        "Principal People Scientist",  # tier1_title match (+50)
+        company="Culture Amp",
+        description="Lead research for Culture Amp's product.",
+    ))
+    # T1 title +50, company boost +10 (title_has_positive=True) = 60
+    assert r["score"] >= 50
+    assert r["decision"] == "auto_include"
+    assert not any("VENDOR_CAP" in m for m in r["matched"])
+
+
+def test_non_vendor_company_desc_only_NOT_capped():
+    """Non-boost-list company — desc-only signals flow through to LLM review
+    as before. B3 is scoped narrowly to vendor boilerplate."""
+    r = kf.classify(job(
+        "Random Analyst",  # no title positive
+        company="Acme Engineering",  # not in companies.yaml
+        description="Our team uses people analytics to drive decisions.",
+    ))
+    # T1 desc "people analytics" (+30). B3 doesn't apply (not a boost company).
+    assert r["score"] == 30
+    assert r["decision"] == "llm_review"
+
+
 # ───────────── Conflict: positive + negative → LLM, never auto-decide ───────
 
 def test_positive_plus_negative_routes_to_llm():
