@@ -248,6 +248,51 @@ def test_phase_a_migration_adds_columns_to_pre_migration_db():
     c.close()
 
 
+# Regression: C2 — upsert must populate company_normalized so the index is
+# actually used and dedup's DB-side comparisons aren't working against NULL.
+def test_upsert_populates_company_normalized(conn):
+    j = sample_job("cn1", company="Netflix, Inc.")
+    j.pop("company_normalized", None)  # simulate a source that didn't set it
+    db.upsert_job(conn, j)
+    row = conn.execute(
+        "SELECT company_normalized FROM jobs WHERE external_id=?", ("cn1",)
+    ).fetchone()
+    assert row[0] == "netflix"
+
+
+def test_upsert_respects_caller_provided_company_normalized(conn):
+    j = sample_job("cn2", company="Acme Corporation")
+    j["company_normalized"] = "acme-forced"
+    db.upsert_job(conn, j)
+    row = conn.execute(
+        "SELECT company_normalized FROM jobs WHERE external_id=?", ("cn2",)
+    ).fetchone()
+    assert row[0] == "acme-forced"
+
+
+# Regression: C3 — when a previously-archived job reappears, upsert must clear
+# archived_date + days_active so the row isn't shown as "archived N days ago"
+# while is_active=1.
+def test_upsert_resurrection_clears_archived_fields(conn):
+    db.upsert_job(conn, sample_job("res1"))
+    db.archive_job(conn, "res1", days_active=12)
+    # Sanity: archived_date + days_active are set
+    row = conn.execute(
+        "SELECT is_active, archived_date, days_active FROM jobs WHERE external_id=?",
+        ("res1",),
+    ).fetchone()
+    assert row == (0, _today(), 12)
+    # Reappear in a fresh batch
+    db.upsert_job(conn, sample_job("res1"))
+    row = conn.execute(
+        "SELECT is_active, archived_date, days_active FROM jobs WHERE external_id=?",
+        ("res1",),
+    ).fetchone()
+    assert row[0] == 1
+    assert row[1] is None
+    assert row[2] is None
+
+
 def test_log_run_and_consecutive_zeros(conn):
     db.log_run(conn, {
         "run_date": "2026-04-15",

@@ -137,7 +137,8 @@ function jm_batch_update($request) {
         if (isset($job['apply_url'])) {
             $meta['apply_url'] = esc_url_raw($job['apply_url']);
         }
-        $meta['last_seen_active'] = current_time('Y-m-d');
+        // UTC to match Python-side date stamping (see db.py _today()).
+        $meta['last_seen_active'] = current_time('Y-m-d', true);
         $meta['job_status'] = 'active';
 
         if (!empty($existing)) {
@@ -146,7 +147,7 @@ function jm_batch_update($request) {
             $results['updated']++;
             $results['post_ids'][$job['external_id']] = $post_id;
         } else {
-            $meta['first_seen_date'] = current_time('Y-m-d');
+            $meta['first_seen_date'] = current_time('Y-m-d', true);
             $pid = wp_insert_post([
                 'post_type' => 'job_listing',
                 'post_title' => sanitize_text_field(mb_substr($job['title'], 0, 200)),
@@ -204,8 +205,11 @@ add_action('wp', function() {
 });
 add_action('jm_daily_archive', function() {
     global $wpdb;
-    $closed_cutoff = date('Y-m-d', strtotime('-' . JM_LIKELY_CLOSED_DAYS . ' days'));
-    $archive_cutoff = date('Y-m-d', strtotime('-' . JM_ARCHIVE_DAYS . ' days'));
+    // UTC for cutoff math: Python's db.py stores last_seen_date in UTC
+    // (`datetime('now')`), so comparing against site-timezone-local dates
+    // here caused off-by-one archival on edge timezones. Use gmdate().
+    $closed_cutoff = gmdate('Y-m-d', time() - JM_LIKELY_CLOSED_DAYS * 86400);
+    $archive_cutoff = gmdate('Y-m-d', time() - JM_ARCHIVE_DAYS * 86400);
 
     // Step 1: mark day-7+ stale jobs as 'likely_closed' (still post_status=publish,
     // just tagged via meta so the shortcode can render them muted).
@@ -238,7 +242,7 @@ add_action('jm_daily_archive', function() {
         $days = ($first && $last) ? max(1, round((strtotime($last) - strtotime($first)) / 86400)) : 0;
         wp_update_post(['ID' => $pid, 'post_status' => 'archived']);
         update_post_meta($pid, 'job_status', 'archived');
-        update_post_meta($pid, 'archived_date', current_time('Y-m-d'));
+        update_post_meta($pid, 'archived_date', current_time('Y-m-d', true));
         update_post_meta($pid, 'days_active', (string)$days);
     }
 

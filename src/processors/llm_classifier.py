@@ -203,10 +203,15 @@ def _classify_openai(prompt: str, api_key: str) -> dict[str, Any] | None:
 
 
 def _keyword_fallback(job: dict[str, Any]) -> dict[str, Any]:
-    """Final tier: decide from keyword_score alone."""
+    """Final tier: decide from keyword_score alone.
+
+    Confidence values are chosen so `publish_decision` routes correctly when
+    all LLM providers are unreachable — score>=50 must publish (conf>=70),
+    score 25-49 must publish_flag (40<=conf<70), score<25 must reject.
+    Previously conf=60 on RELEVANT silently dropped score>=50 jobs."""
     score = int(job.get("keyword_score", 0))
     if score >= 50:
-        cls, conf = "RELEVANT", 60
+        cls, conf = "RELEVANT", 70
     elif score >= 25:
         cls, conf = "PARTIALLY_RELEVANT", 50
     else:
@@ -318,7 +323,12 @@ def classify_batch(
         try:
             r = classify_job(job, groq_key=groq_key, gemini_key=gemini_key, openai_key=openai_key)
             counts[r["provider"]] = counts.get(r["provider"], 0) + 1
-            last_provider = r["provider"]
+            # Only refresh pacing when a network provider actually served. When
+            # every provider failed and we fell through to keyword_only, retrying
+            # Groq on the very next job with a 0s delay re-triggers the same
+            # 429/5xx. Preserve the prior provider's cadence so the chain backs off.
+            if r["provider"] != "keyword_only":
+                last_provider = r["provider"]
         except Exception as e:  # noqa: BLE001
             errors.append(f"llm: failed on {job.get('external_id','?')}: {e}")
             # Don't update last_provider on exception — keep pacing from whatever

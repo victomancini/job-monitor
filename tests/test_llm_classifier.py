@@ -307,6 +307,62 @@ def test_publish_decision_low_conf_rejects():
     assert lc.publish_decision({"llm_classification": "RELEVANT", "llm_confidence": 50}) == "reject"
 
 
+# Regression: C1 — keyword-only fallback must emit conf values that survive
+# publish_decision. Previously RELEVANT/conf=60 was silently rejected (60 < 70).
+def test_keyword_fallback_high_score_reaches_publish():
+    j = job()
+    j["keyword_score"] = 80
+    r = lc._keyword_fallback(j)
+    j["llm_classification"] = r["classification"]
+    j["llm_confidence"] = r["confidence"]
+    assert lc.publish_decision(j) == "publish"
+
+
+def test_keyword_fallback_partial_reaches_publish_flag():
+    j = job()
+    j["keyword_score"] = 30
+    r = lc._keyword_fallback(j)
+    j["llm_classification"] = r["classification"]
+    j["llm_confidence"] = r["confidence"]
+    assert lc.publish_decision(j) == "publish_flag"
+
+
+def test_keyword_fallback_low_score_rejects():
+    j = job()
+    j["keyword_score"] = 10
+    r = lc._keyword_fallback(j)
+    j["llm_classification"] = r["classification"]
+    j["llm_confidence"] = r["confidence"]
+    assert lc.publish_decision(j) == "reject"
+
+
+# Regression: IMP7 — after a keyword_only fall-through, the next job's delay
+# should still use the previous network provider's cadence, not Groq's 0s.
+def test_classify_batch_keyword_only_preserves_prior_delay():
+    # First job: Groq succeeds. Second job: every provider raises → keyword_only.
+    # Inter-call delay should stay at Groq's 2.5s, not reset to 0.
+    groq_client = MagicMock()
+    ok_then_fail = [
+        MagicMock(choices=[MagicMock(message=MagicMock(
+            content='{"classification":"RELEVANT","confidence":90,"reasoning":"x"}'))]),
+        Exception("groq down"),
+        Exception("groq down"),
+    ]
+    groq_client.chat.completions.create.side_effect = ok_then_fail
+
+    jobs = [job(title="j0"), job(title="j1"), job(title="j2")]
+    for j in jobs:
+        j["keyword_score"] = 80
+    with patch("openai.OpenAI", return_value=groq_client), \
+         patch("src.processors.llm_classifier.time.sleep") as ms:
+        lc.classify_batch(jobs, groq_key="g", gemini_key="", openai_key="")
+    # 3 jobs → 2 inter-call sleeps. Both should be Groq's cadence even though
+    # jobs 1+2 fell through to keyword_only.
+    assert ms.call_count == 2
+    for call in ms.call_args_list:
+        assert call.args[0] == lc.GROQ_CALL_DELAY_SEC
+
+
 # ──────────────────────────── Batch API ─────────────────────────────
 
 def test_classify_batch_counts_providers():

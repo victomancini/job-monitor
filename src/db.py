@@ -208,6 +208,11 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
         values["is_active"] = 1
     if isinstance(values.get("raw_data"), (dict, list)):
         values["raw_data"] = json.dumps(values["raw_data"])
+    # Derive company_normalized if the caller didn't. Lazy import so db.py has
+    # no hard dependency on processors.
+    if not values.get("company_normalized") and values.get("company"):
+        from src.processors.deduplicator import normalize_company
+        values["company_normalized"] = normalize_company(values["company"])
 
     if row is None:
         values["first_seen_date"] = today
@@ -229,6 +234,13 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
     values["lifecycle_status"] = "active"
     update_cols = [c for c in values.keys() if c != "first_seen_date"]
     set_clause = ", ".join(f"{c} = ?" for c in update_cols) + ", updated_at = datetime('now')"
+    # Resurrection: if a previously-archived row (is_active=0 with archived_date
+    # and days_active set) reappears in a fresh batch, clear the archival state
+    # so the dashboard/WP don't show stale "archived X days ago" on a live job.
+    # Only clears when the incoming row is marking itself active (which upsert
+    # always does — is_active defaulted to 1 above).
+    if values.get("is_active") == 1:
+        set_clause += ", archived_date = NULL, days_active = NULL"
     params = [values[c] for c in update_cols] + [job["external_id"]]
     conn.execute(f"UPDATE jobs SET {set_clause} WHERE external_id = ?", params)
     conn.commit()
