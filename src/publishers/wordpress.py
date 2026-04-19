@@ -23,10 +23,10 @@ _WP_FIELDS = [
     "salary_min", "salary_max", "salary_range", "source_url", "apply_url",
     "source_name", "is_remote", "work_arrangement", "description", "description_snippet",
     "keyword_score", "keywords_matched", "llm_classification", "llm_confidence",
-    "llm_provider", "fit_score", "category", "seniority",
+    "llm_provider", "llm_reasoning", "fit_score", "category", "seniority",
     # Phase F6: enrichment + confidence fields
     "location_confidence", "salary_confidence", "remote_confidence",
-    "enrichment_source",
+    "enrichment_source", "enrichment_date",
     # Phase B (R2): freshness display + ordering in WP table
     "date_posted",
     # Phase F (R2): seniority confidence badge

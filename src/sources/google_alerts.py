@@ -7,10 +7,36 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import feedparser
+import requests
 
 from src.shared import build_job, env
 
 log = logging.getLogger(__name__)
+
+# R8-M11: feedparser.parse(url) invokes urllib internally with no timeout,
+# so a hung RSS host can block the entire collector for minutes. Fetch via
+# requests (which has a real timeout) and pass the response text to
+# feedparser so the parse step is network-free.
+RSS_FETCH_TIMEOUT_SEC = 15.0
+_RSS_USER_AGENT = "Mozilla/5.0 (compatible; job-monitor-rss/1.0)"
+
+
+def _fetch_feed(url: str):
+    """Return a parsed feedparser object. On network failure returns a
+    feedparser-shaped empty object so callers can treat it uniformly."""
+    try:
+        resp = requests.get(
+            url,
+            timeout=RSS_FETCH_TIMEOUT_SEC,
+            headers={"User-Agent": _RSS_USER_AGENT},
+        )
+    except requests.RequestException as e:
+        log.warning("google_alerts: fetch error on %s: %s", url[:60], e)
+        return feedparser.parse("")  # empty, .entries == []
+    if resp.status_code != 200:
+        log.warning("google_alerts: HTTP %d on %s", resp.status_code, url[:60])
+        return feedparser.parse("")
+    return feedparser.parse(resp.text)
 
 _BLOG_HEURISTIC = [
     "blog", "article", "guide", "how to", "opinion", "review",
@@ -99,7 +125,7 @@ def fetch(feed_urls: list[str] | None = None) -> tuple[list[dict[str, Any]], lis
     seen_ext_ids: set[str] = set()
     for url in active:
         try:
-            parsed = feedparser.parse(url)
+            parsed = _fetch_feed(url)
             if getattr(parsed, "bozo", False) and getattr(parsed, "bozo_exception", None):
                 # feedparser reports parse warnings in bozo. Log but continue — feeds often still parseable.
                 log.warning("google_alerts: parse warning on %s: %s", url[:60], parsed.bozo_exception)

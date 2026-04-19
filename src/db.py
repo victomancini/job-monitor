@@ -6,6 +6,7 @@ import logging
 import os
 import time
 from datetime import datetime, timedelta, timezone
+from typing import Any
 
 
 def _today() -> str:
@@ -14,7 +15,6 @@ def _today() -> str:
 
 def _days_ago(n: int) -> str:
     return (datetime.now(timezone.utc) - timedelta(days=n)).strftime("%Y-%m-%d")
-from typing import Any, Iterable
 
 try:
     import libsql  # type: ignore
@@ -212,6 +212,24 @@ def connect(
     raise last_exc
 
 
+def _execute_with_retry(conn, sql: str, params: tuple | list = ()) -> Any:
+    """R8-M10: run a single `conn.execute` with one retry on any libsql
+    exception. A transient Turso blip during an upsert would otherwise skip
+    that job silently; one retry with a 1-second sleep covers the common
+    failure mode (brief regional failover) without burning wall time on
+    permanently-dead connections.
+
+    Not used for SELECTs — those are cheap to replay from the caller if they
+    fail. Reserved for the writes that matter (upsert_job, log_run, etc.).
+    """
+    try:
+        return conn.execute(sql, params)
+    except Exception as e:  # noqa: BLE001 — libsql raises multiple concrete types
+        log.warning("db.execute failed once, retrying in 1s: %s", e)
+        time.sleep(1.0)
+        return conn.execute(sql, params)
+
+
 def migrate(conn) -> None:
     """Apply schema (idempotent). Runs CREATE TABLE IF NOT EXISTS for the base
     schema, then ALTER TABLE ADD COLUMN for each Phase A column so databases
@@ -262,7 +280,8 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
         insert_vals = {k: v for k, v in values.items() if v is not None}
         cols = ", ".join(insert_vals.keys())
         placeholders = ", ".join(["?"] * len(insert_vals))
-        conn.execute(
+        _execute_with_retry(
+            conn,
             f"INSERT INTO jobs ({cols}) VALUES ({placeholders})",
             tuple(insert_vals.values()),
         )
@@ -283,7 +302,9 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
     if values.get("is_active") == 1:
         set_clause += ", archived_date = NULL, days_active = NULL"
     params = [values[c] for c in update_cols] + [job["external_id"]]
-    conn.execute(f"UPDATE jobs SET {set_clause} WHERE external_id = ?", params)
+    _execute_with_retry(
+        conn, f"UPDATE jobs SET {set_clause} WHERE external_id = ?", params,
+    )
     conn.commit()
     return "updated"
 
@@ -426,7 +447,8 @@ def record_lifecycle_check(conn, external_id: str, status: str) -> str | None:
     old_status = prior[0] if prior else None
 
     if status == "unknown":
-        conn.execute(
+        _execute_with_retry(
+            conn,
             "UPDATE jobs SET last_lifecycle_check = ?, last_lifecycle_verdict = ?, "
             "updated_at = datetime('now') WHERE external_id = ?",
             (today, status, external_id),
@@ -434,7 +456,8 @@ def record_lifecycle_check(conn, external_id: str, status: str) -> str | None:
         conn.commit()
         return None  # lifecycle_status never changes on unknown
     new_status = "active" if status == "active" else "likely_closed"
-    conn.execute(
+    _execute_with_retry(
+        conn,
         "UPDATE jobs SET lifecycle_status = ?, last_lifecycle_check = ?, "
         "last_lifecycle_verdict = ?, updated_at = datetime('now') "
         "WHERE external_id = ?",
@@ -493,9 +516,38 @@ def archive_job(conn, external_id: str, days_active: int) -> None:
 
 
 def enqueue_retry(conn, job: dict[str, Any]) -> None:
+    """R8-M9: dedup by external_id. If WP is down for several days, the
+    collector would enqueue the same job every run, piling up duplicate
+    retry_queue rows. Before inserting, check whether the job already has a
+    pending row and — if so — update it in place (reset attempts, refresh
+    payload) rather than adding a duplicate.
+
+    `retry_queue.job_json` is opaque TEXT; there's no indexed external_id
+    column, so we do a LIKE scan. At the sizes we operate at (tens of rows
+    at most) this is fine. If retry_queue ever grows to thousands, promote
+    external_id to a real indexed column.
+    """
+    ext_id = job.get("external_id") or ""
+    new_json = json.dumps(job)
+    if ext_id:
+        # Look for an existing row carrying this external_id. We match on the
+        # JSON-escaped substring since json.dumps always quotes the value.
+        needle = '"external_id": "' + ext_id.replace('"', '\\"') + '"'
+        existing = conn.execute(
+            "SELECT id FROM retry_queue WHERE job_json LIKE ? LIMIT 1",
+            (f"%{needle}%",),
+        ).fetchone()
+        if existing is not None:
+            conn.execute(
+                "UPDATE retry_queue SET job_json = ?, attempts = 0, "
+                "last_attempt = NULL WHERE id = ?",
+                (new_json, existing[0]),
+            )
+            conn.commit()
+            return
     conn.execute(
         "INSERT INTO retry_queue (job_json) VALUES (?)",
-        (json.dumps(job),),
+        (new_json,),
     )
     conn.commit()
 
@@ -530,7 +582,12 @@ def drop_exhausted_retries(conn, max_attempts: int = 3) -> int:
 
 
 def log_run(conn, stats: dict[str, Any]) -> None:
-    """Insert a row into run_log. `stats` keys map to columns."""
+    """Insert a row into run_log. `stats` keys map to columns.
+
+    R8-M10: the run_log row is the only source of truth for the
+    consecutive-zero-run canary — losing it to a transient write failure
+    would mask an outage. Route through `_execute_with_retry`.
+    """
     cols = [
         "run_date", "jsearch_found", "jooble_found", "adzuna_found",
         "usajobs_found", "alerts_found", "total_passed_filter",
@@ -539,7 +596,8 @@ def log_run(conn, stats: dict[str, Any]) -> None:
     ]
     values = [stats.get(c) for c in cols]
     placeholders = ", ".join(["?"] * len(cols))
-    conn.execute(
+    _execute_with_retry(
+        conn,
         f"INSERT INTO run_log ({', '.join(cols)}) VALUES ({placeholders})",
         values,
     )

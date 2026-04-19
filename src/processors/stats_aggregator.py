@@ -49,9 +49,27 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
     small dict of counts for logging.
 
     Each stat_type slice is cleared for `today` before insertion so keys that
-    vanished since the previous run don't linger at stale counts."""
+    vanished since the previous run don't linger at stale counts.
+
+    R8-L17: the clear-then-insert cycle runs inside an explicit transaction.
+    Without it, a mid-run crash (e.g., OOM, killed container) leaves today's
+    slice empty — dashboards go blank for the day until the next run. With
+    the transaction, either the whole day's stats land or none do, and the
+    prior day's row remains readable.
+    """
     today = today or _today()
     written = 0
+    # Start the transaction explicitly. libsql and sqlite3 both auto-commit
+    # by default; wrapping in BEGIN/COMMIT groups the delete+insert stream.
+    conn.execute("BEGIN")
+    try:
+        return _aggregate_daily_stats_inner(conn, today, written)
+    except Exception:
+        conn.execute("ROLLBACK")
+        raise
+
+
+def _aggregate_daily_stats_inner(conn, today: str, written: int) -> dict[str, int]:
 
     def _each(query: str, stat_type: str, default_key: str = "") -> None:
         nonlocal written
@@ -134,7 +152,8 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
     _upsert_stat(conn, today, "total_active", "all", int(total))
     written += 1
 
-    conn.commit()
+    # R8-L17: close the transaction started in the outer wrapper.
+    conn.execute("COMMIT")
     return {"rows_written": written, "total_active": int(total)}
 
 

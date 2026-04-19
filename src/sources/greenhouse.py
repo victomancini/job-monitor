@@ -199,11 +199,15 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
     if not jid or not title:
         return None
     loc = (item.get("location") or {}).get("name") or ""
-    depts = item.get("departments") or []
-    department = depts[0].get("name") if depts else ""
     description_html = item.get("content") or ""
     description = _html_to_text(description_html)
     apply_url = item.get("absolute_url") or ""
+    # R8-M3: previously stored the department name in `work_arrangement`,
+    # which caused the WP table's filter chips to fragment into dozens of
+    # department names. Greenhouse's public API does not expose a
+    # remote/hybrid/onsite indicator on the job object itself (location
+    # strings are the only signal), so leave the field blank and let the
+    # enrichment + `_llm_remote` passes populate is_remote instead.
     job = build_job(
         source_name=ATS_NAME,
         external_id=f"gh_{slug}_{jid}",
@@ -214,7 +218,7 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
         source_url=apply_url,
         apply_url=apply_url,
         date_posted=item.get("updated_at"),
-        work_arrangement=department,
+        work_arrangement="",
         raw_data=item,
     )
     return job

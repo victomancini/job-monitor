@@ -44,6 +44,10 @@ add_action('init', function() {
         'fit_score','is_remote','work_arrangement','first_seen_date','last_seen_active',
         'archived_date','days_active','job_status','keywords_matched','description_snippet',
         'keyword_score','llm_classification','llm_confidence','llm_provider',
+        // R8-M1: llm_reasoning is one sentence of LLM explanation. Stored in
+        // WP post meta for debugging but NOT shown in the default table
+        // render — inspect via the admin UI or REST.
+        'llm_reasoning',
         // Phase F: enrichment + confidence fields
         'location_confidence','salary_confidence','remote_confidence',
         'enrichment_source','enrichment_date',
@@ -139,6 +143,7 @@ function jm_batch_update($request) {
             'salary_range','source_url','apply_url','external_id','source_name','category','seniority',
             'fit_score','is_remote','work_arrangement','keywords_matched','description_snippet',
             'keyword_score','llm_classification','llm_confidence','llm_provider',
+            'llm_reasoning',  // R8-M1: debug-only meta
             // Phase F3: enrichment + confidence fields
             'location_confidence','salary_confidence','remote_confidence',
             'enrichment_source','enrichment_date',
@@ -166,7 +171,15 @@ function jm_batch_update($request) {
 
         if (!empty($existing)) {
             $post_id = $existing[0]->ID;
-            wp_update_post(['ID' => $post_id, 'post_status' => 'publish', 'meta_input' => $meta]);
+            // R8-H3: include post_content so description rewrites from the
+            // source (e.g., aggregator re-scrapes a longer description) are
+            // not silently dropped after the first insert. Only update when
+            // the payload actually carries a description.
+            $update_args = ['ID' => $post_id, 'post_status' => 'publish', 'meta_input' => $meta];
+            if (isset($job['description']) && $job['description'] !== '') {
+                $update_args['post_content'] = wp_kses_post(mb_substr($job['description'], 0, 5000));
+            }
+            wp_update_post($update_args);
             $results['updated']++;
             $results['post_ids'][$job['external_id']] = $post_id;
         } else {
@@ -345,15 +358,52 @@ CSS;
 // Phase D (R2): render the Relevance cell from llm_classification.
 // RELEVANT → Relevant (green), PARTIALLY_RELEVANT → Partial (amber),
 // anything else (including empty) → Auto (gray, keyword-only).
+// R8-H1: `data-filter` carries the plain logical value so the DataTables
+// chip filter matches on "Relevant" rather than the HTML string
+// "<span style='color:#155724;font-weight:600'>Relevant</span>".
 function jm_relevance_cell($classification) {
     switch ($classification) {
         case 'RELEVANT':
-            return '<td><span style="color:#155724;font-weight:600">Relevant</span></td>';
+            return '<td data-filter="Relevant"><span style="color:#155724;font-weight:600">Relevant</span></td>';
         case 'PARTIALLY_RELEVANT':
-            return '<td><span style="color:#856404;font-weight:600">Partial</span></td>';
+            return '<td data-filter="Partial"><span style="color:#856404;font-weight:600">Partial</span></td>';
         default:
-            return '<td><span style="color:#6c757d">Auto</span></td>';
+            return '<td data-filter="Auto"><span style="color:#6c757d">Auto</span></td>';
     }
+}
+
+// R8-L12: source_name consolidation. Raw source_name values fragment into
+// 15+ chips (jobspy_linkedin, jobspy_indeed, jobspy_glassdoor, …). Map them
+// to a small set of friendly display names; filter chips operate on the
+// display name so the Source filter stays manageable.
+function jm_source_display_name($source_name) {
+    if (!$source_name) return 'Unknown';
+    if (strpos($source_name, 'jobspy_') === 0) {
+        $site = substr($source_name, 7);
+        $map = [
+            'linkedin' => 'LinkedIn',
+            'indeed' => 'Indeed',
+            'glassdoor' => 'Glassdoor',
+            'zip_recruiter' => 'ZipRecruiter',
+        ];
+        return isset($map[$site]) ? $map[$site] : ucfirst($site);
+    }
+    if (in_array($source_name, ['greenhouse', 'lever', 'ashby'], true)) {
+        return 'Direct (ATS)';
+    }
+    if (in_array($source_name, ['onemodel', 'included_ai', 'siop'], true)) {
+        return 'Niche Board';
+    }
+    if (in_array($source_name, ['google_alerts', 'talkwalker'], true)) {
+        return 'RSS Alert';
+    }
+    $canonical = [
+        'jsearch' => 'JSearch',
+        'jooble' => 'Jooble',
+        'adzuna' => 'Adzuna',
+        'usajobs' => 'USAJobs',
+    ];
+    return isset($canonical[$source_name]) ? $canonical[$source_name] : $source_name;
 }
 
 // Phase 9 (R3): build a Schema.org JobPosting object for JSON-LD emission.
@@ -444,7 +494,9 @@ function jm_freshness_cell($date_posted, $first_seen) {
     if (!$ref_date) {
         return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
     }
-    $ts = strtotime($ref_date);
+    // R8-M6: `time()` is UTC; parse $ref_date as UTC too so the day-count
+    // math isn't skewed by site timezone vs. the UTC-stored first_seen_date.
+    $ts = strtotime($ref_date . ' UTC');
     if ($ts === false) {
         return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
     }
@@ -456,7 +508,9 @@ function jm_freshness_cell($date_posted, $first_seen) {
     if ($days === 0) { $text = $label . 'Today'; }
     elseif ($days === 1) { $text = $label . '1 day ago'; }
     else { $text = $label . $days . ' days ago'; }
-    $is_new = ($first_seen && $first_seen === current_time('Y-m-d'));
+    // R8-M7: first_seen_date is stored as UTC (see jm_batch_update), so
+    // compare against the UTC "today" not the site-local one.
+    $is_new = ($first_seen && $first_seen === current_time('Y-m-d', true));
     $badge = $is_new ? ' <span class="badge-new">NEW</span>' : '';
     return '<td data-order="' . $days . '"><span class="' . esc_attr($class) . '">' . esc_html($text) . '</span>' . $badge . '</td>';
 }
@@ -483,46 +537,91 @@ function jm_filter_bar_html($id_suffix, $categorical_cols = ['Level','Remote','S
 
 // Phase C (R2): DataTables initComplete. Populates checkbox filter pills from each
 // categorical column's unique values and wires text filters to freeform columns.
-// Column names are matched by <th> text so the PHP doesn't care about indices.
+//
+// R8-H1/P5-2: filter values are now read from a `data-filter` attribute on each
+// cell (when present) rather than from stripped text. This is because cells with
+// a confidence badge (Remote) or styled wrapper (Relevance) render as
+// "remote <span>•</span>" / "<span>Relevant</span>" — stripping text produces
+// "remote •" / "Relevant" with no guarantee of round-trip equality against the
+// raw HTML that column.search() scans. A custom row-filter function checks the
+// cell node's `data-filter` attribute directly, so chip values and row values
+// are the same logical tokens ("remote", "Relevant", …).
+//
 // Uses nowdoc ('JS') so $ and \ are literal in the JS body.
 function jm_datatables_init_complete_js() {
     return <<<'JS'
 initComplete: function() {
     var api = this.api();
+    var tableNode = this.table().node();
     var colIdxByName = {};
     api.columns().every(function(i) {
         colIdxByName[jQuery(this.header()).text().trim()] = i;
     });
     var $wrapper = jQuery(this.table().container()).parent();
+
+    // Read the filter value for a cell. Prefer `data-filter`, fall back to
+    // stripped text. Defined once and reused for both chip population and
+    // the row-match function.
+    function cellFilterValue(td) {
+        var $td = jQuery(td);
+        var v = $td.attr('data-filter');
+        if (v !== undefined) return v;
+        return jQuery('<div>').html($td.html()).text().trim();
+    }
+
+    // activeChipFilters: {colIdx: [values]}. Default = all chips checked
+    // (i.e., values = every unique value), so a row passes unless the user
+    // unchecks something.
+    var activeChipFilters = {};
+
+    // Custom row-level filter: for each configured column, check the row's
+    // cell filter value is in the active selection. Scoped to THIS table so
+    // two shortcodes on one page don't cross-filter.
+    jQuery.fn.dataTable.ext.search.push(function(settings, rowData, rowIdx) {
+        if (settings.nTable !== tableNode) return true;
+        for (var colIdx in activeChipFilters) {
+            var allowed = activeChipFilters[colIdx];
+            if (!allowed || allowed.length === 0) continue;
+            var cell = api.cell(rowIdx, colIdx).node();
+            if (!cell) continue;
+            var val = cellFilterValue(cell);
+            if (allowed.indexOf(val) === -1) return false;
+        }
+        return true;
+    });
+
     $wrapper.find('.jm-checkboxes').each(function() {
         var $container = jQuery(this);
         var colName = $container.data('column');
         var colIdx = colIdxByName[colName];
         if (typeof colIdx !== 'number') return;
         var column = api.column(colIdx);
+
+        // Populate chips from data-filter (or fallback text) of each cell
         var unique = {};
-        column.data().each(function(d) {
-            var text = jQuery('<div>').html(d).text().trim();
-            if (text) unique[text] = true;
+        column.nodes().each(function(node) {
+            var v = cellFilterValue(node);
+            if (v) unique[v] = true;
         });
+        var values = Object.keys(unique).sort();
         Object.keys(unique).sort().forEach(function(val) {
             var safeVal = val.replace(/"/g, '&quot;');
             $container.append(
                 '<label class="jm-chip"><input type="checkbox" value="' + safeVal + '" checked> ' + val + '</label>'
             );
         });
+        // All chips checked by default → row filter is a pass-through.
+        activeChipFilters[colIdx] = values.slice();
+
         $container.on('change', 'input[type=checkbox]', function() {
             var $cb = jQuery(this);
             $cb.closest('.jm-chip').toggleClass('jm-chip-off', !$cb.is(':checked'));
             var checked = [];
             $container.find('input:checked').each(function() {
-                checked.push(jQuery.fn.dataTable.util.escapeRegex(jQuery(this).val()));
+                checked.push(jQuery(this).val());
             });
-            if (checked.length === 0) {
-                column.search('').draw();
-            } else {
-                column.search('^(' + checked.join('|') + ')$', true, false).draw();
-            }
+            activeChipFilters[colIdx] = checked;
+            api.draw();
         });
     });
     $wrapper.find('.jm-text-filter').each(function() {
@@ -609,6 +708,15 @@ add_shortcode('job_table', function() {
         $closed_label = ($lifecycle === 'likely_closed')
             ? ' <span class="label-likely-closed">(likely closed)</span>' : '';
 
+        // R8-H1: emit data-filter on cells that render HTML wrappers/badges so
+        // the initComplete chip filter matches the logical token, not the
+        // HTML-mangled display text.
+        $remote_logical = esc_attr(get_post_meta($j->ID, 'is_remote', true) ?: 'unknown');
+        // R8-L12: consolidate jobspy_* / ATS / niche / RSS source_name values
+        // into a handful of display names to keep the Source filter usable.
+        $source_raw = get_post_meta($j->ID, 'source_name', true);
+        $source_display = jm_source_display_name($source_raw);
+
         echo '<tr' . $tr_class . '>';
         echo '<td>' . $t . $closed_label . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
@@ -616,19 +724,26 @@ add_shortcode('job_table', function() {
         // Phase I (R2): Category column
         echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
         echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
-        echo '<td>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        echo '<td data-filter="' . $remote_logical . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
         // Phase H (R2): data-order so DataTables sorts by salary_min numerically
         echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
-        // Phase D (R2): Relevance column (llm_classification)
+        // Phase D (R2): Relevance column (llm_classification) — helper emits data-filter
         echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'source_name', true)) . '</td>';
-        // R-audit Issue 2f: likely-closed jobs get a muted "Check →" button so
-        // users know the role may be filled; the link still works (it's the
-        // company page) but the styling warns before the click.
+        echo '<td data-filter="' . esc_attr($source_display) . '">' . esc_html($source_display) . '</td>';
+        // R-audit Issue 2f + R8-P5-9: likely-closed jobs link to the company's
+        // careers root (derived from the apply_url hostname) rather than the
+        // specific posting URL, which is probably a 404 by now. Title attr
+        // warns on hover.
         if ($apply_url) {
-            $btn_class = ($lifecycle === 'likely_closed') ? 'jm-apply-btn jm-check-btn' : 'jm-apply-btn';
-            $btn_label = ($lifecycle === 'likely_closed') ? 'Check &rarr;' : 'Apply &rarr;';
-            $apply_cell = '<a class="' . esc_attr($btn_class) . '" href="' . $apply_url . '" target="_blank" rel="noopener">' . $btn_label . '</a>';
+            if ($lifecycle === 'likely_closed') {
+                $host = parse_url($apply_url, PHP_URL_HOST);
+                $careers_root = $host ? 'https://' . $host : $apply_url;
+                $apply_cell = '<a class="jm-apply-btn jm-check-btn" href="' . esc_url($careers_root)
+                    . '" target="_blank" rel="noopener" title="This posting may be closed">Check &rarr;</a>';
+            } else {
+                $apply_cell = '<a class="jm-apply-btn" href="' . $apply_url
+                    . '" target="_blank" rel="noopener">Apply &rarr;</a>';
+            }
         } else {
             $apply_cell = '';
         }
@@ -701,6 +816,12 @@ add_shortcode('job_archive_table', function() {
         $salary_min = (int) get_post_meta($j->ID, 'salary_min', true);  // Phase H (R2): numeric sort
         $seniority = esc_html(get_post_meta($j->ID, 'seniority', true));
 
+        // R8-H1 + R8-L12: same data-filter + source consolidation as the
+        // active shortcode so the archive table's chip filter behaves
+        // identically.
+        $remote_logical = esc_attr(get_post_meta($j->ID, 'is_remote', true) ?: 'unknown');
+        $source_display = jm_source_display_name(get_post_meta($j->ID, 'source_name', true));
+
         echo '<tr>';
         echo '<td>' . $t . '</td>';
         echo '<td>' . esc_html(get_post_meta($j->ID, 'company', true)) . '</td>';
@@ -708,12 +829,12 @@ add_shortcode('job_archive_table', function() {
         // Phase I (R2): Category column
         echo '<td>' . esc_html(get_post_meta($j->ID, 'category', true) ?: 'General PA') . '</td>';
         echo '<td>' . ($seniority ?: 'Unknown') . '</td>';
-        echo '<td>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        echo '<td data-filter="' . $remote_logical . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
         // Phase H (R2): data-order so DataTables sorts by salary_min numerically
         echo '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
-        // Phase D (R2): Relevance column (llm_classification)
+        // Phase D (R2): Relevance column (llm_classification) — helper emits data-filter
         echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
-        echo '<td>' . esc_html(get_post_meta($j->ID, 'source_name', true)) . '</td>';
+        echo '<td data-filter="' . esc_attr($source_display) . '">' . esc_html($source_display) . '</td>';
         $apply_cell = $apply_url ? '<a class="jm-apply-btn" href="' . $apply_url . '" target="_blank" rel="noopener">Apply &rarr;</a>' : '';
         echo '<td>' . $apply_cell . '</td>';
         // Phase B (R2): Posted column with freshness + NEW badge

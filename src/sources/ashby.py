@@ -79,6 +79,22 @@ def _extract_compensation(item: dict[str, Any]) -> tuple[float | None, float | N
     return _coerce(lo), _coerce(hi)
 
 
+def _ashby_workplace_to_is_remote(workplace_type: Any) -> str:
+    """R8-M3: Ashby publishes `workplaceType` as Remote / Hybrid / OnSite.
+    Map to the canonical is_remote vocabulary so downstream filters see
+    authoritative values instead of 'unknown' for the ATS cohort."""
+    if not isinstance(workplace_type, str):
+        return "unknown"
+    wt = workplace_type.strip().lower()
+    if wt == "remote":
+        return "remote"
+    if wt == "hybrid":
+        return "hybrid"
+    if wt in ("onsite", "on-site", "on_site", "in-person", "inperson"):
+        return "onsite"
+    return "unknown"
+
+
 def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] | None:
     jid = item.get("id")
     title = item.get("title") or ""
@@ -87,10 +103,12 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
     location = item.get("location") or ""
     if isinstance(location, dict):  # some Ashby boards return structured location
         location = location.get("name") or ""
-    department = item.get("department") or item.get("team") or ""
     description = _html_to_text(item.get("descriptionHtml") or item.get("descriptionPlain") or "")
     apply_url = item.get("jobUrl") or item.get("applyUrl") or ""
     salary_min, salary_max = _extract_compensation(item)
+    # R8-M3: Ashby exposes a proper remote indicator; use it for is_remote.
+    # Drop the department-as-work_arrangement pattern shared with GH/Lever.
+    is_remote = _ashby_workplace_to_is_remote(item.get("workplaceType"))
     return build_job(
         source_name=ATS_NAME,
         external_id=f"ashby_{slug}_{jid}",
@@ -102,8 +120,9 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
         apply_url=apply_url,
         salary_min=salary_min,
         salary_max=salary_max,
+        is_remote=is_remote,
         date_posted=item.get("publishedAt"),
-        work_arrangement=department,
+        work_arrangement="",
         raw_data=item,
     )
 

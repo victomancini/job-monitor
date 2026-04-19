@@ -127,11 +127,14 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
         return None
     categories = item.get("categories") or {}
     location = categories.get("location") or ""
-    team = categories.get("team") or categories.get("department") or ""
     description = item.get("descriptionPlain") or ""
     apply_url = item.get("hostedUrl") or ""
     salary_min, salary_max = _parse_salary(item)
     created_at = item.get("createdAt")
+    # R8-M3: see greenhouse.py — don't jam team/department into
+    # work_arrangement. Lever's `commitment` ("full-time" / "part-time") is
+    # closer to the semantic field but also isn't always reliable; leaving
+    # blank keeps the filter surface clean.
     return build_job(
         source_name=ATS_NAME,
         external_id=f"lever_{slug}_{jid}",
@@ -144,7 +147,7 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
         salary_min=salary_min,
         salary_max=salary_max,
         date_posted=_ms_to_iso(created_at),
-        work_arrangement=team,
+        work_arrangement="",
         raw_data=item,
     )
 
