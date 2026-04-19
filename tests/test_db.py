@@ -273,6 +273,40 @@ def test_upsert_respects_caller_provided_company_normalized(conn):
 # Regression: C3 — when a previously-archived job reappears, upsert must clear
 # archived_date + days_active so the row isn't shown as "archived N days ago"
 # while is_active=1.
+# Regression: N3 — dedup pool must include recently-archived rows so a job
+# re-emerging from a different aggregator dedups against its archived sibling.
+def test_get_active_jobs_for_dedup_includes_recent_archives(conn):
+    db.upsert_job(conn, sample_job("active_one"))
+    db.upsert_job(conn, sample_job("recently_archived"))
+    db.upsert_job(conn, sample_job("long_archived"))
+    # Archive two — one recently, one ancient
+    db.archive_job(conn, "recently_archived", days_active=3)
+    conn.execute(
+        "UPDATE jobs SET archived_date=? WHERE external_id=?",
+        ((datetime.now(timezone.utc) - timedelta(days=5)).strftime("%Y-%m-%d"), "recently_archived"),
+    )
+    db.archive_job(conn, "long_archived", days_active=60)
+    conn.execute(
+        "UPDATE jobs SET archived_date=? WHERE external_id=?",
+        ((datetime.now(timezone.utc) - timedelta(days=60)).strftime("%Y-%m-%d"), "long_archived"),
+    )
+    conn.commit()
+    pool = db.get_active_jobs_for_dedup(conn, include_recent_archived_days=30)
+    ids = {j["external_id"] for j in pool}
+    assert "active_one" in ids
+    assert "recently_archived" in ids  # within 30-day window
+    assert "long_archived" not in ids
+
+
+def test_get_active_jobs_for_dedup_legacy_active_only(conn):
+    """Backward-compat: passing 0 returns active rows only."""
+    db.upsert_job(conn, sample_job("a"))
+    db.upsert_job(conn, sample_job("b"))
+    db.archive_job(conn, "b", days_active=5)
+    pool = db.get_active_jobs_for_dedup(conn, include_recent_archived_days=0)
+    assert {j["external_id"] for j in pool} == {"a"}
+
+
 def test_upsert_resurrection_clears_archived_fields(conn):
     db.upsert_job(conn, sample_job("res1"))
     db.archive_job(conn, "res1", days_active=12)

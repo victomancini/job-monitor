@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     seniority TEXT,
     seniority_confidence TEXT,
     lifecycle_status TEXT DEFAULT 'active',
+    last_lifecycle_check TEXT,
     keyword_score INTEGER DEFAULT 0,
     keywords_matched TEXT,
     llm_classification TEXT,
@@ -157,6 +158,10 @@ _ADD_COLUMN_MIGRATIONS = [
     ("vendors_mentioned", "vendors_mentioned TEXT"),
     # Phase 6 (R3): lifecycle state machine — 'active' | 'likely_closed'
     ("lifecycle_status", "lifecycle_status TEXT DEFAULT 'active'"),
+    # R-audit: source-of-truth lifecycle check stamp. Distinct from
+    # last_seen_date (aggregator visibility) — records when we last verified
+    # the job via ATS API membership or company career page HEAD request.
+    ("last_lifecycle_check", "last_lifecycle_check TEXT"),
 ]
 
 
@@ -255,12 +260,59 @@ def set_wp_post_id(conn, external_id: str, wp_post_id: int) -> None:
     conn.commit()
 
 
-def get_active_jobs_for_dedup(conn) -> list[dict[str, Any]]:
-    """Return active jobs as dicts for deduplication comparison."""
-    cur = conn.execute(
-        "SELECT external_id, title, company, company_normalized, location "
-        "FROM jobs WHERE is_active = 1"
+def upgrade_apply_url(conn, external_id: str, new_apply_url: str) -> None:
+    """Replace the apply_url on an existing row (used when the dedup pipeline
+    sees a direct-company URL for a role that's already stored with an
+    aggregator URL). No-op if the URL is empty."""
+    if not new_apply_url:
+        return
+    conn.execute(
+        "UPDATE jobs SET apply_url = ?, updated_at = datetime('now') WHERE external_id = ?",
+        (new_apply_url, external_id),
     )
+    conn.commit()
+
+
+def get_row_for_wp_push(conn, external_id: str) -> dict[str, Any] | None:
+    """Return the minimal payload needed to push a targeted WP meta update for
+    an existing row (R4-7 apply_url upgrades). None if the row doesn't exist."""
+    row = conn.execute(
+        "SELECT external_id, title, apply_url, source_url FROM jobs WHERE external_id = ?",
+        (external_id,),
+    ).fetchone()
+    if not row:
+        return None
+    return {
+        "external_id": row[0],
+        "title": row[1],
+        "apply_url": row[2],
+        "source_url": row[3],
+    }
+
+
+def get_active_jobs_for_dedup(conn, *, include_recent_archived_days: int = 30) -> list[dict[str, Any]]:
+    """Return jobs for deduplication comparison. By default includes active rows
+    plus archived rows from the last `include_recent_archived_days` days so that
+    a re-emerging posting (same company+title, different external_id from a
+    different aggregator) dedups against its archived sibling instead of
+    creating a second row. Set `include_recent_archived_days=0` to limit to
+    active only."""
+    # apply_url is selected so the deduplicator can compare URL quality when an
+    # incoming direct-company URL matches an existing DB row carrying an
+    # aggregator URL — and promote the DB row's apply_url on upsert.
+    if include_recent_archived_days > 0:
+        cutoff = _days_ago(include_recent_archived_days)
+        cur = conn.execute(
+            "SELECT external_id, title, company, company_normalized, location, apply_url "
+            "FROM jobs WHERE is_active = 1 "
+            "OR (is_active = 0 AND archived_date IS NOT NULL AND archived_date >= ?)",
+            (cutoff,),
+        )
+    else:
+        cur = conn.execute(
+            "SELECT external_id, title, company, company_normalized, location, apply_url "
+            "FROM jobs WHERE is_active = 1"
+        )
     cols = [d[0] for d in cur.description]
     return [dict(zip(cols, row)) for row in cur.fetchall()]
 
@@ -286,6 +338,66 @@ def mark_job_likely_closed(conn, external_id: str) -> None:
         (external_id,),
     )
     conn.commit()
+
+
+# ────────────── R-audit: lifecycle checker helpers ──────────────
+
+def get_jobs_for_lifecycle_check(conn, stale_days: int = 2, limit: int = 500) -> list[dict[str, Any]]:
+    """Return active jobs due for a lifecycle check. Excludes rows already
+    checked within `stale_days`. `limit` caps per-run volume so the GH Actions
+    budget isn't eaten by a single run."""
+    cutoff = _days_ago(stale_days)
+    cur = conn.execute(
+        "SELECT external_id, source_name, apply_url, source_url, last_lifecycle_check "
+        "FROM jobs WHERE is_active = 1 "
+        "AND (last_lifecycle_check IS NULL OR last_lifecycle_check < ?) "
+        "ORDER BY last_lifecycle_check IS NULL DESC, last_lifecycle_check ASC "
+        "LIMIT ?",
+        (cutoff, limit),
+    )
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
+
+
+def record_lifecycle_check(conn, external_id: str, status: str) -> None:
+    """Stamp `last_lifecycle_check` to today and transition `lifecycle_status`
+    based on the checker result:
+      - status='active'        → lifecycle_status='active'
+      - status='likely_closed' → lifecycle_status='likely_closed'
+      - status='unknown'       → lifecycle_status unchanged; only timestamp updates
+    """
+    today = _today()
+    if status == "unknown":
+        conn.execute(
+            "UPDATE jobs SET last_lifecycle_check = ?, updated_at = datetime('now') "
+            "WHERE external_id = ?",
+            (today, external_id),
+        )
+    else:
+        new_status = "active" if status == "active" else "likely_closed"
+        conn.execute(
+            "UPDATE jobs SET lifecycle_status = ?, last_lifecycle_check = ?, "
+            "updated_at = datetime('now') WHERE external_id = ?",
+            (new_status, today, external_id),
+        )
+    conn.commit()
+
+
+def get_jobs_to_archive_confirmed_closed(conn, limit: int = 100) -> list[dict[str, Any]]:
+    """R-audit: fast-path for jobs confirmed-closed by a source-of-truth check.
+    Returns active rows whose lifecycle_status was flipped to likely_closed via
+    last_lifecycle_check (i.e., a source-page or ATS API veto — not just
+    aggregator absence). These skip the 21-day window."""
+    cur = conn.execute(
+        "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "
+        "FROM jobs WHERE is_active = 1 "
+        "AND lifecycle_status = 'likely_closed' "
+        "AND last_lifecycle_check IS NOT NULL "
+        "LIMIT ?",
+        (limit,),
+    )
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
 def get_jobs_to_mark_likely_closed(conn, days: int = 7) -> list[dict[str, Any]]:

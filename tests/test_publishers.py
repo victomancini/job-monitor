@@ -214,6 +214,56 @@ def test_wordpress_batches_of_20(conn):
     assert mock.call_count == 3
 
 
+# Regression: N1 — retry_queue must store the full job dict (not the
+# cast-to-string _payload) so retries can rebuild the payload fresh at send time.
+def test_retry_queue_stores_full_dict_not_payload(conn):
+    j = _job("rq_full")
+    j["salary_min"] = 150000.0  # float — _payload would str() this
+    j["llm_confidence"] = 90     # int — _payload passes through
+    j["llm_reasoning"] = "core EL role"
+    with patch("src.publishers.wordpress.retry_request",
+               side_effect=Exception("wp down")), \
+         patch("src.publishers.wordpress.time.sleep"):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p", conn=conn)
+    queued = db.fetch_retry_queue(conn)
+    assert len(queued) == 1
+    _, stored = queued[0]
+    # Floats survive as floats, not "150000.0" strings
+    assert stored["salary_min"] == 150000.0
+    assert isinstance(stored["salary_min"], float)
+    assert stored["llm_confidence"] == 90
+    # Fields stripped by _payload (e.g. llm_reasoning isn't in _WP_FIELDS) must
+    # still be present on the enqueued dict for debugging / future re-classify.
+    assert stored["llm_reasoning"] == "core EL role"
+
+
+# Regression: N4 — X-JM-Secret header is sent only when WP_SHARED_SECRET is set.
+def test_wordpress_sends_shared_secret_header_when_env_set(conn, monkeypatch):
+    monkeypatch.setenv("WP_SHARED_SECRET", "s3cret")
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured["headers"] = headers
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([_job()], wp_url="https://s", username="u", app_password="p", conn=conn)
+    assert captured["headers"].get("X-JM-Secret") == "s3cret"
+
+
+def test_wordpress_omits_shared_secret_header_when_env_unset(conn, monkeypatch):
+    monkeypatch.delenv("WP_SHARED_SECRET", raising=False)
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured["headers"] = headers
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([_job()], wp_url="https://s", username="u", app_password="p", conn=conn)
+    assert "X-JM-Secret" not in captured["headers"]
+
+
 # ────────────────────── Notifier ──────────────────────
 
 def test_is_qualifying_score():

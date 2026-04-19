@@ -215,10 +215,22 @@ def deduplicate(
                     skipped.append({**job, "_dedup_score": score,
                                     "_dedup_against": match.get("external_id")})
             else:
-                # Duplicate against a DB row — we don't touch DB locations from here;
-                # just drop the incoming duplicate.
-                skipped.append({**job, "_dedup_score": score,
-                                "_dedup_against": match.get("external_id")})
+                # Duplicate against a DB row — we don't touch DB locations from
+                # here. But if the incoming job's apply_url is materially
+                # better (direct company URL vs. DB row's aggregator URL), we
+                # stash the upgrade hint on the skipped record so the caller
+                # can upsert the improved apply_url onto the existing row
+                # instead of dropping this signal.
+                skipped_entry = {**job, "_dedup_score": score,
+                                 "_dedup_against": match.get("external_id")}
+                incoming_score = _apply_url_score(job.get("apply_url", ""))
+                db_score = _apply_url_score(match.get("apply_url", ""))
+                if incoming_score > db_score:
+                    skipped_entry["_apply_url_upgrade"] = {
+                        "external_id": match.get("external_id"),
+                        "apply_url": job.get("apply_url", ""),
+                    }
+                skipped.append(skipped_entry)
             continue
         if match is not None and score >= FLAG_THRESHOLD:
             job = {**job, "_dedup_flag": True, "_dedup_score": score}

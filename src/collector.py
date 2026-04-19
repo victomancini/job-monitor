@@ -19,7 +19,7 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import db
-from src.processors import deduplicator, enrichment, keyword_filter, llm_classifier, stats_aggregator
+from src.processors import deduplicator, enrichment, keyword_filter, lifecycle_checker, llm_classifier, stats_aggregator
 from src.processors.category import classify_category
 from src.processors.seniority import extract_seniority, infer_seniority_from_salary
 from src.processors.vendor_extractor import extract_vendors, vendors_to_str
@@ -55,16 +55,82 @@ def _shadow_log(event: dict[str, Any]) -> None:
 
 # ──────────────────────────── Source collection ──────────────────────
 
+def _extract_ats_snapshot(
+    jobs: list[dict[str, Any]],
+    source_name: str,
+    successful_slugs: set[str] | None = None,
+) -> dict[tuple[str, str], set[str]]:
+    """Group freshly-fetched ATS jobs by (source_name, slug) → set of job_ids.
+    Mirrors the external_id format built in src/sources/{greenhouse,lever,ashby}.py.
+    Used by the lifecycle checker to resolve ATS-sourced jobs without per-URL
+    HEAD requests.
+
+    R4-4 / R5-1: `successful_slugs` is the authoritative whitelist of slugs
+    whose board API returned a clean 200 this run.
+      - When provided (including `set()`), ONLY those slugs get snapshot
+        entries. Jobs from failed/skipped slugs don't populate the map — the
+        lifecycle checker then falls through to HEAD requests so a flaky
+        board doesn't mass-close every job from that company.
+      - When `None`, we fall back to the permissive old behavior (populate
+        from the jobs list alone). Only kept for callers that predate R4-4.
+        Production collector passes an explicit set.
+    """
+    prefix_map = {"greenhouse": "gh_", "lever": "lever_", "ashby": "ashby_"}
+    prefix = prefix_map.get(source_name)
+    if not prefix:
+        return {}
+    out: dict[tuple[str, str], set[str]] = {}
+
+    if successful_slugs is None:
+        # Back-compat path: trust every slug that shows up in the jobs list.
+        for job in jobs:
+            ext = job.get("external_id") or ""
+            if not ext.startswith(prefix):
+                continue
+            rest = ext[len(prefix):]
+            slug, _, jid = rest.rpartition("_")
+            if not slug or not jid:
+                continue
+            out.setdefault((source_name, slug), set()).add(jid)
+        return out
+
+    # Whitelist path: seed empty sets for every successfully-fetched slug
+    # (authoritative "board is empty"), then add job IDs only for slugs in
+    # the whitelist. A job whose slug isn't in `successful_slugs` is ignored
+    # here — the lifecycle checker will fall through to HEAD for those.
+    for slug in successful_slugs:
+        out[(source_name, slug)] = set()
+    for job in jobs:
+        ext = job.get("external_id") or ""
+        if not ext.startswith(prefix):
+            continue
+        rest = ext[len(prefix):]
+        slug, _, jid = rest.rpartition("_")
+        if not slug or not jid:
+            continue
+        if slug not in successful_slugs:
+            continue
+        out[(source_name, slug)].add(jid)
+    return out
+
+
 def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], list[str], dict[str, Any]]:
     """Run all sources. Each is independently fault-tolerant.
     Returns (all_jobs, per_source_counts, errors, meta).
 
     `conn` (Phase 2 R3): optional Turso connection — enables ATS slug caching so
-    we don't re-fetch known-404 boards on every run."""
+    we don't re-fetch known-404 boards on every run.
+
+    `meta["ats_snapshots"]` (R-audit Issue 2c): dict keyed by (ats_name, slug)
+    → set of job IDs currently on the board. Consumed by lifecycle_checker so
+    Greenhouse/Lever/Ashby jobs resolve via board membership (free) instead of
+    per-job HEAD requests.
+    """
     all_jobs: list[dict[str, Any]] = []
     counts: dict[str, int] = {}
     errors: list[str] = []
     meta: dict[str, Any] = {}
+    ats_snapshots: dict[tuple[str, str], set[str]] = {}
 
     # JSearch (daily)
     jobs, errs, m = jsearch.fetch(env("JSEARCH_API_KEY"))
@@ -104,21 +170,34 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
     if m.get("stale_feeds"):
         meta["stale_feeds"] = m["stale_feeds"]
 
-    # Phase 2 (R3): direct ATS sources — Greenhouse / Lever / Ashby (daily)
-    jobs, errs, _ = greenhouse.fetch(conn=conn)
+    # Phase 2 (R3): direct ATS sources — Greenhouse / Lever / Ashby (daily).
+    # Capture an authoritative snapshot per ATS so the lifecycle checker can
+    # resolve yesterday's jobs by set-membership instead of HEAD-checking each.
+    # R4-4: only slugs with a clean 200 go into the snapshot; failed slugs
+    # fall through to per-job HEAD checks so a flaky board doesn't mass-close.
+    jobs, errs, gh_meta = greenhouse.fetch(conn=conn)
     counts["greenhouse_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
+    ats_snapshots.update(_extract_ats_snapshot(
+        jobs, "greenhouse", gh_meta.get("successful_slugs") or set(),
+    ))
 
-    jobs, errs, _ = lever.fetch(conn=conn)
+    jobs, errs, lever_meta = lever.fetch(conn=conn)
     counts["lever_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
+    ats_snapshots.update(_extract_ats_snapshot(
+        jobs, "lever", lever_meta.get("successful_slugs") or set(),
+    ))
 
-    jobs, errs, _ = ashby.fetch(conn=conn)
+    jobs, errs, ashby_meta = ashby.fetch(conn=conn)
     counts["ashby_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
+    ats_snapshots.update(_extract_ats_snapshot(
+        jobs, "ashby", ashby_meta.get("successful_slugs") or set(),
+    ))
 
     # Phase 3 (R3): JobSpy (LinkedIn / Indeed / Glassdoor / ZipRecruiter)
     jobs, errs, jm = jobspy_source.fetch()
@@ -144,6 +223,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
     all_jobs.extend(jobs)
     errors.extend(errs)
 
+    meta["ats_snapshots"] = ats_snapshots
     return all_jobs, counts, errors, meta
 
 
@@ -374,6 +454,28 @@ def run(dry_run: bool = False) -> int:
     to_publish, skipped_dupes = deduplicator.deduplicate(to_publish, active_db_rows=active_rows)
     log.info("deduplicator: %d kept / %d skipped as dupes", len(to_publish), len(skipped_dupes))
 
+    # 6a. Apply apply_url upgrades for dropped-as-dupe jobs whose direct URL
+    # beats the DB row's aggregator URL (R-audit Issue 1d).
+    #
+    # R4-7: alongside the DB update, collect a targeted WP payload for each
+    # upgraded row so the existing WP post also gets the fresh apply_url this
+    # run — otherwise the visible table stays stale until the aggregator drops
+    # the job and a new scrape re-publishes it.
+    url_upgrade_pushes: list[dict[str, Any]] = []
+    for dupe in skipped_dupes:
+        upgrade = dupe.get("_apply_url_upgrade")
+        if not upgrade:
+            continue
+        try:
+            db.upgrade_apply_url(conn, upgrade["external_id"], upgrade["apply_url"])
+            log.info("apply_url upgrade: %s -> %s",
+                     upgrade["external_id"], upgrade["apply_url"])
+            row = db.get_row_for_wp_push(conn, upgrade["external_id"])
+            if row and row.get("title"):
+                url_upgrade_pushes.append(row)
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"db.upgrade_apply_url {upgrade['external_id']}: {e}")
+
     # 6.5. Enrichment — fetch source pages to confirm salary/remote/location
     log.info("=== Phase 4.5: enrichment ===")
     enrichment_stats = apply_enrichment(to_publish)
@@ -414,6 +516,36 @@ def run(dry_run: bool = False) -> int:
         log.info("publish: %s", pub_result)
         published = pub_result["created"] + pub_result["updated"]
 
+        # R4-7: push targeted apply_url upgrades for DB rows that got promoted
+        # during dedup. These posts aren't in to_publish (they dedup-collapsed),
+        # so without this push WP would keep showing the old aggregator URL
+        # until the next time the job is re-fetched and re-published.
+        #
+        # R5-16: only push when the main batch went through cleanly. If WP is
+        # down (pub_result["queued"] > 0), the URL-upgrade push would also
+        # queue and we'd end up with retry-queue rows whose only purpose is a
+        # single field update. The DB upgrade is already persisted; the fresh
+        # URL will flow to WP on the next successful publish of that job.
+        main_publish_healthy = (
+            pub_result.get("queued", 0) == 0 and pub_result.get("batches", 0) > 0
+        )
+        if url_upgrade_pushes and main_publish_healthy:
+            upg_result = wordpress.publish(
+                url_upgrade_pushes,
+                wp_url=env("WP_URL"),
+                username=env("WP_USERNAME"),
+                app_password=env("WP_APP_PASSWORD"),
+                conn=conn,
+            )
+            log.info("apply_url upgrade WP push: %s (count=%d)",
+                     upg_result, len(url_upgrade_pushes))
+        elif url_upgrade_pushes:
+            log.info(
+                "apply_url upgrade WP push skipped (main publish degraded): "
+                "%d pending upgrades will flow on next successful publish",
+                len(url_upgrade_pushes),
+            )
+
         # 8. Notifier
         log.info("=== Phase 6: notifier ===")
         notify_result = notifier.notify(
@@ -425,6 +557,21 @@ def run(dry_run: bool = False) -> int:
             email_to=env("NOTIFICATION_EMAIL"),
         )
         log.info("notifier: %s", notify_result)
+
+    # 8.5. Lifecycle checker (R-audit Issue 2d): verify ACTIVE jobs are still
+    # open via source-of-truth (ATS board membership or company-page HEAD).
+    # Runs before archiver so ATS-confirmed-closed jobs can be archived
+    # immediately in the fast-path instead of waiting 21 days.
+    log.info("=== Phase 6.5: lifecycle checker ===")
+    try:
+        lifecycle_stats = lifecycle_checker.check_lifecycle_batch(
+            conn,
+            ats_snapshots=source_meta.get("ats_snapshots"),
+        )
+        log.info("lifecycle_checker: %s", lifecycle_stats)
+    except Exception as e:  # noqa: BLE001 — never block the archiver/healthcheck
+        log.warning("lifecycle_checker failed: %s", e)
+        lifecycle_stats = {"error": str(e)}
 
     # 9. Archiver (always runs — doesn't touch WP in dry-run)
     log.info("=== Phase 7: archiver ===")
@@ -483,7 +630,14 @@ def run(dry_run: bool = False) -> int:
         archived=arch_result["archived"],
         duration_s=duration,
         provider_counts=provider_counts,
-        meta={**source_meta, **enrichment_stats, "retry_queue_dropped": retry_dropped},
+        meta={
+            # Drop ats_snapshots from source_meta — it's a large dict of sets,
+            # not JSON-friendly and not useful in the healthcheck body.
+            **{k: v for k, v in source_meta.items() if k != "ats_snapshots"},
+            **enrichment_stats,
+            "lifecycle": lifecycle_stats,
+            "retry_queue_dropped": retry_dropped,
+        },
     )
     log.info("=== DONE in %.1fs ===", duration)
     # Non-zero exit when canary tripped so the workflow-level ping also fails

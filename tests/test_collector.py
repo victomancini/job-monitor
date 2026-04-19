@@ -674,6 +674,175 @@ def test_pipeline_r2_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypat
     assert p["llm_classification"] == "RELEVANT"
 
 
+def test_extract_ats_snapshot_seeds_successful_empty_boards():
+    """R4-4: a slug that was successfully fetched but returned zero jobs still
+    gets an empty-set entry in the snapshot (authoritative 'board is empty')."""
+    snap = collector._extract_ats_snapshot(
+        jobs=[],
+        source_name="greenhouse",
+        successful_slugs={"acme"},
+    )
+    assert ("greenhouse", "acme") in snap
+    assert snap[("greenhouse", "acme")] == set()
+
+
+def test_extract_ats_snapshot_strict_whitelist(env_ok):
+    """R5-1: when `successful_slugs` is provided, slugs NOT in that set get NO
+    snapshot entry — even if the jobs list contains them. Prevents a
+    partially-failed fetch from mass-closing every job from a company."""
+    jobs = [
+        {"external_id": "gh_cultureamp_1"},
+        {"external_id": "gh_acme_9"},
+    ]
+    snap = collector._extract_ats_snapshot(
+        jobs=jobs,
+        source_name="greenhouse",
+        successful_slugs={"acme"},  # cultureamp fetch failed
+    )
+    assert ("greenhouse", "acme") in snap
+    assert snap[("greenhouse", "acme")] == {"9"}
+    # cultureamp job exists in the batch but its board wasn't confirmed →
+    # lifecycle checker must NOT have a snapshot for it.
+    assert ("greenhouse", "cultureamp") not in snap
+
+
+def test_extract_ats_snapshot_backcompat_no_whitelist():
+    """R5-1: `successful_slugs=None` preserves the permissive old behavior —
+    every slug that appears in the jobs list gets an entry."""
+    jobs = [
+        {"external_id": "gh_cultureamp_1"},
+        {"external_id": "gh_acme_9"},
+    ]
+    snap = collector._extract_ats_snapshot(
+        jobs=jobs,
+        source_name="greenhouse",
+        successful_slugs=None,
+    )
+    assert ("greenhouse", "cultureamp") in snap
+    assert ("greenhouse", "acme") in snap
+
+
+def test_pipeline_url_upgrade_pushes_to_wordpress(env_ok, conn, monkeypatch):
+    """R4-7: when dedup drops an incoming direct-URL job against an existing
+    DB row with an aggregator URL, the promoted URL must also be pushed to WP
+    in the same run — not wait for the next publish cycle."""
+    # Pre-seed DB with a row carrying an aggregator URL
+    existing = _sample_job("existing", title="People Analytics Manager",
+                           company="Netflix")
+    existing["apply_url"] = "https://jooble.org/desc/existing"
+    db.upsert_job(conn, existing)
+
+    # Incoming direct-URL duplicate
+    incoming = _sample_job("gh_netflix_1", title="People Analytics Manager",
+                           company="Netflix", source="greenhouse")
+    incoming["apply_url"] = "https://careers.netflix.com/jobs/1"
+
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
+        [incoming],
+        {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {"ats_snapshots": {}},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
+    # Capture WP publish calls — we want to see the URL upgrade pushed
+    publish_calls: list[list[dict]] = []
+    def fake_publish(jobs, **kw):
+        publish_calls.append(list(jobs))
+        return {"created": 0, "updated": len(jobs), "errors": 0, "queued": 0, "batches": 1}
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+    monkeypatch.setattr(collector.lifecycle_checker, "check_lifecycle_batch",
+                        MagicMock(return_value={}))
+
+    collector.run(dry_run=False)
+
+    # DB upgrade happened
+    row = conn.execute("SELECT apply_url FROM jobs WHERE external_id=?",
+                       ("existing",)).fetchone()
+    assert row[0] == "https://careers.netflix.com/jobs/1"
+
+    # Two WP publish calls expected: main batch (empty — the incoming was
+    # dropped as dupe) and the URL-upgrade push
+    assert any(
+        any(j.get("external_id") == "existing"
+            and j.get("apply_url") == "https://careers.netflix.com/jobs/1"
+            for j in batch)
+        for batch in publish_calls
+    ), f"URL upgrade not pushed to WP: {publish_calls}"
+
+
+def test_url_upgrade_push_skipped_when_main_publish_degraded(env_ok, conn, monkeypatch):
+    """R5-16: if the main WP publish queued anything (WP down), the URL-upgrade
+    push must be skipped this run — the DB already has the fresh URL, and the
+    next successful publish will carry it naturally. Avoids piling retry-queue
+    rows whose only purpose is a single apply_url update during WP outages."""
+    existing = _sample_job("existing", title="People Analytics Manager",
+                           company="Netflix")
+    existing["apply_url"] = "https://jooble.org/desc/existing"
+    db.upsert_job(conn, existing)
+
+    incoming = _sample_job("gh_netflix_1", title="People Analytics Manager",
+                           company="Netflix", source="greenhouse")
+    incoming["apply_url"] = "https://careers.netflix.com/jobs/1"
+
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
+        [incoming],
+        {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {"ats_snapshots": {}},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
+    publish_calls: list[list[dict]] = []
+    # Main publish returns queued=1 (WP degraded)
+    def fake_publish(jobs, **kw):
+        publish_calls.append(list(jobs))
+        return {"created": 0, "updated": 0, "errors": 0, "queued": 1, "batches": 1}
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+    monkeypatch.setattr(collector.lifecycle_checker, "check_lifecycle_batch",
+                        MagicMock(return_value={}))
+
+    collector.run(dry_run=False)
+
+    # Exactly ONE publish call: the main (degraded) batch. No URL-upgrade push.
+    assert len(publish_calls) == 1, \
+        f"URL upgrade push should be skipped when main degraded; got {len(publish_calls)} calls"
+
+    # DB upgrade still happened (the upgrade is persisted; it'll flow to WP
+    # on the next successful publish of that job).
+    row = conn.execute("SELECT apply_url FROM jobs WHERE external_id=?",
+                       ("existing",)).fetchone()
+    assert row[0] == "https://careers.netflix.com/jobs/1"
+
+
 def test_pipeline_confidence_fields_persist_to_db_and_wp_payload(env_ok, conn, monkeypatch):
     """Walks a single job through: collect → filter → LLM → seniority → dedup → enrichment → upsert → WP.
     Verifies apply_url + confidence fields survive every hop."""

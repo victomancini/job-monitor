@@ -43,6 +43,21 @@ def _auth_header(username: str, app_password: str) -> str:
     return f"Basic {token}"
 
 
+def _build_headers(username: str, app_password: str) -> dict[str, str]:
+    """Assemble WP REST headers. Adds X-JM-Secret when WP_SHARED_SECRET is set,
+    matching the optional JM_SHARED_SECRET gate on the plugin side."""
+    import os
+    headers = {
+        "Authorization": _auth_header(username, app_password),
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+    }
+    secret = (os.environ.get("WP_SHARED_SECRET") or "").strip()
+    if secret:
+        headers["X-JM-Secret"] = secret
+    return headers
+
+
 def _payload(job: dict[str, Any]) -> dict[str, Any]:
     out = {}
     for k in _WP_FIELDS:
@@ -98,11 +113,7 @@ def publish(
         return {"created": 0, "updated": 0, "errors": 0, "queued": queued, "batches": 0}
 
     endpoint = wp_url.rstrip("/") + "/wp-json/jobmonitor/v1/update-jobs"
-    headers = {
-        "Authorization": _auth_header(username, app_password),
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+    headers = _build_headers(username, app_password)
 
     totals = {"created": 0, "updated": 0, "errors": 0, "queued": 0, "batches": 0}
     for batch_idx, i in enumerate(range(0, len(jobs), BATCH_SIZE)):
@@ -136,16 +147,33 @@ def publish(
 
 
 def _enqueue_all(conn, jobs: list[dict[str, Any]]) -> int:
+    """Enqueue the FULL job dict (not the _payload-truncated form) so retries
+    can rebuild the WP payload fresh at send time. Previous behavior stored
+    the cast-to-string payload, which meant retries days later published with
+    yesterday's `last_seen_date` / LLM verdict baked in. Fields that can't be
+    JSON-serialized (rare — e.g., datetime) are coerced to str."""
     if conn is None:
         return 0
     n = 0
     for j in jobs:
         try:
-            db.enqueue_retry(conn, _payload(j))
+            db.enqueue_retry(conn, _jsonable(j))
             n += 1
         except Exception as e:  # noqa: BLE001
             log.warning("wordpress: retry_queue insert failed: %s", e)
     return n
+
+
+def _jsonable(job: dict[str, Any]) -> dict[str, Any]:
+    """Shallow-coerce a job dict so json.dumps() never raises. Preserves ints,
+    floats, strs, bools, None; str()s everything else (dates, decimals, etc.)."""
+    out: dict[str, Any] = {}
+    for k, v in job.items():
+        if v is None or isinstance(v, (bool, int, float, str)):
+            out[k] = v
+        else:
+            out[k] = str(v)
+    return out
 
 
 def publish_dashboard_stats(
@@ -160,11 +188,7 @@ def publish_dashboard_stats(
     if not wp_url or not username or not app_password:
         return {"ok": False, "status": None, "reason": "credentials incomplete"}
     endpoint = wp_url.rstrip("/") + "/wp-json/jobmonitor/v1/dashboard-stats"
-    headers = {
-        "Authorization": _auth_header(username, app_password),
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+    headers = _build_headers(username, app_password)
     try:
         resp = retry_request("POST", endpoint, headers=headers, json=stats, max_attempts=2)
     except Exception as e:  # noqa: BLE001
@@ -191,11 +215,7 @@ def process_retry_queue(
         return {"attempted": 0, "succeeded": 0, "failed": 0, "dropped": dropped}
 
     endpoint = wp_url.rstrip("/") + "/wp-json/jobmonitor/v1/update-jobs"
-    headers = {
-        "Authorization": _auth_header(username, app_password),
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
+    headers = _build_headers(username, app_password)
 
     succeeded = 0
     failed = 0

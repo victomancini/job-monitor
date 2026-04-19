@@ -148,6 +148,135 @@ def test_no_boost_for_unknown_company():
     assert r["score"] < 10
 
 
+# ───── R-audit Issue 1: boost requires TITLE-level positive match ─────────
+# Shadow log 2026-04-18 showed 45 jobs at Culture Amp / Qualtrics routed to
+# LLM review with only the company boost contributing (title unrelated, desc
+# matched the vendor self-mention). Tightening the gate to title_has_positive
+# keeps the boost aligned with role relevance.
+
+def test_issue1_account_executive_at_cultureamp_no_boost():
+    """Non-PA title at a boost-listed vendor: boost must NOT apply."""
+    r = kf.classify(job("Account Executive", company="Culture Amp"))
+    assert r["score"] == 0
+    assert r["decision"] == "low_score"
+    assert not any("+:company:" in m for m in r["matched"])
+
+
+def test_issue1_people_analytics_lead_at_cultureamp_gets_boost():
+    """PA title + boost-listed vendor: T1 title (50) + boost (10) = 60."""
+    r = kf.classify(job("People Analytics Lead", company="Culture Amp"))
+    assert r["score"] == 60
+    assert r["decision"] == "auto_include"
+    assert any("+:company:Culture Amp" in m for m in r["matched"])
+
+
+def test_issue1_employee_listening_manager_at_netflix_gets_boost():
+    """EL title at Tier-1 employer: T1 title (50) + boost (10) = 60."""
+    r = kf.classify(job("Employee Listening Manager", company="Netflix"))
+    assert r["score"] == 60
+    assert r["decision"] == "auto_include"
+    assert any("+:company:Netflix" in m for m in r["matched"])
+
+
+def test_issue1_desc_only_match_at_vendor_does_not_trigger_boost():
+    """Vendor self-mention in description alone must not pull the company boost.
+    This was the actual shadow-log pattern: SDR-style titles whose desc
+    contained 'Culture Amp' boilerplate picked up +30 (T1 desc) and the guard
+    flipped true because any_positive was True. Under the tighter title-only
+    gate, no boost applies."""
+    r = kf.classify(job("Allbound SDR", company="Culture Amp",
+                        description="About Culture Amp — we build employee experience software."))
+    # Desc still contributes T1 desc for "Culture Amp", but boost must NOT apply.
+    assert not any("+:company:" in m for m in r["matched"])
+
+
+# ───── R-audit Issue 2: previously-missed PA/EL titles ─────────────────────
+
+def test_issue2_insights_analyst_employee_engagement_survey_analytics():
+    """Bare 'employee engagement' gated by cosignal (insights/survey/analytics
+    all present in the title) → T2 match (25), reaches LLM review."""
+    r = kf.classify(job(
+        "Insights Analyst - Employee Engagement & Survey Analytics",
+        company="Courseific",
+    ))
+    assert r["score"] >= 15, f"score {r['score']}, matched {r['matched']}"
+    assert r["decision"] == "llm_review"
+    assert "employee engagement" in r["matched"]
+
+
+def test_issue2_senior_workforce_planning_manager_americas():
+    """Matches via B8 fallback: cosignal 'manager' passes, no negative cosignal
+    present → 15 points (llm_review floor)."""
+    r = kf.classify(job(
+        "Senior Workforce Planning Manager - Americas",
+        company="Arcadis",
+    ))
+    assert r["score"] >= 15, f"score {r['score']}, matched {r['matched']}"
+    assert r["decision"] == "llm_review"
+    assert "workforce planning" in r["matched"]
+
+
+def test_issue2_workforce_planning_optimisation_manager():
+    """No specific T2 term matches contiguously, but B8 fallback with expanded
+    cosignal (manager / optimisation) yields 15 points — the llm_review floor."""
+    r = kf.classify(job(
+        "Workforce Planning Optimisation Manager",
+        company="VetPartners",
+    ))
+    assert r["score"] >= 15, f"score {r['score']}, matched {r['matched']}"
+    assert r["decision"] == "llm_review"
+    assert "workforce planning" in r["matched"]
+
+
+def test_issue2_workforce_planning_and_analytics_manager():
+    """Specific T2 term 'workforce planning & analytics' matches (covers the
+    shadow-log title that previously scored only 5)."""
+    r = kf.classify(job(
+        "Workforce Planning & Analytics Manager",
+        company="Registers of Scotland",
+    ))
+    assert r["score"] >= 15, f"score {r['score']}, matched {r['matched']}"
+    assert r["decision"] == "llm_review"
+
+
+# ───── Guardrails: false positives must stay rejected ──────────────────────
+
+def test_employee_engagement_coordinator_event_planning_still_rejected():
+    """CLAUDE.md edge case: 'Employee Engagement Coordinator' at a hospitality
+    company is event planning, not analytics. Gate must reject without the
+    analytics/leadership cosignal."""
+    r = kf.classify(job("Employee Engagement Coordinator", company="Marriott"))
+    assert r["score"] == 0
+    assert r["decision"] == "low_score"
+
+
+def test_workforce_planning_scheduler_retail_still_rejected():
+    """Retail/call-center workforce scheduling — no B8 cosignal matches."""
+    r = kf.classify(job("Workforce Planning Scheduler", company="Random Retailer"))
+    assert r["score"] == 0
+
+
+def test_workforce_planning_manager_hospital_neg_cosignal_still_rejected():
+    """R-audit guardrail: a 'Workforce Planning Manager' title with nurse-shift
+    context in the description must still score 0. The expanded B8 positive
+    cosignal (now including 'manager') would otherwise let hospital scheduling
+    roles in — the negative cosignal check catches them."""
+    r = kf.classify(job(
+        "Workforce Planning Manager",
+        description="Build nurse shift schedules and manage staffing ratios.",
+    ))
+    assert r["score"] == 0, f"score {r['score']}, matched {r['matched']}"
+    assert r["decision"] == "low_score"  # no positive matches, no auto-reject negatives
+
+
+def test_workforce_planning_call_center_neg_cosignal_still_rejected():
+    r = kf.classify(job(
+        "Senior Workforce Planning Manager",
+        description="Forecast agent volume for our contact centre staffing.",
+    ))
+    assert r["score"] == 0
+
+
 # ───────────── google_alerts: always LLM ────────────────────────────────────
 
 def test_google_alerts_high_score_still_llm():

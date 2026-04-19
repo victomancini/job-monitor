@@ -121,6 +121,7 @@ def fetch(
     errors: list[str] = []
     checked = 0
     skipped = 0
+    successful_slugs: set[str] = set()  # R4-4: board-failure-safe set
 
     items = list(companies.items())
     for i, (slug, company_name) in enumerate(items):
@@ -162,6 +163,7 @@ def fetch(
                     jobs_for_slug += 1
             except Exception as e:  # noqa: BLE001
                 errors.append(f"ashby[{slug}]: map error: {e}")
+        successful_slugs.add(slug)
         if conn is not None:
             dbmod.set_ats_status(
                 conn, ATS_NAME, slug,
@@ -172,4 +174,5 @@ def fetch(
             time.sleep(delay)
 
     return results, errors, {"checked": checked, "skipped_cached": skipped,
-                             "total_slugs": len(items)}
+                             "total_slugs": len(items),
+                             "successful_slugs": successful_slugs}

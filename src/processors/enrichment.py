@@ -7,7 +7,10 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 import time
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlparse
@@ -25,12 +28,88 @@ def _host(url: str) -> str:
     except Exception:  # noqa: BLE001
         return ""
 
+
+# Meta-refresh and JS redirect patterns — aggregator pages often serve HTTP 200
+# and then bounce via <meta http-equiv="refresh"> or window.location. Phase A's
+# redirect following (allow_redirects=True) misses these; parsing the response
+# body catches them.
+_META_REFRESH_RE = re.compile(
+    r"""<meta\s+http-equiv=["']refresh["']\s+content=["']\s*\d+\s*;\s*url=([^"']+)""",
+    re.IGNORECASE,
+)
+_JS_REDIRECT_RES = [
+    re.compile(r"""(?:window\.)?location(?:\.href)?\s*=\s*["']([^"']+)["']""", re.IGNORECASE),
+    re.compile(r"""location\.replace\s*\(\s*["']([^"']+)["']""", re.IGNORECASE),
+    re.compile(r"""location\.assign\s*\(\s*["']([^"']+)["']""", re.IGNORECASE),
+]
+
+
+def _extract_body_redirect(html: str, base_url: str) -> str:
+    """Return a redirect target URL found in an HTML body (meta-refresh or JS
+    window.location), absolutized against `base_url`. Empty string if none."""
+    from urllib.parse import urljoin
+    if not html:
+        return ""
+    # R5-10: scan the first ~32kB. Redirect scripts usually live near the top
+    # but some SPA-style aggregators emit 20–30kB of inline CSS before the
+    # window.location bounce. Regex over 32kB is still sub-millisecond.
+    scope = html[:32000]
+    candidates: list[str] = []
+    m = _META_REFRESH_RE.search(scope)
+    if m:
+        candidates.append(m.group(1).strip())
+    for pat in _JS_REDIRECT_RES:
+        m = pat.search(scope)
+        if m:
+            candidates.append(m.group(1).strip())
+    for target in candidates:
+        if not target or target.startswith("#"):
+            continue
+        absolute = urljoin(base_url, target)
+        # Only treat it as a real redirect if the target is on a different host
+        # — self-links and fragment anchors aren't what we're after.
+        if _host(absolute) and _host(absolute) != _host(base_url):
+            return absolute
+    return ""
+
+
+def _head_final_url(url: str, *, timeout: float = 10.0) -> str:
+    """Follow a URL via HEAD request (then fall back to GET stream), returning
+    the final URL after all redirects. Empty string if the request fails."""
+    try:
+        resp = requests.head(
+            url, timeout=timeout, allow_redirects=True,
+            headers={"User-Agent": USER_AGENT},
+        )
+        final = getattr(resp, "url", "") or ""
+        if final and final != url and _host(final) != _host(url):
+            return final
+    except requests.RequestException:
+        pass
+    # Some servers reject HEAD. Stream a GET and grab the final URL.
+    try:
+        resp = requests.get(
+            url, timeout=timeout, allow_redirects=True, stream=True,
+            headers={"User-Agent": USER_AGENT},
+        )
+        final = getattr(resp, "url", "") or ""
+        resp.close()
+        if final and final != url and _host(final) != _host(url):
+            return final
+    except requests.RequestException:
+        pass
+    return ""
+
 log = logging.getLogger(__name__)
 
 FETCH_TIMEOUT_SEC = 10.0
 RATE_LIMIT_SEC = 1.0
 ENRICHMENT_FRESH_DAYS = 7
 USER_AGENT = "Mozilla/5.0 (compatible; job-monitor/1.0)"
+# IMP-N8: concurrent enrichment. Each host still gets serialized ≥ RATE_LIMIT_SEC
+# via `_HostThrottle`, so distinct hosts fetch in parallel while a single host
+# never exceeds 1 req/sec. `max_workers` caps total concurrency.
+DEFAULT_ENRICHMENT_WORKERS = 5
 
 _US_STATES = (
     "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|"
@@ -261,6 +340,9 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
     _pre_enrich_from_description(job)
 
     url = job.get("apply_url") or job.get("source_url")
+    orig_apply = job.get("apply_url")
+    log.debug("enrich_job[%s] source=%s url_host=%s",
+              job.get("external_id"), job.get("source_name"), _host(url or ""))
     if not url:
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
@@ -287,16 +369,34 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
     # Phase A: if we left the aggregator domain via redirect, store the final URL
     # as the canonical apply_url.
     final_url = getattr(resp, "url", None) or url
-    if final_url and final_url != url:
-        orig_host = _host(url)
-        final_host = _host(final_url)
-        if final_host and final_host != orig_host and orig_host in AGGREGATOR_HOSTS:
-            job["apply_url"] = final_url
+    orig_host = _host(url)
+    final_host = _host(final_url)
+    if final_url and final_url != url and final_host and final_host != orig_host \
+            and orig_host in AGGREGATOR_HOSTS:
+        job["apply_url"] = final_url
+        url = final_url  # subsequent passes fetch the direct page instead
+        orig_host = final_host
 
     if resp.status_code != 200:
+        # R-audit: before giving up, try once more via HEAD — aggregators
+        # sometimes 403 on GET but redirect on HEAD, or the original URL was
+        # briefly flaky. If that resolves to a non-aggregator host, rewrite.
+        if orig_host in AGGREGATOR_HOSTS:
+            resolved = _head_final_url(job.get("apply_url") or url)
+            if resolved and _host(resolved) not in AGGREGATOR_HOSTS:
+                job["apply_url"] = resolved
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
         return job
+
+    # R-audit (Issue 1b): the aggregator returned 200 but may be bouncing via
+    # meta-refresh / JS. Scan the body for a redirect target and rewrite.
+    if orig_host in AGGREGATOR_HOSTS:
+        body_redirect = _extract_body_redirect(resp.text or "", url)
+        if body_redirect and _host(body_redirect) not in AGGREGATOR_HOSTS:
+            job["apply_url"] = body_redirect
+            log.debug("enrich_job[%s]: body-redirect rewrote apply_url %s -> %s",
+                      job.get("external_id"), url, body_redirect)
 
     text = _extract_text(resp.text or "")
 
@@ -348,16 +448,86 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
 
     job["enrichment_source"] = "source_page"
     job["enrichment_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+
+    # R-audit (Issue 1c): last-chance fallback. If apply_url is still on an
+    # aggregator host after body-redirect parsing, do one HEAD request — some
+    # sites use multiple redirect hops that requests.get didn't fully chase.
+    final_apply = job.get("apply_url") or ""
+    if _host(final_apply) in AGGREGATOR_HOSTS:
+        resolved = _head_final_url(final_apply)
+        if resolved and _host(resolved) not in AGGREGATOR_HOSTS:
+            job["apply_url"] = resolved
+            log.debug("enrich_job[%s]: HEAD fallback rewrote apply_url -> %s",
+                      job.get("external_id"), resolved)
+
     _apply_assumed_defaults(job)
+    if (job.get("apply_url") or "") != (orig_apply or ""):
+        log.debug("enrich_job[%s]: apply_url %s -> %s",
+                  job.get("external_id"), orig_apply, job.get("apply_url"))
     return job
 
 
+class _HostThrottle:
+    """Per-host sequential throttle: any two fetches to the same host are
+    separated by at least `min_gap` seconds. Distinct hosts proceed in parallel.
+    Safe for use from multiple threads."""
+
+    def __init__(self, min_gap: float = RATE_LIMIT_SEC) -> None:
+        self.min_gap = min_gap
+        self._locks: dict[str, threading.Lock] = defaultdict(threading.Lock)
+        self._last_fetch: dict[str, float] = defaultdict(lambda: 0.0)
+        self._guard = threading.Lock()
+
+    def _lock_for(self, host: str) -> threading.Lock:
+        with self._guard:
+            return self._locks[host]
+
+    def acquire(self, host: str) -> None:
+        """Block until the host is available per the throttle contract."""
+        lock = self._lock_for(host or "__empty__")
+        lock.acquire()
+        try:
+            now = time.monotonic()
+            last = self._last_fetch[host]
+            wait = (last + self.min_gap) - now
+            if wait > 0:
+                time.sleep(wait)
+            self._last_fetch[host] = time.monotonic()
+        finally:
+            lock.release()
+
+
 def enrich_batch(
-    jobs: list[dict[str, Any]], *, delay: float = RATE_LIMIT_SEC
+    jobs: list[dict[str, Any]],
+    *,
+    delay: float = RATE_LIMIT_SEC,
+    max_workers: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Enrich a list of jobs in place; sleeps `delay` between fetches."""
-    for i, job in enumerate(jobs):
+    """Enrich a list of jobs in place. By default parallelizes across hosts
+    using `DEFAULT_ENRICHMENT_WORKERS` threads while still serializing same-host
+    fetches to `delay` seconds apart. Pass `max_workers=1` for the old
+    sequential behavior."""
+    if not jobs:
+        return jobs
+    workers = max_workers if max_workers is not None else DEFAULT_ENRICHMENT_WORKERS
+    if workers <= 1:
+        for i, job in enumerate(jobs):
+            enrich_job(job)
+            if i < len(jobs) - 1:
+                time.sleep(delay)
+        return jobs
+
+    throttle = _HostThrottle(min_gap=delay)
+
+    def _worker(job: dict[str, Any]) -> None:
+        url = job.get("apply_url") or job.get("source_url") or ""
+        throttle.acquire(_host(url))
         enrich_job(job)
-        if i < len(jobs) - 1:
-            time.sleep(delay)
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(_worker, j) for j in jobs]
+        for f in as_completed(futures):
+            exc = f.exception()
+            if exc is not None:
+                log.warning("enrichment: worker raised: %s", exc)
     return jobs

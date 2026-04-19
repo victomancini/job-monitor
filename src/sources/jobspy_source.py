@@ -111,25 +111,37 @@ def fetch(
 
     terms = search_terms if search_terms is not None else SEARCH_TERMS
     terms_run = 0
+    # Per-site isolation: loop over (term, site) so a Glassdoor TLS bounce
+    # doesn't take out LinkedIn/Indeed/ZipRecruiter for that term. JobSpy's
+    # internal per-site isolation is inconsistent across versions.
+    per_site_counts: dict[str, int] = {}
     for term in terms:
-        try:
-            df = scrape(
-                site_name=SITES,
-                search_term=term,
-                location=location,
-                results_wanted=results_wanted,
-                hours_old=hours_old,
-                country_indeed="USA",
-            )
-        except Exception as e:  # noqa: BLE001 — any JobSpy failure is isolated per-term
-            errors.append(f"jobspy[{term}]: {e}")
-            continue
-        terms_run += 1
-        for row in _iter_rows(df):
+        term_produced = False
+        for site in SITES:
             try:
-                job = _row_to_job(row)
-                if job:
-                    results.append(job)
-            except Exception as e:  # noqa: BLE001
-                errors.append(f"jobspy[{term}]: map error: {e}")
-    return results, errors, {"available": True, "terms_run": terms_run}
+                df = scrape(
+                    site_name=[site],
+                    search_term=term,
+                    location=location,
+                    results_wanted=results_wanted,
+                    hours_old=hours_old,
+                    country_indeed="USA",
+                )
+            except Exception as e:  # noqa: BLE001 — one bad site shouldn't lose the others
+                errors.append(f"jobspy[{term}/{site}]: {e}")
+                continue
+            term_produced = True
+            for row in _iter_rows(df):
+                try:
+                    job = _row_to_job(row)
+                    if job:
+                        results.append(job)
+                        per_site_counts[site] = per_site_counts.get(site, 0) + 1
+                except Exception as e:  # noqa: BLE001
+                    errors.append(f"jobspy[{term}/{site}]: map error: {e}")
+        if term_produced:
+            terms_run += 1
+    return results, errors, {
+        "available": True, "terms_run": terms_run,
+        "per_site_counts": per_site_counts,
+    }

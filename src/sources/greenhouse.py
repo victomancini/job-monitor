@@ -239,6 +239,11 @@ def fetch(
     errors: list[str] = []
     checked = 0
     skipped = 0
+    # R4-4: track slugs whose board returned a clean 200 (or 404 = definitively
+    # closed). Only these are safe inputs to the lifecycle_checker's
+    # set-membership pass — a transient 5xx on one slug shouldn't flip every
+    # job from that company to 'likely_closed'.
+    successful_slugs: set[str] = set()
 
     items = list(companies.items())
     for i, (slug, company_name) in enumerate(items):
@@ -279,6 +284,7 @@ def fetch(
                     jobs_for_slug += 1
             except Exception as e:  # noqa: BLE001
                 errors.append(f"greenhouse[{slug}]: map error: {e}")
+        successful_slugs.add(slug)
         if conn is not None:
             dbmod.set_ats_status(
                 conn, ATS_NAME, slug,
@@ -289,4 +295,5 @@ def fetch(
             time.sleep(delay)
 
     return results, errors, {"checked": checked, "skipped_cached": skipped,
-                             "total_slugs": len(items)}
+                             "total_slugs": len(items),
+                             "successful_slugs": successful_slugs}

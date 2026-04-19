@@ -296,6 +296,115 @@ def test_enrich_keeps_apply_url_when_origin_not_aggregator():
     assert j["apply_url"] == "https://careers.netflix.com/job/1"
 
 
+# ──────────────────────── R-audit Issue 1: stronger redirect handling ────
+
+def test_meta_refresh_body_redirect_rewrites_apply_url():
+    """Jooble-style: 200 OK with <meta http-equiv=refresh> in <head>.
+    requests.get(allow_redirects=True) doesn't follow these — body parser does."""
+    j = _job(source_url="https://jooble.org/desc/999",
+             apply_url="https://jooble.org/desc/999")
+    body = (
+        '<html><head>'
+        '<meta http-equiv="refresh" content="0;url=https://careers.netflix.com/job/999">'
+        '</head><body>redirecting...</body></html>'
+    )
+    # final_url == original (no HTTP redirect), but body has the real target
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://jooble.org/desc/999", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/job/999"
+
+
+def test_js_window_location_body_redirect_rewrites_apply_url():
+    """Some aggregators serve an inline JS window.location bounce."""
+    j = _job(source_url="https://jooble.org/desc/42",
+             apply_url="https://jooble.org/desc/42")
+    body = (
+        '<html><head><script>'
+        'window.location = "https://jobs.lever.co/ramp/abc";'
+        '</script></head><body></body></html>'
+    )
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://jooble.org/desc/42", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://jobs.lever.co/ramp/abc"
+
+
+def test_body_redirect_ignored_when_target_host_same():
+    """Meta-refresh pointing to another aggregator page is NOT a direct URL
+    upgrade. Keep the original."""
+    j = _job(source_url="https://jooble.org/desc/1",
+             apply_url="https://jooble.org/desc/1")
+    body = (
+        '<html><head>'
+        '<meta http-equiv="refresh" content="0;url=https://jooble.org/another/2">'
+        '</head></html>'
+    )
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://jooble.org/desc/1", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://jooble.org/desc/1"
+
+
+def test_head_fallback_rewrites_stuck_aggregator_url():
+    """When the GET response is 200 with no body-redirect but HEAD follows
+    redirects to a direct URL, the final pass fixes apply_url."""
+    j = _job(source_url="https://jooble.org/desc/7",
+             apply_url="https://jooble.org/desc/7")
+    body = "<html><body>Opaque page</body></html>"
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://jooble.org/desc/7", 200)), \
+         patch("src.processors.enrichment._head_final_url",
+               return_value="https://careers.netflix.com/job/7"):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/job/7"
+
+
+def test_head_fallback_skipped_when_already_direct():
+    """If the GET response redirected to a direct URL, no HEAD fallback runs."""
+    j = _job(source_url="https://jooble.org/desc/1",
+             apply_url="https://jooble.org/desc/1")
+    final = "https://careers.netflix.com/job/1"
+    head_mock = MagicMock(return_value="should_not_be_used")
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>", final, 200)), \
+         patch("src.processors.enrichment._head_final_url", head_mock):
+        en.enrich_job(j)
+    head_mock.assert_not_called()
+    assert j["apply_url"] == final
+
+
+def test_body_redirect_parsed_past_4kb_boundary():
+    """R5-10: SPA-style aggregators can emit 20-30kB of inline CSS before the
+    redirect JS. Widened scan window catches these."""
+    padding = "<style>" + ("." * 20000) + "</style>"
+    body = (
+        "<html><head>"
+        + padding
+        + '<script>window.location = "https://careers.netflix.com/job/late";</script>'
+        + "</head></html>"
+    )
+    j = _job(source_url="https://jooble.org/desc/late",
+             apply_url="https://jooble.org/desc/late")
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url(body, "https://jooble.org/desc/late", 200)):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/job/late"
+
+
+def test_head_fallback_fires_on_non_200_response():
+    """If the original URL returned 403/500 (no usable body-redirect), HEAD
+    fallback still gets a chance to resolve the aggregator URL."""
+    j = _job(source_url="https://jooble.org/desc/5",
+             apply_url="https://jooble.org/desc/5")
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("", "https://jooble.org/desc/5", 403)), \
+         patch("src.processors.enrichment._head_final_url",
+               return_value="https://careers.netflix.com/job/5"):
+        en.enrich_job(j)
+    assert j["apply_url"] == "https://careers.netflix.com/job/5"
+
+
 # ──────────────────────── Phase J: three-pass enrichment ────────────
 
 def test_pre_enrich_extracts_salary_from_description():
@@ -411,6 +520,9 @@ def test_http_failure_still_applies_description_inferences_and_default():
 
 
 def test_enrich_batch_continues_past_individual_failures():
+    # max_workers=1 pins the sequential ordering this test depends on — the
+    # response list is consumed in the order workers call requests.get, which
+    # is only deterministic when there's a single worker.
     jobs = [_job(external_id=f"t{i}") for i in range(3)]
     responses = [
         _mock_resp("<p>$120K-$180K</p>", 200),
@@ -420,7 +532,53 @@ def test_enrich_batch_continues_past_individual_failures():
     with patch("src.processors.enrichment.requests.get",
                side_effect=responses), \
          patch("src.processors.enrichment.time.sleep"):
-        en.enrich_batch(jobs)
+        en.enrich_batch(jobs, max_workers=1)
     assert jobs[0]["enrichment_source"] == "source_page"
     assert jobs[1]["enrichment_source"] == "aggregator"
     assert jobs[2]["enrichment_source"] == "source_page"
+
+
+# Regression: IMP-N8 — parallel enrich_batch still applies per-host throttling,
+# so two jobs on the same host are serialized by at least `delay` seconds while
+# jobs on distinct hosts overlap.
+def test_host_throttle_serializes_same_host_and_parallelizes_cross_host():
+    import time as t
+    throttle = en._HostThrottle(min_gap=0.05)
+    timestamps: list[tuple[str, float]] = []
+
+    def worker(host: str) -> None:
+        throttle.acquire(host)
+        timestamps.append((host, t.monotonic()))
+
+    from threading import Thread
+    threads = [
+        Thread(target=worker, args=("a",)),
+        Thread(target=worker, args=("a",)),  # must wait on first 'a'
+        Thread(target=worker, args=("b",)),  # independent host — can overlap
+    ]
+    start = t.monotonic()
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+    # Two same-host acquires must be at least `min_gap` apart
+    a_times = sorted(ts for h, ts in timestamps if h == "a")
+    assert a_times[1] - a_times[0] >= 0.04
+    # Total wall time < 2 * min_gap: proves 'b' didn't wait on 'a'
+    assert (t.monotonic() - start) < 0.15
+
+
+def test_enrich_batch_parallel_fetches_all_three():
+    """IMP-N8 sanity: all jobs complete via the thread pool and enrichment
+    fields land on each dict."""
+    jobs = [
+        _job(external_id="p0", apply_url="https://a.example/1"),
+        _job(external_id="p1", apply_url="https://b.example/2"),
+        _job(external_id="p2", apply_url="https://c.example/3"),
+    ]
+    with patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp("<p>Hybrid schedule with $120K-$180K</p>", 200)):
+        en.enrich_batch(jobs, max_workers=3, delay=0.01)
+    for j in jobs:
+        assert j["enrichment_source"] == "source_page"
+        assert j["salary_min"] == 120000.0

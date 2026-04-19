@@ -285,3 +285,81 @@ def test_deduplicate_keeps_first_when_apply_url_equal_quality():
     assert len(kept) == 1
     assert kept[0]["external_id"] == "a"
     assert skipped[0]["external_id"] == "b"
+
+
+# ───── R-audit Issue 1d: apply_url upgrade hint on DB-side dedup ─────
+
+def test_dedup_against_db_row_attaches_url_upgrade_hint():
+    """Incoming direct-company URL that dedups against a DB row with an
+    aggregator URL must carry an `_apply_url_upgrade` hint on the skipped
+    record so the collector can promote the better URL onto the DB row."""
+    db_rows = [{
+        "external_id": "db_existing",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "company_normalized": "netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": "https://jooble.org/desc/old",  # aggregator URL
+    }]
+    incoming = [{
+        "external_id": "gh_netflix_123",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": "https://careers.netflix.com/jobs/123",  # direct, better
+    }]
+    kept, skipped = dedup.deduplicate(incoming, active_db_rows=db_rows)
+    assert kept == []
+    assert len(skipped) == 1
+    upgrade = skipped[0].get("_apply_url_upgrade")
+    assert upgrade is not None
+    assert upgrade["external_id"] == "db_existing"
+    assert upgrade["apply_url"] == "https://careers.netflix.com/jobs/123"
+
+
+def test_dedup_against_db_row_no_upgrade_when_incoming_is_worse():
+    """Incoming aggregator URL, DB already has direct URL → no upgrade hint."""
+    db_rows = [{
+        "external_id": "db_existing",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "company_normalized": "netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": "https://careers.netflix.com/jobs/123",  # direct, better
+    }]
+    incoming = [{
+        "external_id": "jooble_99",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": "https://jooble.org/desc/99",  # worse
+    }]
+    kept, skipped = dedup.deduplicate(incoming, active_db_rows=db_rows)
+    assert kept == []
+    assert len(skipped) == 1
+    assert "_apply_url_upgrade" not in skipped[0]
+
+
+def test_dedup_against_db_row_no_upgrade_when_db_missing_apply_url():
+    """Legacy DB rows may have NULL apply_url; treat them as lowest-quality
+    so any incoming non-empty URL wins the upgrade."""
+    db_rows = [{
+        "external_id": "db_legacy",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "company_normalized": "netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": None,
+    }]
+    incoming = [{
+        "external_id": "jsearch_42",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "location": "Los Gatos, CA",
+        "apply_url": "https://careers.netflix.com/jobs/42",
+    }]
+    kept, skipped = dedup.deduplicate(incoming, active_db_rows=db_rows)
+    assert len(skipped) == 1
+    upgrade = skipped[0].get("_apply_url_upgrade")
+    assert upgrade is not None
+    assert upgrade["external_id"] == "db_legacy"

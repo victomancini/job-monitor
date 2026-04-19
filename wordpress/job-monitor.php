@@ -64,12 +64,35 @@ add_action('init', function() {
     }
 });
 
+// Defense-in-depth: when the site defines JM_SHARED_SECRET in wp-config.php,
+// writes to the ingestion endpoints also require a matching X-JM-Secret header.
+// Falls open (no secret check) when the constant is not defined so existing
+// installs keep working until the secret is provisioned on both sides.
+// The constant-time compare guards against timing side channels.
+function jm_check_shared_secret($request) {
+    if (!defined('JM_SHARED_SECRET') || !JM_SHARED_SECRET) {
+        return true;  // no secret configured → skip header check
+    }
+    $sent = $request->get_header('x-jm-secret');
+    if (!$sent || !hash_equals(JM_SHARED_SECRET, $sent)) {
+        return new WP_Error('jm_bad_secret', 'Invalid or missing X-JM-Secret', ['status' => 403]);
+    }
+    return true;
+}
+
+function jm_write_permission($request) {
+    if (!current_user_can('edit_posts')) return false;
+    $sec = jm_check_shared_secret($request);
+    if ($sec !== true) return $sec;
+    return true;
+}
+
 // ── REST Endpoints ────────────────────────────────────────
 add_action('rest_api_init', function() {
     register_rest_route('jobmonitor/v1', '/update-jobs', [
         'methods' => 'POST',
         'callback' => 'jm_batch_update',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
+        'permission_callback' => 'jm_write_permission',
     ]);
     register_rest_route('jobmonitor/v1', '/stats', [
         'methods' => 'GET',
@@ -80,7 +103,7 @@ add_action('rest_api_init', function() {
     register_rest_route('jobmonitor/v1', '/dashboard-stats', [
         'methods' => 'POST',
         'callback' => 'jm_update_dashboard_stats',
-        'permission_callback' => function() { return current_user_can('edit_posts'); },
+        'permission_callback' => 'jm_write_permission',
     ]);
 });
 
@@ -308,10 +331,13 @@ tfoot input, tfoot select { width:100%; box-sizing:border-box; font-size:0.85em;
 .jm-chip.jm-chip-off { opacity:0.5; background:#e9ecef; }
 .jm-text-filters { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .jm-text-filters input { padding:4px 8px; border:1px solid #dee2e6; border-radius:4px; font-size:0.85em; }
-/* Phase 6 (R3): muted styling for likely-closed jobs */
-tr.likely-closed { opacity:0.55; }
+/* Phase 6 (R3) + R-audit Issue 2f: muted styling for likely-closed jobs.
+   Opacity 0.5 per spec; "Check →" button is grayed out vs. the normal blue Apply. */
+tr.likely-closed { opacity:0.5; }
 tr.likely-closed td { font-style:italic; }
 .label-likely-closed { color:#6c757d; font-size:0.75em; font-style:italic; margin-left:4px; }
+.jm-check-btn { background:#6c757d !important; }
+.jm-check-btn:hover { background:#5a6268 !important; }
 </style>
 CSS;
 }
@@ -534,6 +560,24 @@ add_shortcode('job_table', function() {
         'order' => 'DESC',
     ]);
 
+    // R-audit Issue 2f: likely-closed jobs sort to the bottom by default.
+    // R4-8: pre-warm the meta cache with a single SQL round-trip so the
+    // subsequent get_post_meta calls (sort + render) read from object cache.
+    // Previously the usort callback did 2×N get_post_meta hits which, at 500
+    // posts, is 1000 DB queries just to sort.
+    $job_ids = wp_list_pluck($jobs, 'ID');
+    if (!empty($job_ids)) {
+        update_meta_cache('post', $job_ids);
+    }
+    usort($jobs, function($a, $b) {
+        $al = get_post_meta($a->ID, 'lifecycle_status', true);
+        $bl = get_post_meta($b->ID, 'lifecycle_status', true);
+        $a_closed = ($al === 'likely_closed') ? 1 : 0;
+        $b_closed = ($bl === 'likely_closed') ? 1 : 0;
+        if ($a_closed !== $b_closed) return $a_closed - $b_closed;
+        return strcmp($b->post_date, $a->post_date);
+    });
+
     ob_start();
     echo jm_inline_styles();
     echo '<div class="jm-wrapper">';
@@ -563,7 +607,7 @@ add_shortcode('job_table', function() {
         $lifecycle = get_post_meta($j->ID, 'lifecycle_status', true);
         $tr_class = ($lifecycle === 'likely_closed') ? ' class="likely-closed"' : '';
         $closed_label = ($lifecycle === 'likely_closed')
-            ? ' <span class="label-likely-closed">(may be closed)</span>' : '';
+            ? ' <span class="label-likely-closed">(likely closed)</span>' : '';
 
         echo '<tr' . $tr_class . '>';
         echo '<td>' . $t . $closed_label . '</td>';
@@ -578,7 +622,16 @@ add_shortcode('job_table', function() {
         // Phase D (R2): Relevance column (llm_classification)
         echo jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
         echo '<td>' . esc_html(get_post_meta($j->ID, 'source_name', true)) . '</td>';
-        $apply_cell = $apply_url ? '<a class="jm-apply-btn" href="' . $apply_url . '" target="_blank" rel="noopener">Apply &rarr;</a>' : '';
+        // R-audit Issue 2f: likely-closed jobs get a muted "Check →" button so
+        // users know the role may be filled; the link still works (it's the
+        // company page) but the styling warns before the click.
+        if ($apply_url) {
+            $btn_class = ($lifecycle === 'likely_closed') ? 'jm-apply-btn jm-check-btn' : 'jm-apply-btn';
+            $btn_label = ($lifecycle === 'likely_closed') ? 'Check &rarr;' : 'Apply &rarr;';
+            $apply_cell = '<a class="' . esc_attr($btn_class) . '" href="' . $apply_url . '" target="_blank" rel="noopener">' . $btn_label . '</a>';
+        } else {
+            $apply_cell = '';
+        }
         echo '<td>' . $apply_cell . '</td>';
         // Phase B (R2): Posted column with freshness + NEW badge
         echo jm_freshness_cell(
@@ -620,6 +673,12 @@ add_shortcode('job_archive_table', function() {
         'orderby' => 'date',
         'order' => 'DESC',
     ]);
+    // R4-8: prime the post-meta cache before the render loop so the 12-ish
+    // get_post_meta calls per row hit object cache instead of the DB.
+    $job_ids = wp_list_pluck($jobs, 'ID');
+    if (!empty($job_ids)) {
+        update_meta_cache('post', $job_ids);
+    }
     ob_start();
     echo jm_inline_styles();
     echo '<div class="jm-wrapper">';

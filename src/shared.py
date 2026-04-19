@@ -126,6 +126,9 @@ OPTIONAL_ENV = [
     "GOOGLE_ALERT_RSS_1", "GOOGLE_ALERT_RSS_2", "GOOGLE_ALERT_RSS_3",
     "GOOGLE_ALERT_RSS_4", "GOOGLE_ALERT_RSS_5", "GOOGLE_ALERT_SIOP",
     "TALKWALKER_RSS_1", "TALKWALKER_RSS_2", "TALKWALKER_RSS_3",
+    # Optional defense-in-depth: sent as X-JM-Secret to the WP REST endpoint
+    # when set. Matches JM_SHARED_SECRET defined in wp-config.php.
+    "WP_SHARED_SECRET",
 ]
 
 

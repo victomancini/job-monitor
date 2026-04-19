@@ -155,6 +155,17 @@ tier2_title:
     - "colleague experience manager"
     - "partner experience analyst"      # gated: require Starbucks or HR context
     - "workforce strategy consultant"
+    # R-audit: analytics-specific workforce-planning titles get T2 (25pts).
+    # Role-only titles like "Workforce Planning Manager" are intentionally NOT
+    # here — they're indistinguishable from retail/hospital scheduling roles
+    # without additional context, so B8 handles them with negative cosignal
+    # gating.
+    - "workforce planning analyst"
+    - "workforce planning & analytics"
+    - "workforce planning and analytics"
+    # R-audit: bare "employee engagement" gated via T2_TITLE_GATES — the gate
+    # excludes event-planning coordinator titles.
+    - "employee engagement"
 
 tier2_description:
   score: 10

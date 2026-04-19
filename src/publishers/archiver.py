@@ -1,13 +1,20 @@
-"""Turso-side archival with a Phase 6 (R3) two-step lifecycle:
+"""Turso-side archival with a two-track lifecycle:
 
-1. 7+ days unseen AND lifecycle_status='active'  → mark 'likely_closed' (muted in UI)
-2. 21+ days unseen (14+ days past the likely_closed transition) → full archive
+Track A — source-of-truth veto (fast-path). Jobs whose source page or ATS API
+confirmed them closed (lifecycle_checker flipped lifecycle_status to
+'likely_closed' AND stamped last_lifecycle_check) are archived immediately.
+No grace period — we have an authoritative 404.
+
+Track B — aggregator staleness (time-based). For jobs where no authoritative
+check is available (aggregator-only apply_url):
+  1. 7+ days unseen AND lifecycle_status='active'  → mark 'likely_closed'
+  2. 21+ days unseen → full archive (likely_closed + 14 days grace)
 
 WordPress-side archival is handled independently by the WP plugin's cron."""
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from src import db
@@ -50,10 +57,30 @@ def mark_likely_closed(conn, *, days: int = LIKELY_CLOSED_DAYS) -> dict[str, int
     return {"marked_likely_closed": marked}
 
 
+def archive_confirmed_closed(conn) -> int:
+    """Track A fast-path: archive any active row whose lifecycle_checker
+    already flipped it to 'likely_closed' via a source-of-truth check (ATS API
+    404 or direct company page 404). Skips the 21-day grace window — we have
+    an authoritative signal."""
+    rows = db.get_jobs_to_archive_confirmed_closed(conn)
+    archived = 0
+    for row in rows:
+        try:
+            days_active = _days_between(row.get("first_seen_date"), row.get("last_seen_date"))
+            db.archive_job(conn, row["external_id"], days_active=days_active)
+            archived += 1
+        except Exception as e:  # noqa: BLE001
+            log.warning("archiver: fast-path failed on %s: %s", row.get("external_id"), e)
+    return archived
+
+
 def archive_stale(conn, *, days: int = ARCHIVE_DAYS) -> dict[str, int]:
-    """Step 2 (+ step 1): jobs unseen for `days` days get fully archived
-    (is_active=0). Runs step 1 first so freshly-stale jobs slide into
-    likely_closed rather than jumping straight to archived."""
+    """Run both tracks. Track A first so confirmed-closed jobs archive
+    immediately; then Track B for everything else still hanging on."""
+    # Track A — fast-path confirmed closures
+    fast_archived = archive_confirmed_closed(conn)
+
+    # Track B — time-based. Step 1 (mark likely_closed) then step 2 (archive)
     step1 = mark_likely_closed(conn, days=LIKELY_CLOSED_DAYS)
 
     stale = db.get_jobs_to_archive(conn, days=days)
@@ -65,4 +92,8 @@ def archive_stale(conn, *, days: int = ARCHIVE_DAYS) -> dict[str, int]:
             archived += 1
         except Exception as e:  # noqa: BLE001
             log.warning("archiver: failed on %s: %s", row.get("external_id"), e)
-    return {"archived": archived, **step1}
+    return {
+        "archived": archived + fast_archived,
+        "archived_fast_path": fast_archived,
+        **step1,
+    }

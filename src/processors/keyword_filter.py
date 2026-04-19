@@ -24,10 +24,44 @@ T3_COSIGNAL = (
 )
 
 # Phase B8: narrower co-signal for "employee experience" / "workforce planning"
-# (checked in title + first 400 chars of description)
-B8_COSIGNAL = ("analytics", "insights", "data", "survey", "listening")
-B8_TERMS = {"employee experience", "workforce planning"}
-B8_POINTS = 5
+# (checked in title + first 400 chars of description). Per-term cosignals —
+# workforce planning gets a broader set because it's routinely paired with a
+# role/optimization word rather than an analytics word (e.g., "Senior Workforce
+# Planning Manager", "Workforce Planning Optimisation Manager"). Employee
+# experience keeps the stricter analytics-only cosignal so hospitality
+# "Employee Experience Coordinator" roles stay out.
+_B8_BASE_COSIGNAL: tuple[str, ...] = ("analytics", "insights", "data", "survey", "listening")
+B8_COSIGNALS: dict[str, tuple[str, ...]] = {
+    "employee experience": _B8_BASE_COSIGNAL,
+    "workforce planning": _B8_BASE_COSIGNAL + (
+        "manager", "director", "lead", "head", "analyst",
+        "optimization", "optimisation", "strategy", "strategic",
+    ),
+}
+# Negative cosignal: if any of these appears in title+desc, the B8 gate for
+# "workforce planning" fails even when a positive cosignal is present. Catches
+# retail/hospital workforce-scheduling roles that title-match the PA function
+# but have shift/staff-scheduling context.
+B8_NEGATIVE_COSIGNALS: dict[str, tuple[str, ...]] = {
+    "workforce planning": (
+        "nurse", "nursing", "shift schedule", "shift schedules",
+        "staff schedule", "staff scheduling", "staffing ratio",
+        "staffing ratios", "clinical staff", "retail staff", "call center",
+        "call centre", "contact center", "contact centre",
+    ),
+}
+# Per-term point value. Default keeps the conservative 5-pt B8 floor for
+# "employee experience". Workforce planning pays 15 — the llm_review_min
+# floor — so gated matches reach LLM triage instead of being dropped.
+_B8_DEFAULT_POINTS = 5
+B8_POINTS_BY_TERM: dict[str, int] = {
+    "employee experience": 5,
+    "workforce planning": 15,
+}
+# Kept for backwards compat with any external imports
+B8_COSIGNAL = _B8_BASE_COSIGNAL
+B8_TERMS = frozenset(B8_COSIGNALS.keys())
+B8_POINTS = _B8_DEFAULT_POINTS
 B8_DESC_WINDOW = 400
 
 # Phase B7: continuous-listening gate
@@ -52,6 +86,16 @@ T2_TITLE_GATES: dict[str, tuple[str, ...]] = {
     "behavioral scientist": ("HR", "people", "employee", "workforce"),
     "labor economist": ("HR", "people", "employee", "employer", "workforce", "corporate", "company"),
     "partner experience analyst": ("Starbucks", "HR", "people", "partner engagement"),
+    # R-audit (shadow log 2026-04-18): "Insights Analyst - Employee Engagement &
+    # Survey Analytics" scored 0 because bare "employee engagement" wasn't a
+    # keyword and no role-variant matched contiguously. Adding bare
+    # "employee engagement" with an analytics/leadership cosignal catches the
+    # role-analyst and director-level variants while excluding event-planning
+    # "Employee Engagement Coordinator" titles (no cosignal → fail).
+    "employee engagement": (
+        "analytics", "insights", "data", "survey", "listening",
+        "analyst", "director", "head", "vp",
+    ),
 }
 
 
@@ -251,8 +295,14 @@ def classify(job: dict[str, Any]) -> dict[str, Any]:
         tl = term.lower()
         if tl in B8_TERMS:
             scope = f"{title} {desc[:B8_DESC_WINDOW]}"
-            if _has_any(scope, B8_COSIGNAL):
-                _push(term, "title", B8_POINTS, span, "t3_b8")
+            cosignal = B8_COSIGNALS.get(tl, _B8_BASE_COSIGNAL)
+            neg_cosignal = B8_NEGATIVE_COSIGNALS.get(tl, ())
+            # Full title+desc for the negative check — we want a nurse-shift
+            # mention anywhere in the posting to veto, not just the first 400.
+            full_scope = f"{title} {desc}"
+            if _has_any(scope, cosignal) and not _has_any(full_scope, neg_cosignal):
+                pts = B8_POINTS_BY_TERM.get(tl, _B8_DEFAULT_POINTS)
+                _push(term, "title", pts, span, "t3_b8")
         else:
             if _has_any(desc, T3_COSIGNAL):
                 _push(term, "title", t3_pts, span, "t3_title")
@@ -293,8 +343,13 @@ def classify(job: dict[str, Any]) -> dict[str, Any]:
             score += tier_pts
             matched.append(f"-:{m}")
 
-    # ── Company boost (Phase B3): +10 only if ≥1 positive keyword already matched ──
-    if any_positive and _company_matches_boost_list(job.get("company", "")):
+    # ── Company boost (Phase B3/R-audit): +10 only if the TITLE already has a
+    # positive keyword. Previously gated on `any_positive` (title OR desc), which
+    # let vendor-self-mentions in the description trigger a boost on irrelevant
+    # roles (e.g., "Allbound SDR" at Culture Amp, where the boilerplate "About
+    # Culture Amp" matched tier1_description). Requiring a title positive keeps
+    # the boost aligned with real role-level relevance.
+    if title_has_positive and _company_matches_boost_list(job.get("company", "")):
         score += COMPANY_BOOST_POINTS
         matched.append(f"+:company:{job.get('company', '')}")
 
