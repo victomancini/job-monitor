@@ -185,8 +185,10 @@ def process_retry_queue(
     """
     pending = db.fetch_retry_queue(conn, max_attempts=3)
     if not pending:
-        db.drop_exhausted_retries(conn)
-        return {"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}
+        dropped = db.drop_exhausted_retries(conn)
+        if dropped:
+            log.warning("wordpress: dropped %d permanently-failed job(s) from retry queue", dropped)
+        return {"attempted": 0, "succeeded": 0, "failed": 0, "dropped": dropped}
 
     endpoint = wp_url.rstrip("/") + "/wp-json/jobmonitor/v1/update-jobs"
     headers = {
@@ -220,6 +222,8 @@ def process_retry_queue(
             time.sleep(BETWEEN_BATCHES_SEC)
 
     dropped = db.drop_exhausted_retries(conn)
+    if dropped:
+        log.warning("wordpress: dropped %d permanently-failed job(s) from retry queue", dropped)
     return {
         "attempted": len(pending),
         "succeeded": succeeded,

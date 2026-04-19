@@ -9,16 +9,7 @@ from urllib.parse import urlparse
 import rapidfuzz
 from rapidfuzz import fuzz, utils
 
-# Phase A: hosts we treat as "aggregator redirect" — a direct company URL is preferred.
-_AGGREGATOR_HOSTS = {
-    "jooble.org", "www.jooble.org",
-    "adzuna.com", "www.adzuna.com", "adzuna.co.uk",
-    "indeed.com", "www.indeed.com",
-    "google.com", "www.google.com", "jobs.google.com",
-    "linkedin.com", "www.linkedin.com",
-    "ziprecruiter.com", "www.ziprecruiter.com",
-    "glassdoor.com", "www.glassdoor.com",
-}
+from src.shared import AGGREGATOR_HOSTS
 
 
 def _apply_url_score(url: str) -> int:
@@ -37,7 +28,7 @@ def _apply_url_score(url: str) -> int:
     host = (parsed.netloc or "").lower()
     if not host:
         return 0
-    is_aggregator = host in _AGGREGATOR_HOSTS
+    is_aggregator = host in AGGREGATOR_HOSTS
     if is_aggregator:
         return 1
     # Direct company URL

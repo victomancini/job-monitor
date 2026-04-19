@@ -38,7 +38,7 @@ def _days_between(start: str | None, end: str | None) -> int:
 def mark_likely_closed(conn, *, days: int = LIKELY_CLOSED_DAYS) -> dict[str, int]:
     """Step 1: jobs unseen for `days` days get marked 'likely_closed'. Still
     visible in the table, just muted."""
-    stale = db.get_active_stale_jobs(conn, days=days)
+    stale = db.get_jobs_to_mark_likely_closed(conn, days=days)
     marked = 0
     for row in stale:
         try:
@@ -56,7 +56,7 @@ def archive_stale(conn, *, days: int = ARCHIVE_DAYS) -> dict[str, int]:
     likely_closed rather than jumping straight to archived."""
     step1 = mark_likely_closed(conn, days=LIKELY_CLOSED_DAYS)
 
-    stale = db.get_stale_active_jobs(conn, days=days)
+    stale = db.get_jobs_to_archive(conn, days=days)
     archived = 0
     for row in stale:
         try:

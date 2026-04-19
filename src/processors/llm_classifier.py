@@ -23,6 +23,15 @@ GROQ_CALL_DELAY_SEC = 2.5
 GEMINI_CALL_DELAY_SEC = 4.0  # 15 RPM → 4s between calls
 OPENAI_CALL_DELAY_SEC = 1.0
 
+# Which delay to sleep between calls, keyed by the provider that actually
+# served the preceding call. keyword_only is local, so no wait is needed.
+_PROVIDER_DELAYS: dict[str, float] = {
+    "groq": GROQ_CALL_DELAY_SEC,
+    "gemini": GEMINI_CALL_DELAY_SEC,
+    "openai": OPENAI_CALL_DELAY_SEC,
+    "keyword_only": 0.0,
+}
+
 _VALID_CLASSIFICATIONS = {"RELEVANT", "PARTIALLY_RELEVANT", "NOT_RELEVANT"}
 _VALID_SENIORITIES = {
     "Executive", "VP", "Senior Director", "Director",
@@ -293,17 +302,32 @@ def classify_batch(
     groq_key: str | None = None,
     gemini_key: str | None = None,
     openai_key: str | None = None,
-    delay: float = GROQ_CALL_DELAY_SEC,
+    delay: float | None = None,
 ) -> tuple[list[str], dict[str, int]]:
-    """Classify a batch. Returns (errors, {provider_name: count})."""
+    """Classify a batch. Returns (errors, {provider_name: count}).
+
+    `delay=None` (default) picks the inter-call sleep from `_PROVIDER_DELAYS`
+    based on which provider served the PREVIOUS call — so a batch that fell
+    back to Gemini waits Gemini's 4s instead of Groq's 2.5s. Passing an explicit
+    `delay` overrides this and uses the fixed value for every pair.
+    """
     errors: list[str] = []
     counts: dict[str, int] = {}
+    last_provider: str | None = None
     for i, job in enumerate(jobs):
         try:
             r = classify_job(job, groq_key=groq_key, gemini_key=gemini_key, openai_key=openai_key)
             counts[r["provider"]] = counts.get(r["provider"], 0) + 1
+            last_provider = r["provider"]
         except Exception as e:  # noqa: BLE001
             errors.append(f"llm: failed on {job.get('external_id','?')}: {e}")
+            # Don't update last_provider on exception — keep pacing from whatever
+            # worked most recently.
         if i < len(jobs) - 1:
-            time.sleep(delay)
+            if delay is not None:
+                sleep_for = delay
+            else:
+                sleep_for = _PROVIDER_DELAYS.get(last_provider or "groq", GROQ_CALL_DELAY_SEC)
+            if sleep_for > 0:
+                time.sleep(sleep_for)
     return errors, counts

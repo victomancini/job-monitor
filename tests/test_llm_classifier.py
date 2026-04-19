@@ -110,6 +110,60 @@ def test_parse_json_remote_status_invalid_is_none():
     assert r["remote_status"] is None
 
 
+# ───────────── Per-provider delay (M7) ────────────────────
+
+def test_classify_batch_uses_groq_delay_when_groq_serves():
+    groq_client = MagicMock()
+    groq_client.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(
+            content='{"classification":"RELEVANT","confidence":90,"reasoning":"x"}'))]
+    )
+    jobs = [job(title=f"j{i}") for i in range(3)]
+    with patch("openai.OpenAI", return_value=groq_client), \
+         patch("src.processors.llm_classifier.time.sleep") as ms:
+        lc.classify_batch(jobs, groq_key="g", gemini_key="", openai_key="")
+    # 3 jobs → 2 delays; should use Groq's 2.5s
+    assert ms.call_count == 2
+    for call in ms.call_args_list:
+        assert call.args[0] == lc.GROQ_CALL_DELAY_SEC
+
+
+def test_classify_batch_uses_gemini_delay_when_gemini_serves():
+    """When Groq fails and Gemini takes over, subsequent sleeps use 4s."""
+    from google import genai  # noqa: F401
+    # Groq always fails; Gemini always succeeds
+    groq_client = MagicMock()
+    groq_client.chat.completions.create.side_effect = Exception("429 groq down")
+    gemini_client = MagicMock()
+    gemini_client.models.generate_content.return_value = MagicMock(
+        text='{"classification":"RELEVANT","confidence":80,"reasoning":"x"}'
+    )
+
+    jobs = [job(title=f"j{i}") for i in range(3)]
+    with patch("openai.OpenAI", return_value=groq_client), \
+         patch("google.genai.Client", return_value=gemini_client), \
+         patch("src.processors.llm_classifier.time.sleep") as ms:
+        errors, counts = lc.classify_batch(jobs, groq_key="g", gemini_key="gm", openai_key="")
+    assert counts.get("gemini") == 3
+    # All inter-call sleeps should be the Gemini delay, not the Groq one
+    assert ms.call_count == 2
+    for call in ms.call_args_list:
+        assert call.args[0] == lc.GEMINI_CALL_DELAY_SEC
+
+
+def test_classify_batch_explicit_delay_overrides_per_provider():
+    groq_client = MagicMock()
+    groq_client.chat.completions.create.return_value = MagicMock(
+        choices=[MagicMock(message=MagicMock(
+            content='{"classification":"RELEVANT","confidence":90,"reasoning":"x"}'))]
+    )
+    jobs = [job(title=f"j{i}") for i in range(2)]
+    with patch("openai.OpenAI", return_value=groq_client), \
+         patch("src.processors.llm_classifier.time.sleep") as ms:
+        lc.classify_batch(jobs, groq_key="g", gemini_key="", openai_key="", delay=0.5)
+    assert ms.call_args_list == [((0.5,),)]
+
+
 def test_classify_job_stashes_llm_remote_and_salary_hint():
     j = job()
     payload = (

@@ -102,7 +102,7 @@ DEFAULT_COMPANIES: dict[str, str] = {
     "jpmorgan": "JPMorgan Chase",
     "blackstone": "Blackstone",
     "citadel": "Citadel",
-    "twosigsigma": "Two Sigma",
+    "twosigma": "Two Sigma",
     "deshaw": "D.E. Shaw",
     # Healthcare
     "regeneron": "Regeneron",

@@ -35,14 +35,27 @@ def _upsert_stat(conn, stat_date: str, stat_type: str, stat_key: str, stat_value
     )
 
 
+def _clear_slice(conn, stat_date: str, stat_type: str) -> None:
+    """Delete today's rows for a given stat_type before we repopulate. Prevents
+    keys that disappeared between runs from persisting at their last-seen count."""
+    conn.execute(
+        "DELETE FROM monthly_stats WHERE stat_date=? AND stat_type=?",
+        (stat_date, stat_type),
+    )
+
+
 def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
     """Snapshot today's active-job slices into monthly_stats. Returns a
-    small dict of counts for logging."""
+    small dict of counts for logging.
+
+    Each stat_type slice is cleared for `today` before insertion so keys that
+    vanished since the previous run don't linger at stale counts."""
     today = today or _today()
     written = 0
 
     def _each(query: str, stat_type: str, default_key: str = "") -> None:
         nonlocal written
+        _clear_slice(conn, today, stat_type)
         for key, count in conn.execute(query).fetchall():
             k = (key if key is not None else "") or default_key
             if not k:
@@ -72,6 +85,7 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
     )
 
     # Top hiring companies (LIMIT 20)
+    _clear_slice(conn, today, "company_count")
     for company, count in conn.execute(
         "SELECT company, COUNT(*) AS c FROM jobs WHERE is_active=1 "
         "GROUP BY company ORDER BY c DESC LIMIT 20"
@@ -82,6 +96,7 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
         written += 1
 
     # Vendor mentions (from comma-separated vendors_mentioned column)
+    _clear_slice(conn, today, "vendor_count")
     vendor_counts: dict[str, int] = {}
     for (vendors_str,) in conn.execute(
         "SELECT vendors_mentioned FROM jobs WHERE is_active=1 "
@@ -95,7 +110,10 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
         _upsert_stat(conn, today, "vendor_count", vendor, count)
         written += 1
 
-    # Salary percentiles per seniority (p25 / p50 / p75)
+    # Salary percentiles per seniority (p25 / p50 / p75). Three separate
+    # stat_types, so clear each before re-populating.
+    for stype in ("salary_p25", "salary_p50", "salary_p75"):
+        _clear_slice(conn, today, stype)
     for sen in _SALARY_TIERS:
         rows = conn.execute(
             "SELECT salary_min FROM jobs WHERE is_active=1 AND seniority=? "
@@ -111,6 +129,7 @@ def aggregate_daily_stats(conn, today: str | None = None) -> dict[str, int]:
             written += 3
 
     # Total active count — the dashboard trend line uses this by default
+    _clear_slice(conn, today, "total_active")
     total = conn.execute("SELECT COUNT(*) FROM jobs WHERE is_active=1").fetchone()[0] or 0
     _upsert_stat(conn, today, "total_active", "all", int(total))
     written += 1

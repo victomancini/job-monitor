@@ -260,6 +260,9 @@ def apply_llm(candidates: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], d
 
 # ──────────────────────────── Healthchecks ping ──────────────────────
 
+ERROR_LIST_CAP = 50
+
+
 def ping_healthcheck(
     url: str,
     *,
@@ -280,7 +283,11 @@ def ping_healthcheck(
         **counts,
         "total_published": published,
         "total_archived": archived,
-        "errors": errors[:50],  # cap
+        # Truncate to keep ping body small, but signal when it happened so the
+        # receiving end knows whether len(errors) == total_errors.
+        "errors": errors[:ERROR_LIST_CAP],
+        "total_errors": len(errors),
+        "errors_truncated": len(errors) > ERROR_LIST_CAP,
         "duration_seconds": round(duration_s, 1),
         "llm_providers": provider_counts,
         **meta,
@@ -382,6 +389,7 @@ def run(dry_run: bool = False) -> int:
             errors.append(f"db.upsert_job {job.get('external_id')}: {e}")
 
     published = 0
+    retry_dropped = 0
     if dry_run:
         log.info("DRY-RUN: skipping WordPress publish, notifier, archiver")
     else:
@@ -394,6 +402,7 @@ def run(dry_run: bool = False) -> int:
             app_password=env("WP_APP_PASSWORD"),
         )
         log.info("retry_queue: %s", retry_result)
+        retry_dropped = retry_result.get("dropped", 0)
 
         pub_result = wordpress.publish(
             to_publish,
@@ -474,7 +483,7 @@ def run(dry_run: bool = False) -> int:
         archived=arch_result["archived"],
         duration_s=duration,
         provider_counts=provider_counts,
-        meta={**source_meta, **enrichment_stats},
+        meta={**source_meta, **enrichment_stats, "retry_queue_dropped": retry_dropped},
     )
     log.info("=== DONE in %.1fs ===", duration)
     # Non-zero exit when canary tripped so the workflow-level ping also fails

@@ -298,6 +298,36 @@ def test_healthcheck_ping_posts_rich_body():
     assert mock_req.call_args.args[1] == "https://hc-ping.com/abc"
 
 
+def test_healthcheck_ping_flags_error_truncation():
+    """Regression for M3: when errors exceed ERROR_LIST_CAP, the ping body
+    reports the real total + a truncation flag so ops can tell the list was cut."""
+    many_errors = [f"err-{i}" for i in range(collector.ERROR_LIST_CAP + 7)]
+    with patch("src.collector.retry_request") as mock_req:
+        collector.ping_healthcheck(
+            "https://hc-ping.com/abc",
+            success=True, counts={}, errors=many_errors,
+            published=0, archived=0, duration_s=1.0,
+            provider_counts={}, meta={},
+        )
+    body = mock_req.call_args.kwargs["json"]
+    assert len(body["errors"]) == collector.ERROR_LIST_CAP
+    assert body["total_errors"] == collector.ERROR_LIST_CAP + 7
+    assert body["errors_truncated"] is True
+
+
+def test_healthcheck_ping_no_truncation_flag_when_under_cap():
+    with patch("src.collector.retry_request") as mock_req:
+        collector.ping_healthcheck(
+            "https://hc-ping.com/abc",
+            success=True, counts={}, errors=["one", "two"],
+            published=0, archived=0, duration_s=1.0,
+            provider_counts={}, meta={},
+        )
+    body = mock_req.call_args.kwargs["json"]
+    assert body["total_errors"] == 2
+    assert body["errors_truncated"] is False
+
+
 def test_healthcheck_ping_fail_endpoint_on_failure():
     with patch("src.collector.retry_request") as mock_req:
         collector.ping_healthcheck(

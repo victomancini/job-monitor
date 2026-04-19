@@ -103,6 +103,8 @@ function jm_batch_update($request) {
             $results['errors']++;
             continue;
         }
+        // Include 'archived' so a previously-archived job that reappears in a
+        // new batch gets re-activated in place instead of duplicated.
         $existing = get_posts([
             'post_type' => 'job_listing',
             'meta_key' => 'external_id',
@@ -187,6 +189,14 @@ function jm_update_dashboard_stats($request) {
 }
 
 // ── Daily Archival Cron ───────────────────────────────────
+// Two-step lifecycle mirrors src/publishers/archiver.py (Phase 6 R3):
+//   Day 7+  → lifecycle_status='likely_closed' (still visible, muted in [job_table])
+//   Day 21+ → post_status='archived' (moves to [job_archive_table])
+// Previously this cron archived at day 7, which stomped the Python-side
+// likely_closed state so the muted UI never appeared (code-review C1).
+define('JM_LIKELY_CLOSED_DAYS', 7);
+define('JM_ARCHIVE_DAYS', 21);
+
 add_action('wp', function() {
     if (!wp_next_scheduled('jm_daily_archive')) {
         wp_schedule_event(time(), 'daily', 'jm_daily_archive');
@@ -194,16 +204,35 @@ add_action('wp', function() {
 });
 add_action('jm_daily_archive', function() {
     global $wpdb;
-    $cutoff = date('Y-m-d', strtotime('-7 days'));
-    // Use direct SQL with LIMIT to avoid memory issues on large tables
-    $stale_ids = $wpdb->get_col($wpdb->prepare(
+    $closed_cutoff = date('Y-m-d', strtotime('-' . JM_LIKELY_CLOSED_DAYS . ' days'));
+    $archive_cutoff = date('Y-m-d', strtotime('-' . JM_ARCHIVE_DAYS . ' days'));
+
+    // Step 1: mark day-7+ stale jobs as 'likely_closed' (still post_status=publish,
+    // just tagged via meta so the shortcode can render them muted).
+    $to_mark = $wpdb->get_col($wpdb->prepare(
+        "SELECT DISTINCT p.ID FROM {$wpdb->posts} p
+         INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'last_seen_active'
+         LEFT JOIN {$wpdb->postmeta} pm2 ON p.ID = pm2.post_id AND pm2.meta_key = 'lifecycle_status'
+         WHERE p.post_type = 'job_listing'
+           AND p.post_status = 'publish'
+           AND pm.meta_value < %s
+           AND (pm2.meta_value IS NULL OR pm2.meta_value <> 'likely_closed')
+         LIMIT 100",
+        $closed_cutoff
+    ));
+    foreach ($to_mark as $pid) {
+        update_post_meta($pid, 'lifecycle_status', 'likely_closed');
+    }
+
+    // Step 2: jobs unseen for JM_ARCHIVE_DAYS days get fully archived.
+    $to_archive = $wpdb->get_col($wpdb->prepare(
         "SELECT p.ID FROM {$wpdb->posts} p
          INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id AND pm.meta_key = 'last_seen_active'
          WHERE p.post_type = 'job_listing' AND p.post_status = 'publish' AND pm.meta_value < %s
          LIMIT 100",
-        $cutoff
+        $archive_cutoff
     ));
-    foreach ($stale_ids as $pid) {
+    foreach ($to_archive as $pid) {
         $first = get_post_meta($pid, 'first_seen_date', true);
         $last = get_post_meta($pid, 'last_seen_active', true);
         $days = ($first && $last) ? max(1, round((strtotime($last) - strtotime($first)) / 86400)) : 0;
@@ -212,7 +241,11 @@ add_action('jm_daily_archive', function() {
         update_post_meta($pid, 'archived_date', current_time('Y-m-d'));
         update_post_meta($pid, 'days_active', (string)$days);
     }
-    // Invalidate both caches after archival
+
+    // Re-seen jobs come through jm_batch_update which explicitly resets
+    // lifecycle_status='active' on the Python side, so recoveries flow naturally.
+
+    // Invalidate both caches after lifecycle changes
     delete_transient('jm_active_jobs_html');
     delete_transient('jm_archived_jobs_html');
 });
@@ -552,9 +585,12 @@ add_shortcode('job_table', function() {
     }
     echo '</tbody>';
     echo '</table>';
-    // Phase 9 (R3): emit one JSON-LD block per job for SEO / Google for Jobs indexing
+    // Phase 9 (R3): emit one JSON-LD block per job for SEO / Google for Jobs indexing.
+    // JSON_HEX_* flags prevent `</script>` / `&` / quotes in job titles from breaking
+    // out of the <script> block (C5 fix).
+    $jsonld_flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
     foreach ($jsonld_docs as $doc) {
-        echo '<script type="application/ld+json">' . wp_json_encode($doc, JSON_UNESCAPED_SLASHES) . '</script>';
+        echo '<script type="application/ld+json">' . wp_json_encode($doc, $jsonld_flags) . '</script>';
     }
     $init = jm_datatables_init_complete_js();
     echo "<script>jQuery(function(\$){\$('#jm-table').DataTable({responsive:true,order:[[10,'asc']],pageLength:50,{$init}});});</script>";
@@ -637,12 +673,31 @@ add_shortcode('job_archive_table', function() {
 });
 
 // ── Phase 8 (R3): [job_dashboard] — ApexCharts-rendered stats ─────
+// ApexCharts (MIT) is self-hosted at wordpress/assets/js/apexcharts.min.js.
+// Do NOT swap to a CDN — we were burned by the DataTables CDN hijack (Jul 2025).
+function jm_enqueue_apexcharts() {
+    $plugin_url = plugin_dir_url(__FILE__);
+    wp_enqueue_script(
+        'jm-apexcharts',
+        $plugin_url . 'assets/js/apexcharts.min.js',
+        [],
+        '3.53.0',
+        true
+    );
+}
+
 add_shortcode('job_dashboard', function() {
     $stats = get_transient('jm_dashboard_stats');
     if (!is_array($stats)) {
         return '<p>Dashboard data not available yet. The next pipeline run will populate it.</p>';
     }
-    $payload = wp_json_encode($stats);
+    jm_enqueue_apexcharts();
+    // C6 fix: harden against `</script>` / `&` / quote escapes in stat keys
+    // that would otherwise close the inline <script> early.
+    $payload = wp_json_encode(
+        $stats,
+        JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+    );
     ob_start();
     ?>
     <div class="jm-dashboard">
@@ -666,7 +721,6 @@ add_shortcode('job_dashboard', function() {
     .jm-dash-card h3 { margin:0 0 12px; font-size:1em; color:#343a40; font-weight:600; }
     @media (max-width:780px) { .jm-dash-grid { grid-template-columns:1fr; } .jm-dash-wide { grid-column:auto; } }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.53.0/dist/apexcharts.min.js"></script>
     <script>
     (function() {
         var stats = <?php echo $payload; ?>;

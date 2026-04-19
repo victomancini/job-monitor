@@ -18,6 +18,8 @@ from src import db as dbmod
 from src.shared import build_job
 from src.sources._http import retry_request
 
+_SALARY_NUM_RE = re.compile(r"\d{1,3}(?:[,.\s]?\d{3})*(?:\.\d+)?")
+
 log = logging.getLogger(__name__)
 
 BASE_URL = "https://api.lever.co/v0/postings/{slug}"
@@ -64,6 +66,60 @@ def _ms_to_iso(ms: Any) -> str | None:
         return None
 
 
+def _coerce_amount(v: Any) -> float | None:
+    """Normalize a salary amount: numbers under 1000 are treated as thousands
+    (e.g. `120` → 120k). Filters out nonsense outside [10k, 1M]."""
+    try:
+        n = float(v)
+    except (TypeError, ValueError):
+        return None
+    if n <= 0:
+        return None
+    if n < 1000:
+        n *= 1000
+    if 10_000 <= n <= 1_000_000:
+        return n
+    return None
+
+
+def _parse_salary(item: dict[str, Any]) -> tuple[float | None, float | None]:
+    """Best-effort salary extraction from Lever's `salaryRange` (structured) or
+    `salaryDescription` (text). Returns (min, max) — either may be None."""
+    rng = item.get("salaryRange")
+    if isinstance(rng, dict):
+        lo = _coerce_amount(rng.get("min"))
+        hi = _coerce_amount(rng.get("max"))
+        if lo or hi:
+            return lo, hi
+        # Fall back to parsing the text form when present ("$120k – $180k")
+        text = rng.get("text")
+        if text:
+            return _parse_salary_text(text)
+    # Lever sometimes surfaces the band only as a description string
+    for fld in ("salaryDescription", "salary"):
+        text = item.get(fld)
+        if isinstance(text, str) and text:
+            lo, hi = _parse_salary_text(text)
+            if lo or hi:
+                return lo, hi
+    return None, None
+
+
+def _parse_salary_text(text: str) -> tuple[float | None, float | None]:
+    nums: list[float] = []
+    for raw in _SALARY_NUM_RE.findall(text):
+        clean = raw.replace(",", "").replace(" ", "")
+        # Keep only the integer portion — Lever text rarely has cents, and a
+        # value like "120.5k" would confuse the <1000 "thousands" heuristic.
+        clean = clean.split(".")[0]
+        n = _coerce_amount(clean)
+        if n is not None:
+            nums.append(n)
+    if not nums:
+        return None, None
+    return min(nums), (max(nums) if len(nums) >= 2 else None)
+
+
 def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] | None:
     jid = item.get("id")
     title = item.get("text") or ""
@@ -74,8 +130,7 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
     team = categories.get("team") or categories.get("department") or ""
     description = item.get("descriptionPlain") or ""
     apply_url = item.get("hostedUrl") or ""
-    # Lever exposes salary as plaintext in `salaryRange` sometimes — best-effort
-    salary_range = (item.get("salaryRange") or {}).get("text") if isinstance(item.get("salaryRange"), dict) else None
+    salary_min, salary_max = _parse_salary(item)
     created_at = item.get("createdAt")
     return build_job(
         source_name=ATS_NAME,
@@ -86,6 +141,8 @@ def _map(item: dict[str, Any], slug: str, company_name: str) -> dict[str, Any] |
         description=description,
         source_url=apply_url,
         apply_url=apply_url,
+        salary_min=salary_min,
+        salary_max=salary_max,
         date_posted=_ms_to_iso(created_at),
         work_arrangement=team,
         raw_data=item,

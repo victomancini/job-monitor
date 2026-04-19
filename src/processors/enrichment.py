@@ -14,19 +14,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from src.shared import format_salary_range
-
-# Phase A: hosts we treat as aggregator redirects — if we follow a redirect away
-# from one of these, the final URL is the real employer page.
-AGGREGATOR_HOSTS = {
-    "jooble.org", "www.jooble.org",
-    "adzuna.com", "www.adzuna.com", "adzuna.co.uk",
-    "indeed.com", "www.indeed.com",
-    "google.com", "www.google.com", "jobs.google.com",
-    "linkedin.com", "www.linkedin.com",
-    "ziprecruiter.com", "www.ziprecruiter.com",
-    "glassdoor.com", "www.glassdoor.com",
-}
+from src.shared import AGGREGATOR_HOSTS, format_salary_range
 
 
 def _host(url: str) -> str:

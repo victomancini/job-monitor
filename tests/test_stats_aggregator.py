@@ -126,6 +126,25 @@ def test_total_active_count_written(conn):
     assert row[0] == 2
 
 
+def test_vanished_keys_are_cleared_on_reaggregation(conn):
+    """Regression for C3: if a company/vendor/category disappears between runs
+    on the same day, its row must not persist at its last-seen count."""
+    _upsert(conn, ext_id="a", company="X")
+    _upsert(conn, ext_id="b", company="Y")
+    _upsert(conn, ext_id="c", company="Z")
+    stats_aggregator.aggregate_daily_stats(conn, today="2026-04-18")
+    # Deactivate Z — it should vanish from the snapshot, not persist at 1
+    conn.execute("UPDATE jobs SET is_active=0 WHERE external_id='c'")
+    conn.commit()
+    stats_aggregator.aggregate_daily_stats(conn, today="2026-04-18")
+    rows = {r[0]: r[1] for r in conn.execute(
+        "SELECT stat_key, stat_value FROM monthly_stats "
+        "WHERE stat_date='2026-04-18' AND stat_type='company_count'"
+    ).fetchall()}
+    assert "Z" not in rows
+    assert rows == {"X": 1, "Y": 1}
+
+
 def test_rerun_same_day_upserts_not_duplicates(conn):
     _upsert(conn, ext_id="a", category="X")
     stats_aggregator.aggregate_daily_stats(conn, today="2026-04-18")

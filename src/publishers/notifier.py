@@ -3,6 +3,7 @@ Qualifying jobs: fit_score >= 50 OR llm_classification == 'RELEVANT'.
 """
 from __future__ import annotations
 
+import html
 import logging
 import smtplib
 from email.message import EmailMessage
@@ -60,15 +61,23 @@ def send_pushover(
 # ──────────────────────────── Brevo digest email ─────────────────
 
 def _format_digest_html(jobs: list[dict[str, Any]]) -> str:
+    # Every job field is third-party data (aggregator-sourced). Escape all
+    # interpolations to avoid HTML/JS injection into the digest email.
+    def esc(v: Any) -> str:
+        return html.escape(str(v or ""), quote=False)
+
+    def esc_attr(v: Any) -> str:
+        return html.escape(str(v or ""), quote=True)
+
     rows = []
     for j in jobs:
-        title = j.get("title") or ""
-        company = j.get("company") or ""
-        location = j.get("location") or ""
-        salary = j.get("salary_range") or ""
-        score = j.get("fit_score") or 0
-        url = j.get("source_url") or "#"
-        cls = j.get("llm_classification") or "-"
+        title = esc(j.get("title"))
+        company = esc(j.get("company"))
+        location = esc(j.get("location"))
+        salary = esc(j.get("salary_range"))
+        score = esc(j.get("fit_score") or 0)
+        url = esc_attr(j.get("source_url") or "#")
+        cls = esc(j.get("llm_classification") or "-")
         rows.append(
             f'<tr><td><a href="{url}">{title}</a></td><td>{company}</td>'
             f'<td>{location}</td><td>{salary}</td><td>{score}</td><td>{cls}</td></tr>'

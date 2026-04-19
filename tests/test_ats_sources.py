@@ -117,6 +117,44 @@ def test_lever_maps_basic_posting():
     assert j["date_posted"]  # ms converted to ISO date
 
 
+def test_lever_parses_structured_salary_range():
+    """Regression for H3: Lever salary was previously computed then dropped."""
+    body = [{
+        "id": "sal-1",
+        "text": "People Analytics Manager",
+        "hostedUrl": "https://jobs.lever.co/x/sal-1",
+        "salaryRange": {"min": 150000, "max": 210000, "currency": "USD"},
+    }]
+    with patch("src.sources.lever.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = lever.fetch(companies={"x": "X"})
+    j = jobs[0]
+    assert j["salary_min"] == 150000
+    assert j["salary_max"] == 210000
+    assert j["salary_range"] == "$150K-$210K"
+
+
+def test_lever_parses_text_salary_when_structured_absent():
+    body = [{
+        "id": "sal-2",
+        "text": "Senior Analyst",
+        "hostedUrl": "https://jobs.lever.co/x/sal-2",
+        "salaryRange": {"text": "$120k – $160k"},
+    }]
+    with patch("src.sources.lever.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = lever.fetch(companies={"x": "X"})
+    j = jobs[0]
+    assert j["salary_min"] == 120000
+    assert j["salary_max"] == 160000
+
+
+def test_lever_missing_salary_leaves_fields_null():
+    body = [{"id": "no-sal", "text": "T", "hostedUrl": "https://x/ns"}]
+    with patch("src.sources.lever.retry_request", return_value=_mock_resp(body)):
+        jobs, _, _ = lever.fetch(companies={"x": "X"})
+    assert jobs[0]["salary_min"] is None
+    assert jobs[0]["salary_max"] is None
+
+
 def test_lever_404_cached(conn):
     with patch("src.sources.lever.retry_request", return_value=_mock_resp({}, status=404)):
         jobs, _, _ = lever.fetch(conn=conn, companies={"nope": "Nope"})

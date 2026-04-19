@@ -178,6 +178,22 @@ def test_wordpress_retry_queue_three_failures_drops(conn):
     assert db.fetch_retry_queue(conn, max_attempts=99) == []
 
 
+def test_wordpress_retry_queue_surfaces_dropped_count(conn, caplog):
+    """Regression for M2: dropped jobs are logged + returned so the healthcheck
+    ping can surface them instead of silent data loss."""
+    import logging
+    # Pre-seed a retry row already at the failure threshold
+    db.enqueue_retry(conn, _job("exhausted"))
+    conn.execute("UPDATE retry_queue SET attempts = 3 WHERE 1=1")
+    conn.commit()
+    with caplog.at_level(logging.WARNING, logger="src.publishers.wordpress"):
+        result = wordpress.process_retry_queue(
+            conn, wp_url="https://s", username="u", app_password="p",
+        )
+    assert result["dropped"] == 1
+    assert any("dropped 1" in rec.getMessage() for rec in caplog.records)
+
+
 def test_wordpress_empty_jobs_returns_zeros():
     totals = wordpress.publish([], wp_url="https://s", username="u", app_password="p")
     assert totals["created"] == 0 and totals["queued"] == 0
@@ -227,6 +243,26 @@ def test_pushover_http_failure_returns_false():
     with patch("src.publishers.notifier.retry_request", return_value=_mock_resp({}, status=500)):
         ok = notifier.send_pushover(_job(), user_key="u", app_token="t")
     assert ok is False
+
+
+def test_format_digest_html_escapes_hostile_fields():
+    """Regression for C4: hostile strings in job fields must not break out of
+    HTML or the href attribute."""
+    malicious = _job(
+        ext_id="x",
+        title='<script>alert("xss")</script>',
+        company='Acme" onload="pwn()',
+    )
+    malicious["location"] = "NY & NJ"
+    malicious["source_url"] = 'javascript:"alert(1)"'
+    html_out = notifier._format_digest_html([malicious])
+    # Script tags never render raw
+    assert "<script>alert" not in html_out
+    # Ampersand in data is HTML-entity-encoded
+    assert "NY &amp; NJ" in html_out
+    # URL quote must be escaped so it can't close the href="" attribute
+    assert 'javascript:"' not in html_out  # raw form absent
+    assert 'javascript:&quot;' in html_out
 
 
 def test_brevo_email_digest_sends():

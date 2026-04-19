@@ -253,8 +253,9 @@ def get_active_jobs_for_dedup(conn) -> list[dict[str, Any]]:
     return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def get_stale_active_jobs(conn, days: int = 7) -> list[dict[str, Any]]:
-    """Jobs not seen in `days` days that are still active."""
+def get_jobs_to_archive(conn, days: int = 7) -> list[dict[str, Any]]:
+    """Active jobs unseen for `days` days — candidates for full archival
+    (is_active=0). Caller is archiver.archive_stale()."""
     cutoff = _days_ago(days)
     cur = conn.execute(
         "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "
@@ -275,9 +276,11 @@ def mark_job_likely_closed(conn, external_id: str) -> None:
     conn.commit()
 
 
-def get_active_stale_jobs(conn, days: int = 7) -> list[dict[str, Any]]:
+def get_jobs_to_mark_likely_closed(conn, days: int = 7) -> list[dict[str, Any]]:
     """Active jobs unseen for `days` days that are still lifecycle_status='active'.
-    Used by the Phase 6 staleness pass (separate from archiver's full archive)."""
+    Used by the Phase 6 staleness pass — a step before full archive. Rows whose
+    lifecycle_status is already 'likely_closed' are intentionally excluded so
+    we don't re-mark them on every run."""
     cutoff = _days_ago(days)
     cur = conn.execute(
         "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "

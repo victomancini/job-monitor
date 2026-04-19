@@ -54,8 +54,10 @@ def _map(raw: dict[str, Any], country_label: str) -> dict[str, Any] | None:
         return None
     salary_min, salary_max = _parse_salary(raw.get("salary"))
     link = raw.get("link") or ""
-    # Jooble only exposes its own redirect URL; apply_url == source_url for this source.
-    job = build_job(
+    # Jooble only exposes its own redirect URL; apply_url == source_url for this
+    # source. Enrichment follows redirects and rewrites apply_url off the
+    # aggregator domain — see AGGREGATOR_HOSTS in enrichment.py.
+    return build_job(
         source_name="jooble",
         external_id=f"jooble_{jid}",
         title=title,
@@ -71,10 +73,6 @@ def _map(raw: dict[str, Any], country_label: str) -> dict[str, Any] | None:
         date_posted=raw.get("updated"),
         raw_data=raw,
     )
-    # Phase A: Jooble's `link` is always an aggregator redirect; the enrichment
-    # pass should prefer whatever URL it resolves to after following redirects.
-    job["_apply_url_is_redirect"] = True
-    return job
 
 
 def fetch(api_key: str, queries: list[dict[str, Any]] | None = None) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:

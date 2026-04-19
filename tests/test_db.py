@@ -112,7 +112,7 @@ def test_get_stale_and_archive(conn):
     )
     conn.commit()
 
-    stale = db.get_stale_active_jobs(conn, days=7)
+    stale = db.get_jobs_to_archive(conn, days=7)
     assert len(stale) == 1
     assert stale[0]["external_id"] == "stale_1"
 

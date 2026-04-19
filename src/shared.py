@@ -14,6 +14,20 @@ log = logging.getLogger(__name__)
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
+# Hosts we treat as aggregator redirects. Enrichment follows redirects off
+# these hosts and rewrites apply_url; deduplicator prefers direct company
+# URLs over aggregator URLs when merging candidates. Single source of truth —
+# if a new aggregator is onboarded, both modules pick it up automatically.
+AGGREGATOR_HOSTS: frozenset[str] = frozenset({
+    "jooble.org", "www.jooble.org",
+    "adzuna.com", "www.adzuna.com", "adzuna.co.uk",
+    "indeed.com", "www.indeed.com",
+    "google.com", "www.google.com", "jobs.google.com",
+    "linkedin.com", "www.linkedin.com",
+    "ziprecruiter.com", "www.ziprecruiter.com",
+    "glassdoor.com", "www.glassdoor.com",
+})
+
 
 @lru_cache(maxsize=None)
 def load_yaml(name: str) -> dict[str, Any]:
