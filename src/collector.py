@@ -24,7 +24,7 @@ from src.processors.category import classify_category
 from src.processors.seniority import extract_seniority, infer_seniority_from_salary
 from src.processors.vendor_extractor import extract_vendors, vendors_to_str
 from src.publishers import archiver, notifier, wordpress
-from src.shared import env, validate_required_env
+from src.shared import env, validate_env_scheme, validate_required_env
 from src.sources import (
     adzuna, ashby, google_alerts, greenhouse, included_ai, jobspy_source,
     jooble, jsearch, lever, onemodel, siop, usajobs,
@@ -132,8 +132,12 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
     meta: dict[str, Any] = {}
     ats_snapshots: dict[tuple[str, str], set[str]] = {}
 
+    # Each source is wrapped in `_safe_fetch` so an uncaught exception in one
+    # source (structural bug, missing config) doesn't abort the rest of the
+    # chain. Per-source internal try/except still handles query-level errors.
+
     # JSearch (daily)
-    jobs, errs, m = jsearch.fetch(env("JSEARCH_API_KEY"))
+    jobs, errs, m = _safe_fetch("jsearch", jsearch.fetch, env("JSEARCH_API_KEY"))
     counts["jsearch_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -141,20 +145,24 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
         meta["jsearch_quota_remaining"] = m["quota_remaining"]
 
     # Jooble (daily)
-    jobs, errs, _ = jooble.fetch(env("JOOBLE_API_KEY"))
+    jobs, errs, _ = _safe_fetch("jooble", jooble.fetch, env("JOOBLE_API_KEY"))
     counts["jooble_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
 
     # Adzuna (daily, optional)
-    jobs, errs, _ = adzuna.fetch(env("ADZUNA_APP_ID"), env("ADZUNA_APP_KEY"))
+    jobs, errs, _ = _safe_fetch(
+        "adzuna", adzuna.fetch, env("ADZUNA_APP_ID"), env("ADZUNA_APP_KEY"),
+    )
     counts["adzuna_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
 
     # USAJobs (MONDAYS ONLY, optional)
     if _is_monday():
-        jobs, errs, _ = usajobs.fetch(env("USAJOBS_EMAIL"), env("USAJOBS_API_KEY"))
+        jobs, errs, _ = _safe_fetch(
+            "usajobs", usajobs.fetch, env("USAJOBS_EMAIL"), env("USAJOBS_API_KEY"),
+        )
         counts["usajobs_found"] = len(jobs)
         all_jobs.extend(jobs)
         errors.extend(errs)
@@ -163,7 +171,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
         meta["usajobs_skipped_not_monday"] = True
 
     # Google Alerts + Talkwalker + SIOP RSS (daily)
-    jobs, errs, m = google_alerts.fetch()
+    jobs, errs, m = _safe_fetch("google_alerts", google_alerts.fetch)
     counts["alerts_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -175,7 +183,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
     # resolve yesterday's jobs by set-membership instead of HEAD-checking each.
     # R4-4: only slugs with a clean 200 go into the snapshot; failed slugs
     # fall through to per-job HEAD checks so a flaky board doesn't mass-close.
-    jobs, errs, gh_meta = greenhouse.fetch(conn=conn)
+    jobs, errs, gh_meta = _safe_fetch("greenhouse", greenhouse.fetch, conn=conn)
     counts["greenhouse_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -183,7 +191,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
         jobs, "greenhouse", gh_meta.get("successful_slugs") or set(),
     ))
 
-    jobs, errs, lever_meta = lever.fetch(conn=conn)
+    jobs, errs, lever_meta = _safe_fetch("lever", lever.fetch, conn=conn)
     counts["lever_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -191,7 +199,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
         jobs, "lever", lever_meta.get("successful_slugs") or set(),
     ))
 
-    jobs, errs, ashby_meta = ashby.fetch(conn=conn)
+    jobs, errs, ashby_meta = _safe_fetch("ashby", ashby.fetch, conn=conn)
     counts["ashby_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -200,7 +208,7 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
     ))
 
     # Phase 3 (R3): JobSpy (LinkedIn / Indeed / Glassdoor / ZipRecruiter)
-    jobs, errs, jm = jobspy_source.fetch()
+    jobs, errs, jm = _safe_fetch("jobspy", jobspy_source.fetch)
     counts["jobspy_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
@@ -208,23 +216,40 @@ def collect_sources(conn=None) -> tuple[list[dict[str, Any]], dict[str, int], li
         meta["jobspy_unavailable"] = True
 
     # Phase 4 (R3): niche PA boards (One Model / Included.ai / SIOP)
-    jobs, errs, _ = onemodel.fetch(conn=conn)
+    jobs, errs, _ = _safe_fetch("onemodel", onemodel.fetch, conn=conn)
     counts["onemodel_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
 
-    jobs, errs, _ = included_ai.fetch(conn=conn)
+    jobs, errs, _ = _safe_fetch("included_ai", included_ai.fetch, conn=conn)
     counts["included_ai_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
 
-    jobs, errs, _ = siop.fetch(conn=conn)
+    jobs, errs, _ = _safe_fetch("siop", siop.fetch, conn=conn)
     counts["siop_found"] = len(jobs)
     all_jobs.extend(jobs)
     errors.extend(errs)
 
     meta["ats_snapshots"] = ats_snapshots
     return all_jobs, counts, errors, meta
+
+
+def _safe_fetch(
+    source_name: str,
+    fetch_fn,
+    *args,
+    **kwargs,
+) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
+    """R7-B: wrap a source's fetch call so an uncaught exception in one source
+    doesn't kill every subsequent source in the chain. Each source already has
+    per-query/per-slug internal try/except, but a structural bug (e.g., missing
+    config, bad import) would propagate up without this guard."""
+    try:
+        return fetch_fn(*args, **kwargs)
+    except Exception as e:  # noqa: BLE001 — last-resort per-source guard
+        log.warning("%s: uncaught exception, skipping: %s", source_name, e)
+        return [], [f"{source_name}: uncaught exception: {e}"], {}
 
 
 # ──────────────────────────── Filtering + LLM ────────────────────────
@@ -411,6 +436,15 @@ def run(dry_run: bool = False) -> int:
     if missing:
         log.error("Missing required env vars: %s", ", ".join(missing))
         return 1
+    # R7-C: reject HTTP-scheme WP_URL / HEALTHCHECK_URL. Basic Auth
+    # credentials and JM shared secret must not transmit in cleartext.
+    scheme_violations = validate_env_scheme()
+    if scheme_violations:
+        log.error(
+            "Env vars must use https:// scheme: %s",
+            ", ".join(scheme_violations),
+        )
+        return 1
 
     # 2. Connect + migrate
     conn = db.connect()
@@ -492,6 +526,9 @@ def run(dry_run: bool = False) -> int:
 
     published = 0
     retry_dropped = 0
+    # Hoisted so the post-dry-run lifecycle-transition push has a definite
+    # value even on dry runs (and any future branch that doesn't define it).
+    main_publish_healthy = False
     if dry_run:
         log.info("DRY-RUN: skipping WordPress publish, notifier, archiver")
     else:
@@ -521,14 +558,16 @@ def run(dry_run: bool = False) -> int:
         # so without this push WP would keep showing the old aggregator URL
         # until the next time the job is re-fetched and re-published.
         #
-        # R5-16: only push when the main batch went through cleanly. If WP is
-        # down (pub_result["queued"] > 0), the URL-upgrade push would also
-        # queue and we'd end up with retry-queue rows whose only purpose is a
-        # single field update. The DB upgrade is already persisted; the fresh
-        # URL will flow to WP on the next successful publish of that job.
-        main_publish_healthy = (
-            pub_result.get("queued", 0) == 0 and pub_result.get("batches", 0) > 0
-        )
+        # R5-16 / R6-C4: only push when WP looks reachable. A single transient
+        # batch failure shouldn't suppress all URL upgrades, so the gate is
+        # "some batch succeeded" rather than "zero batches queued". Any
+        # of: at least one create/update landed, OR fewer batches queued than
+        # attempted. Empty to_publish (no batches at all) → no evidence WP is
+        # up, so skip the URL-upgrade push (DB change is already persisted).
+        batches = pub_result.get("batches", 0)
+        queued = pub_result.get("queued", 0)
+        landed = pub_result.get("created", 0) + pub_result.get("updated", 0)
+        main_publish_healthy = batches > 0 and (landed > 0 or queued < batches)
         if url_upgrade_pushes and main_publish_healthy:
             upg_result = wordpress.publish(
                 url_upgrade_pushes,
@@ -572,6 +611,36 @@ def run(dry_run: bool = False) -> int:
     except Exception as e:  # noqa: BLE001 — never block the archiver/healthcheck
         log.warning("lifecycle_checker failed: %s", e)
         lifecycle_stats = {"error": str(e)}
+
+    # 8.6. R7: push lifecycle transitions to WordPress so the UI reflects the
+    # new status within this run. Without this, a job flipped to
+    # `likely_closed` stays visually "active" in the WP table until the next
+    # full publish cycle — up to 24 hours of mismatch.
+    if not dry_run and main_publish_healthy:
+        transition_ids = list(lifecycle_stats.get("transitions_to_closed", [])) + \
+                          list(lifecycle_stats.get("transitions_to_active", []))
+        transition_payloads: list[dict[str, Any]] = []
+        for ext_id in transition_ids:
+            row = conn.execute(
+                "SELECT external_id, title, lifecycle_status FROM jobs WHERE external_id = ?",
+                (ext_id,),
+            ).fetchone()
+            if row and row[1]:
+                transition_payloads.append({
+                    "external_id": row[0],
+                    "title": row[1],
+                    "lifecycle_status": row[2] or "active",
+                })
+        if transition_payloads:
+            tx_result = wordpress.publish(
+                transition_payloads,
+                wp_url=env("WP_URL"),
+                username=env("WP_USERNAME"),
+                app_password=env("WP_APP_PASSWORD"),
+                conn=conn,
+            )
+            log.info("lifecycle-transition WP push: %s (count=%d)",
+                     tx_result, len(transition_payloads))
 
     # 9. Archiver (always runs — doesn't touch WP in dry-run)
     log.info("=== Phase 7: archiver ===")

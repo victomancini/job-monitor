@@ -19,15 +19,20 @@ import requests
 
 from src.shared import AGGREGATOR_HOSTS, format_salary_range
 
+log = logging.getLogger(__name__)
 
-def _host(url: str) -> str:
-    if not url:
-        return ""
-    try:
-        return urlparse(url).netloc.lower()
-    except Exception:  # noqa: BLE001
-        return ""
-
+# R6-I1: all module-level constants live here, BEFORE any function that
+# references them. Previously USER_AGENT was defined below _head_final_url,
+# which referenced it — Python's late-binding made it work, but any future
+# refactor that evaluated a default arg at import time would NameError.
+FETCH_TIMEOUT_SEC = 10.0
+RATE_LIMIT_SEC = 1.0
+ENRICHMENT_FRESH_DAYS = 7
+USER_AGENT = "Mozilla/5.0 (compatible; job-monitor/1.0)"
+# IMP-N8: concurrent enrichment. Each host still gets serialized ≥ RATE_LIMIT_SEC
+# via `_HostThrottle`, so distinct hosts fetch in parallel while a single host
+# never exceeds 1 req/sec. `max_workers` caps total concurrency.
+DEFAULT_ENRICHMENT_WORKERS = 5
 
 # Meta-refresh and JS redirect patterns — aggregator pages often serve HTTP 200
 # and then bounce via <meta http-equiv="refresh"> or window.location. Phase A's
@@ -42,6 +47,15 @@ _JS_REDIRECT_RES = [
     re.compile(r"""location\.replace\s*\(\s*["']([^"']+)["']""", re.IGNORECASE),
     re.compile(r"""location\.assign\s*\(\s*["']([^"']+)["']""", re.IGNORECASE),
 ]
+
+
+def _host(url: str) -> str:
+    if not url:
+        return ""
+    try:
+        return urlparse(url).netloc.lower()
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 def _extract_body_redirect(html: str, base_url: str) -> str:
@@ -100,16 +114,6 @@ def _head_final_url(url: str, *, timeout: float = 10.0) -> str:
         pass
     return ""
 
-log = logging.getLogger(__name__)
-
-FETCH_TIMEOUT_SEC = 10.0
-RATE_LIMIT_SEC = 1.0
-ENRICHMENT_FRESH_DAYS = 7
-USER_AGENT = "Mozilla/5.0 (compatible; job-monitor/1.0)"
-# IMP-N8: concurrent enrichment. Each host still gets serialized ≥ RATE_LIMIT_SEC
-# via `_HostThrottle`, so distinct hosts fetch in parallel while a single host
-# never exceeds 1 req/sec. `max_workers` caps total concurrency.
-DEFAULT_ENRICHMENT_WORKERS = 5
 
 _US_STATES = (
     "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|"

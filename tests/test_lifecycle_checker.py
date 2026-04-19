@@ -255,15 +255,18 @@ def test_batch_no_rate_limit_for_ats_snapshot_only(conn):
 # ──────────────────────── archiver fast-path ──────────────────────────────
 
 def test_archiver_fast_path_archives_confirmed_closed(conn):
-    """R-audit Issue 2e: a row flipped to likely_closed by lifecycle_checker
-    (last_lifecycle_check is non-null) archives immediately, no 21-day wait."""
+    """R-audit Issue 2e / R7-A: a row flipped to likely_closed by
+    lifecycle_checker (authoritative 'likely_closed' verdict) archives
+    immediately. Track B time-marked rows must NOT be picked up here — that's
+    what last_lifecycle_verdict discriminates."""
     from src.publishers import archiver
     _seed_active_job(conn, "confirmed_closed", "greenhouse",
                      "https://boards.greenhouse.io/acme/jobs/1")
-    # Simulate lifecycle_checker having flipped it today
+    # Simulate lifecycle_checker having flipped it today with an authoritative
+    # likely_closed verdict (e.g., ATS API returned 404).
     conn.execute(
-        "UPDATE jobs SET lifecycle_status='likely_closed', last_lifecycle_check=? "
-        "WHERE external_id=?",
+        "UPDATE jobs SET lifecycle_status='likely_closed', last_lifecycle_check=?, "
+        "last_lifecycle_verdict='likely_closed' WHERE external_id=?",
         (datetime.now(timezone.utc).strftime("%Y-%m-%d"), "confirmed_closed"),
     )
     conn.commit()
@@ -276,6 +279,92 @@ def test_archiver_fast_path_archives_confirmed_closed(conn):
     ).fetchone()
     assert row[0] == 0
     assert row[1] is not None
+
+
+# ───── R7-4: lifecycle transitions returned for WP push ──────────
+
+def test_record_lifecycle_check_returns_new_status_on_transition(conn):
+    """R7-4: `record_lifecycle_check` returns the new lifecycle_status when it
+    changed, None otherwise. The caller uses this to build the WP push list."""
+    _seed_active_job(conn, "a", "greenhouse", "https://boards.greenhouse.io/x/jobs/1")
+    # Default lifecycle_status='active' → verdict=likely_closed changes it
+    new = db.record_lifecycle_check(conn, "a", "likely_closed")
+    assert new == "likely_closed"
+    # Re-applying the same verdict does NOT transition
+    again = db.record_lifecycle_check(conn, "a", "likely_closed")
+    assert again is None
+    # Transition back to active
+    reactivated = db.record_lifecycle_check(conn, "a", "active")
+    assert reactivated == "active"
+
+
+def test_record_lifecycle_check_unknown_never_returns_transition(conn):
+    """Unknown verdict leaves lifecycle_status unchanged → None return."""
+    _seed_active_job(conn, "b", "jsearch", "https://careers.co/1")
+    assert db.record_lifecycle_check(conn, "b", "unknown") is None
+
+
+def test_batch_collects_transitions_for_wp_push(conn):
+    """R7-4: batch collects external_ids that transitioned this run so the
+    collector can push a targeted WP meta update."""
+    _seed_active_job(conn, "gh_x_1", "greenhouse", "https://boards.greenhouse.io/x/jobs/1")
+    _seed_active_job(conn, "gh_x_2", "greenhouse", "https://boards.greenhouse.io/x/jobs/2")
+    # Snapshot says job 1 is gone (closed), job 2 still active
+    snap = {("greenhouse", "x"): {"2"}}
+
+    with patch("src.processors.lifecycle_checker._head_status_code", return_value=200):
+        stats = lc.check_lifecycle_batch(conn, ats_snapshots=snap)
+
+    assert "gh_x_1" in stats["transitions_to_closed"]
+    # gh_x_2 was already active, no transition
+    assert "gh_x_2" not in stats["transitions_to_active"]
+
+
+def test_batch_collects_reactivations(conn):
+    """A previously-likely_closed job that re-appears in the snapshot
+    transitions back to active — also pushed to WP."""
+    _seed_active_job(conn, "gh_x_1", "greenhouse", "https://boards.greenhouse.io/x/jobs/1")
+    # Mark as likely_closed via prior run
+    db.mark_job_likely_closed(conn, "gh_x_1")
+    # Now it's back in the snapshot
+    snap = {("greenhouse", "x"): {"1"}}
+    stats = lc.check_lifecycle_batch(conn, ats_snapshots=snap)
+    assert "gh_x_1" in stats["transitions_to_active"]
+
+
+def test_archiver_fast_path_skips_unknown_verdict_on_time_based_likely_closed(conn):
+    """R7-A regression: the specific false positive that motivated
+    last_lifecycle_verdict.
+
+    Scenario: Track B time-marks a 7-day-stale aggregator job likely_closed.
+    Later, lifecycle_checker HEAD-checks the URL but the response is 403/
+    timeout/etc — verdict 'unknown'. record_lifecycle_check stamps
+    last_lifecycle_check and last_lifecycle_verdict='unknown' but leaves
+    lifecycle_status at 'likely_closed'.
+
+    Before the fix, fast-path would see (lifecycle_status='likely_closed' AND
+    last_lifecycle_check IS NOT NULL) → archive immediately, robbing the job
+    of its 21-day grace window. After the fix, fast-path requires
+    last_lifecycle_verdict='likely_closed' so this row stays in Track B.
+    """
+    from src.publishers import archiver
+    _seed_active_job(conn, "stale_then_unknown", "jooble",
+                     "https://jooble.org/desc/1")
+    # Track B flagged it likely_closed; later HEAD returned unknown
+    conn.execute(
+        "UPDATE jobs SET lifecycle_status='likely_closed', last_lifecycle_check=?, "
+        "last_lifecycle_verdict='unknown' WHERE external_id=?",
+        (datetime.now(timezone.utc).strftime("%Y-%m-%d"), "stale_then_unknown"),
+    )
+    conn.commit()
+
+    result = archiver.archive_stale(conn)
+    assert result["archived_fast_path"] == 0  # must NOT fast-path
+    row = conn.execute(
+        "SELECT is_active FROM jobs WHERE external_id=?",
+        ("stale_then_unknown",),
+    ).fetchone()
+    assert row[0] == 1  # still active, waiting for Track B 21-day window
 
 
 # ──── R4-1: HTTP budget control ─────────────────────────────────
@@ -365,6 +454,43 @@ def test_head_retries_once_on_request_exception():
     mget.assert_not_called()
 
 
+def test_head_does_not_retry_on_timeout():
+    """R6-C3: a host that didn't answer in `timeout` seconds is probably dead.
+    Retrying just burns wall-time budget — skip to GET fallback (which also
+    won't retry on timeout) so we move on quickly."""
+    import requests as rq
+    with patch("src.processors.lifecycle_checker.requests.head",
+               side_effect=rq.Timeout("host dead")) as mhead, \
+         patch("src.processors.lifecycle_checker.requests.get",
+               side_effect=rq.Timeout("host dead")) as mget:
+        code = lc._head_status_code("https://dead.example.com/job/1")
+    assert code is None
+    # HEAD called exactly once (no retry on timeout), then GET once (also no retry)
+    assert mhead.call_count == 1
+    assert mget.call_count == 1
+
+
+def test_head_retry_uses_shorter_timeout():
+    """R6-C3: the retry uses CHECK_RETRY_TIMEOUT_SEC (shorter). Verify by
+    capturing the timeout keyword on each HEAD call."""
+    import requests as rq
+    ok = MagicMock(status_code=200)
+    calls: list[float] = []
+
+    def fake_head(url, **kw):
+        calls.append(kw.get("timeout", -1))
+        if len(calls) == 1:
+            raise rq.ConnectionError("reset")
+        return ok
+
+    with patch("src.processors.lifecycle_checker.requests.head",
+               side_effect=fake_head):
+        lc._head_status_code("https://flaky.example.com/job/1")
+    assert len(calls) == 2
+    assert calls[0] == lc.CHECK_TIMEOUT_SEC
+    assert calls[1] == lc.CHECK_RETRY_TIMEOUT_SEC
+
+
 def test_head_gives_up_after_two_exceptions():
     """Two consecutive RequestExceptions on HEAD → fall through to GET."""
     import requests as rq
@@ -398,41 +524,58 @@ def test_get_retries_once_on_request_exception():
 # ──── R5-11: parallel HEAD checks + per-host throttle ───────────
 
 def test_parallel_batch_distinct_hosts_overlap(conn):
-    """R5-11: three jobs on three distinct hosts should all resolve; wall time
-    well below `3 × delay` because distinct hosts don't block each other."""
-    import time as _t
+    """R5-11 / R6-I2: three jobs on distinct hosts must actually execute in
+    parallel. Wall-clock assertions flake under CI load, so we verify with a
+    threading.Barrier: if all three workers reach the barrier simultaneously,
+    they're genuinely concurrent. If the code is serial, the first worker
+    blocks forever waiting for the barrier and the test times out."""
+    import threading
     _seed_active_job(conn, "e1", "jsearch", "https://a.example.com/1")
     _seed_active_job(conn, "e2", "jsearch", "https://b.example.com/2")
     _seed_active_job(conn, "e3", "jsearch", "https://c.example.com/3")
 
-    def slow_head(url):
-        _t.sleep(0.05)  # simulate per-request wall time
+    barrier = threading.Barrier(3, timeout=2.0)
+
+    def head_with_barrier(url, **kw):
+        # Each worker waits until all three have arrived. Passes iff they're
+        # running concurrently; BrokenBarrierError on timeout.
+        barrier.wait()
         return 200
-    start = _t.monotonic()
+
     with patch("src.processors.lifecycle_checker._head_status_code",
-               side_effect=lambda u, **kw: slow_head(u)):
+               side_effect=head_with_barrier):
         stats = lc.check_lifecycle_batch(conn, delay=0.0, max_workers=3)
-    elapsed = _t.monotonic() - start
-    # Sequential would be 3 × 0.05 = 0.15s minimum. Parallel should be ~0.05s.
-    assert elapsed < 0.13, f"distinct hosts didn't parallelize (elapsed={elapsed})"
     assert stats["still_active"] == 3
 
 
 def test_parallel_batch_same_host_serializes(conn):
-    """R5-11: three jobs on the SAME host must still serialize at delay seconds
-    apart — the per-host throttle prevents concurrent hits."""
-    import time as _t
+    """R5-11 / R6-I2: three jobs on the SAME host must NOT execute concurrently.
+    The throttle spaces acquisitions `delay` seconds apart; with per-call work
+    of 0.01s and delay of 0.05s, the second/third request can't start until
+    the prior one has returned. Track peak concurrent workers — must be 1."""
+    import threading
     _seed_active_job(conn, "e1", "jsearch", "https://one.example.com/1")
     _seed_active_job(conn, "e2", "jsearch", "https://one.example.com/2")
     _seed_active_job(conn, "e3", "jsearch", "https://one.example.com/3")
-    start = _t.monotonic()
+
+    in_flight = {"count": 0, "peak": 0}
+    lock = threading.Lock()
+
+    def head_tracking(url, **kw):
+        with lock:
+            in_flight["count"] += 1
+            in_flight["peak"] = max(in_flight["peak"], in_flight["count"])
+        import time as _t
+        _t.sleep(0.01)  # work window smaller than throttle gap
+        with lock:
+            in_flight["count"] -= 1
+        return 200
+
     with patch("src.processors.lifecycle_checker._head_status_code",
-               return_value=200):
+               side_effect=head_tracking):
         stats = lc.check_lifecycle_batch(conn, delay=0.05, max_workers=5)
-    elapsed = _t.monotonic() - start
-    # 3 jobs × 0.05 min_gap = two forced waits of 0.05s each → ~0.10s floor
-    assert elapsed >= 0.08, f"same-host throttle bypassed (elapsed={elapsed})"
     assert stats["still_active"] == 3
+    assert in_flight["peak"] == 1, f"same-host throttle bypassed (peak={in_flight['peak']})"
 
 
 def test_db_writes_serialized_on_main_thread(conn):

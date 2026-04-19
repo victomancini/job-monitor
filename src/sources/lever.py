@@ -197,6 +197,7 @@ def fetch(
         # Lever returns a top-level array
         posts = data if isinstance(data, list) else (data.get("data") or [])
         jobs_for_slug = 0
+        map_errors_for_slug = 0
         for raw in posts:
             try:
                 j = _map(raw, slug, company_name)
@@ -205,13 +206,19 @@ def fetch(
                     jobs_for_slug += 1
             except Exception as e:  # noqa: BLE001
                 errors.append(f"lever[{slug}]: map error: {e}")
-        successful_slugs.add(slug)
+                map_errors_for_slug += 1
+        # R6-C1: see greenhouse.py — don't mark a slug authoritative when
+        # every entry parsed into an error. Otherwise a malformed payload
+        # would make lifecycle_checker mass-close existing jobs.
+        if jobs_for_slug > 0 or (not posts and map_errors_for_slug == 0):
+            successful_slugs.add(slug)
         if conn is not None:
-            dbmod.set_ats_status(
-                conn, ATS_NAME, slug,
-                "active" if jobs_for_slug else "empty",
-                jobs_for_slug,
-            )
+            if jobs_for_slug > 0:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "active", jobs_for_slug)
+            elif map_errors_for_slug > 0:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "error")
+            else:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "empty", 0)
         if i < len(items) - 1:
             time.sleep(delay)
 

@@ -154,8 +154,10 @@ def fetch(
             if conn is not None:
                 dbmod.set_ats_status(conn, ATS_NAME, slug, "error")
             continue
+        raw_jobs = data.get("jobs", []) or []
         jobs_for_slug = 0
-        for raw in data.get("jobs", []) or []:
+        map_errors_for_slug = 0
+        for raw in raw_jobs:
             try:
                 j = _map(raw, slug, company_name)
                 if j:
@@ -163,13 +165,17 @@ def fetch(
                     jobs_for_slug += 1
             except Exception as e:  # noqa: BLE001
                 errors.append(f"ashby[{slug}]: map error: {e}")
-        successful_slugs.add(slug)
+                map_errors_for_slug += 1
+        # R6-C1: see greenhouse.py — guard against parse-failure mass-closure.
+        if jobs_for_slug > 0 or (not raw_jobs and map_errors_for_slug == 0):
+            successful_slugs.add(slug)
         if conn is not None:
-            dbmod.set_ats_status(
-                conn, ATS_NAME, slug,
-                "active" if jobs_for_slug else "empty",
-                jobs_for_slug,
-            )
+            if jobs_for_slug > 0:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "active", jobs_for_slug)
+            elif map_errors_for_slug > 0:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "error")
+            else:
+                dbmod.set_ats_status(conn, ATS_NAME, slug, "empty", 0)
         if i < len(items) - 1:
             time.sleep(delay)
 

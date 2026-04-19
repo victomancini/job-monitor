@@ -41,6 +41,9 @@ from src.shared import AGGREGATOR_HOSTS
 log = logging.getLogger(__name__)
 
 CHECK_TIMEOUT_SEC = 10.0
+# R6-C3: retry timeout is shorter than the initial attempt. A URL that
+# didn't answer in 10s is probably dead; don't burn another 10s on the retry.
+CHECK_RETRY_TIMEOUT_SEC = 5.0
 CHECK_DELAY_SEC = 2.0           # per-host pacing between HEAD/GET checks
 CHECK_FRESHNESS_DAYS = 2        # jobs checked within this window are skipped
 CHECK_BATCH_LIMIT = 500         # cap total DB picks per run
@@ -113,18 +116,27 @@ def _ats_membership_result(
 
 
 def _try_head(url: str, timeout: float):
-    """Single HEAD attempt. Returns the response or None on RequestException."""
+    """Single HEAD attempt. Returns (response, is_timeout).
+
+    `is_timeout=True` when the failure was a timeout (slow/dead host); caller
+    should skip the retry since re-attempting a dead host just burns wall time.
+    `is_timeout=False` for ConnectionError / other transient — retry is worth
+    trying at a shorter timeout.
+    """
     try:
         return requests.head(
             url, timeout=timeout, allow_redirects=True,
             headers={"User-Agent": USER_AGENT},
-        )
+        ), False
+    except requests.Timeout:
+        return None, True
     except requests.RequestException:
-        return None
+        return None, False
 
 
-def _try_get(url: str, timeout: float) -> int | None:
-    """Single streamed GET. Returns the status code or None on RequestException."""
+def _try_get(url: str, timeout: float) -> tuple[int | None, bool]:
+    """Single streamed GET. Returns (status_code, is_timeout).
+    Same contract as _try_head: timeouts skip retry to conserve wall time."""
     try:
         resp = requests.get(
             url, timeout=timeout, allow_redirects=True, stream=True,
@@ -132,9 +144,11 @@ def _try_get(url: str, timeout: float) -> int | None:
         )
         code = resp.status_code
         resp.close()
-        return code
+        return code, False
+    except requests.Timeout:
+        return None, True
     except requests.RequestException:
-        return None
+        return None, False
 
 
 def _head_status_code(url: str, *, timeout: float = CHECK_TIMEOUT_SEC) -> int | None:
@@ -147,14 +161,16 @@ def _head_status_code(url: str, *, timeout: float = CHECK_TIMEOUT_SEC) -> int | 
     the canonical 405/501 "method not allowed") rather than marking the job
     unknown. 404/410 stay authoritative; 5xx stays unknown (transient).
 
-    R5-7: one retry on connection reset / timeout before giving up. A single
-    flaky blip shouldn't flip the job to 'unknown' — that wastes a day of the
-    freshness window.
+    R5-7 / R6-C3: one retry on ConnectionError before giving up. Timeouts do
+    NOT retry — a host that didn't answer in `timeout` seconds is probably
+    dead, and a second 10s wait just burns wall time in a 500-job pass. The
+    retry uses CHECK_RETRY_TIMEOUT_SEC (default 5s) to cap exposure.
     """
-    # Attempt 1: HEAD (with one retry on RequestException).
-    resp = _try_head(url, timeout)
-    if resp is None:
-        resp = _try_head(url, timeout)  # R5-7: one retry on connection reset
+    # Attempt 1: HEAD.
+    resp, timed_out = _try_head(url, timeout)
+    if resp is None and not timed_out:
+        # ConnectionError / other transient → retry at the reduced timeout.
+        resp, _ = _try_head(url, CHECK_RETRY_TIMEOUT_SEC)
     if resp is not None and resp.status_code < 400:
         return resp.status_code
     # HEAD-hostile responses: retry as GET. 403 is included — many CDNs block
@@ -162,10 +178,10 @@ def _head_status_code(url: str, *, timeout: float = CHECK_TIMEOUT_SEC) -> int | 
     if resp is not None and resp.status_code in (403, 405, 501):
         resp = None
     if resp is None:
-        # Attempt 2: GET (with one retry on RequestException).
-        code = _try_get(url, timeout)
-        if code is None:
-            code = _try_get(url, timeout)
+        # Attempt 2: GET (with one retry on ConnectionError only).
+        code, timed_out = _try_get(url, timeout)
+        if code is None and not timed_out:
+            code, _ = _try_get(url, CHECK_RETRY_TIMEOUT_SEC)
         return code
     return resp.status_code
 
@@ -264,9 +280,16 @@ def check_lifecycle_batch(
     always run.
     """
     jobs = db.get_jobs_for_lifecycle_check(conn, stale_days=stale_days, limit=limit)
-    stats = {"checked": 0, "still_active": 0, "likely_closed": 0,
-             "unknown": 0, "ats_snapshot_hits": 0, "http_checks": 0,
-             "http_budget_deferred": 0, "errors": 0}
+    stats: dict[str, Any] = {
+        "checked": 0, "still_active": 0, "likely_closed": 0,
+        "unknown": 0, "ats_snapshot_hits": 0, "http_checks": 0,
+        "http_budget_deferred": 0, "errors": 0,
+        # R7: external_ids whose lifecycle_status transitioned this run. The
+        # collector consumes these to push targeted WP meta updates so the UI
+        # reflects the new status within the same run.
+        "transitions_to_closed": [],
+        "transitions_to_active": [],
+    }
     if not jobs:
         return stats
 
@@ -275,9 +298,36 @@ def check_lifecycle_batch(
     # Classify each job into one of three resolution paths so we can drive ATS
     # and aggregator verdicts locally on the main thread and only thread-pool
     # the real HTTP checks.
-    verdicts: list[tuple[str, str]] = []  # (external_id, verdict) to record
     http_jobs: list[dict[str, Any]] = []
 
+    def _record(ext_id: str, verdict: str) -> None:
+        """Tally + persist a single verdict. Pulled into a helper so both the
+        eager (ATS / aggregator) pass and the batched (HTTP) pass share the
+        same bookkeeping path."""
+        stats["checked"] += 1
+        if verdict == "active":
+            stats["still_active"] += 1
+        elif verdict == "likely_closed":
+            stats["likely_closed"] += 1
+        else:
+            stats["unknown"] += 1
+        try:
+            transitioned_to = db.record_lifecycle_check(conn, ext_id, verdict)
+        except Exception as e:  # noqa: BLE001
+            stats["errors"] += 1
+            log.warning("lifecycle: db record failed for %s: %s", ext_id, e)
+            return
+        # R7: collect transitions for the WP push. Only the lifecycle_status
+        # flip (active ↔ likely_closed) counts — "unknown" verdicts return None.
+        if transitioned_to == "likely_closed":
+            stats["transitions_to_closed"].append(ext_id)
+        elif transitioned_to == "active":
+            stats["transitions_to_active"].append(ext_id)
+
+    # R6-I6: record ATS-snapshot + aggregator verdicts eagerly. Previously we
+    # deferred every write to after the HTTP pass, which meant a crashed or
+    # timed-out HTTP pass lost the free ATS verdicts too. Recording them first
+    # persists the cheap wins up-front.
     for job in jobs:
         pre_ats = _ats_membership_result(
             job.get("external_id") or "",
@@ -286,13 +336,13 @@ def check_lifecycle_batch(
         )
         if pre_ats is not None:
             stats["ats_snapshot_hits"] += 1
-            verdicts.append((job["external_id"], pre_ats))
+            _record(job["external_id"], pre_ats)
             continue
         apply_url = job.get("apply_url") or job.get("source_url") or ""
         host = _host(apply_url)
         if not host or host in AGGREGATOR_HOSTS:
             # Category C: no authoritative signal available.
-            verdicts.append((job["external_id"], "unknown"))
+            _record(job["external_id"], "unknown")
             continue
         http_jobs.append(job)
 
@@ -303,8 +353,9 @@ def check_lifecycle_batch(
     stats["http_budget_deferred"] = len(http_jobs) - len(http_to_run)
 
     # R5-11: parallelize HEAD checks across distinct hosts; same-host requests
-    # still serialize via _HostThrottle. Sequential path when workers<=1 for
-    # deterministic tests.
+    # still serialize via _HostThrottle. HTTP verdicts are collected from the
+    # thread pool and recorded sequentially on the caller thread below —
+    # SQLite/libsql connections aren't thread-safe.
     if http_to_run:
         throttle = _HostThrottle(min_gap=delay if delay > 0 else 0.0)
 
@@ -314,10 +365,11 @@ def check_lifecycle_batch(
             verdict = _classify_http_status(_head_status_code(apply_url))
             return job["external_id"], verdict
 
+        http_verdicts: list[tuple[str, str]] = []
         if workers <= 1:
             for job in http_to_run:
                 stats["http_checks"] += 1
-                verdicts.append(_worker(job))
+                http_verdicts.append(_worker(job))
         else:
             with ThreadPoolExecutor(max_workers=workers) as pool:
                 futures = [pool.submit(_worker, j) for j in http_to_run]
@@ -327,24 +379,11 @@ def check_lifecycle_batch(
                         stats["errors"] += 1
                         log.warning("lifecycle: worker raised: %s", exc)
                         continue
-                    verdicts.append(f.result())
+                    http_verdicts.append(f.result())
                     stats["http_checks"] += 1
 
-    # SQLite/libsql connections aren't thread-safe — record verdicts here on
-    # the caller thread, after all HTTP work is done.
-    for ext_id, verdict in verdicts:
-        stats["checked"] += 1
-        if verdict == "active":
-            stats["still_active"] += 1
-        elif verdict == "likely_closed":
-            stats["likely_closed"] += 1
-        else:
-            stats["unknown"] += 1
-        try:
-            db.record_lifecycle_check(conn, ext_id, verdict)
-        except Exception as e:  # noqa: BLE001
-            stats["errors"] += 1
-            log.warning("lifecycle: db record failed for %s: %s", ext_id, e)
+        for ext_id, verdict in http_verdicts:
+            _record(ext_id, verdict)
 
     log.info("lifecycle_checker: %s", stats)
     return stats

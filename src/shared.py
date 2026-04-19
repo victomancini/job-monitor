@@ -14,6 +14,14 @@ log = logging.getLogger(__name__)
 
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
+# R7: hard cap on the serialized raw_data blob stored per job. Some
+# aggregators (notably Adzuna and JSearch) include full HTML descriptions
+# easily exceeding 100KB. Turso row limits vary by plan and unbounded growth
+# can blow them out silently. When exceeded we replace the payload with a
+# marker dict so downstream consumers (shadow log, retry queue) still have
+# structured metadata rather than a truncated-mid-token string.
+RAW_DATA_MAX_BYTES = 50_000
+
 # Hosts we treat as aggregator redirects. Enrichment follows redirects off
 # these hosts and rewrites apply_url; deduplicator prefers direct company
 # URLs over aggregator URLs when merging candidates. Single source of truth —
@@ -101,8 +109,34 @@ def build_job(
         "is_remote": is_remote,
         "work_arrangement": work_arrangement,
         "date_posted": date_posted,
-        "raw_data": json.dumps(raw_data) if raw_data is not None else None,
+        "raw_data": _serialize_raw_data(raw_data),
     }
+
+
+def _serialize_raw_data(raw: Any) -> str | None:
+    """Serialize a source's raw payload to JSON, capping size at
+    RAW_DATA_MAX_BYTES. Oversized payloads are replaced with a structured
+    marker so the column still carries diagnostic info without corrupt JSON."""
+    if raw is None:
+        return None
+    serialized = json.dumps(raw)
+    size = len(serialized.encode("utf-8"))
+    if size <= RAW_DATA_MAX_BYTES:
+        return serialized
+    # Try to keep a hint of what was in the payload for debugging. Top-level
+    # keys usually include {id, title, company}; 200 chars is enough to show
+    # those without risking re-exceeding the cap.
+    preview: str = ""
+    try:
+        if isinstance(raw, dict):
+            preview = json.dumps({k: str(raw.get(k))[:100] for k in list(raw.keys())[:5]})[:400]
+    except Exception:  # noqa: BLE001
+        preview = ""
+    return json.dumps({
+        "_truncated": True,
+        "_original_bytes": size,
+        "_preview": preview,
+    })
 
 
 def env(name: str, default: str = "") -> str:
@@ -135,3 +169,21 @@ OPTIONAL_ENV = [
 def validate_required_env() -> list[str]:
     """Return names of required env vars that are missing/empty."""
     return [v for v in REQUIRED_ENV if not env(v)]
+
+
+def validate_env_scheme() -> list[str]:
+    """R7-C: refuse to run when WP_URL (or HEALTHCHECK_URL) is HTTP rather than
+    HTTPS. Basic Auth app-passwords and the X-JM-Secret header would otherwise
+    cross the wire in cleartext every batch. Returns a list of violating var
+    names so the caller can fail loudly at pre-flight."""
+    violations: list[str] = []
+    wp_url = env("WP_URL")
+    if wp_url and not wp_url.lower().startswith("https://"):
+        violations.append("WP_URL")
+    # HEALTHCHECK_URL leaks run metadata (source counts, error snippets) if
+    # served over HTTP. Healthchecks.io itself is HTTPS — so this mainly
+    # guards against accidental self-hosted misconfig.
+    hc_url = env("HEALTHCHECK_URL")
+    if hc_url and not hc_url.lower().startswith("https://"):
+        violations.append("HEALTHCHECK_URL")
+    return violations

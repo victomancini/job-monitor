@@ -23,6 +23,10 @@ REQUIRED = [
 def env_ok(monkeypatch, tmp_path):
     for v in REQUIRED:
         monkeypatch.setenv(v, "x")
+    # R7-C: scheme check rejects HTTP WP_URL / HEALTHCHECK_URL; tests need
+    # valid-looking https values so pre-flight passes.
+    monkeypatch.setenv("WP_URL", "https://wp.example.test")
+    monkeypatch.setenv("HEALTHCHECK_URL", "https://hc.example.test/abc")
     # Send shadow_log to tmp
     monkeypatch.setattr(collector, "SHADOW_LOG_PATH", tmp_path / "shadow.jsonl")
 
@@ -100,6 +104,43 @@ def test_collect_sources_aggregates_all(env_ok, monkeypatch):
     assert meta["jsearch_quota_remaining"] == 150
     assert meta["usajobs_skipped_not_monday"] is True
     assert meta["stale_feeds"] == ["https://x"]
+
+
+def test_collect_sources_isolates_per_source_exception(env_ok, monkeypatch):
+    """R7-B: an uncaught exception in one source (e.g., adzuna.fetch itself
+    raises before its internal try/except kicks in) must not prevent later
+    sources from running."""
+    monkeypatch.setattr(collector.jsearch, "fetch",
+                        lambda k: ([_sample_job("jsearch_1")], [], {}))
+    monkeypatch.setattr(collector.jooble, "fetch", lambda k: ([], [], {}))
+    # Adzuna blows up structurally — before it can build its own errors list
+    monkeypatch.setattr(collector.adzuna, "fetch",
+                        MagicMock(side_effect=RuntimeError("structural bug")))
+    # Later sources must still run
+    later_usajobs = MagicMock(return_value=([_sample_job("usajobs_1", source="usajobs")], [], {}))
+    monkeypatch.setattr(collector.usajobs, "fetch", later_usajobs)
+    monkeypatch.setattr(collector.google_alerts, "fetch",
+                        lambda: ([_sample_job("galert_1", source="google_alerts")], [], {}))
+    monkeypatch.setattr(collector.greenhouse, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.lever, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.ashby, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.jobspy_source, "fetch",
+                        lambda **kw: ([], [], {"available": False}))
+    monkeypatch.setattr(collector.onemodel, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.included_ai, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector.siop, "fetch", lambda **kw: ([], [], {}))
+    monkeypatch.setattr(collector, "_is_monday", lambda: True)
+
+    jobs, counts, errors, meta = collector.collect_sources()
+
+    # JSearch, USAJobs, and google_alerts all produced jobs despite adzuna crashing
+    job_sources = {j["external_id"] for j in jobs}
+    assert "jsearch_1" in job_sources
+    assert "usajobs_1" in job_sources
+    assert "galert_1" in job_sources
+    # Adzuna error is captured in the errors list, not propagated as an exception
+    assert any("adzuna" in e and "structural bug" in e for e in errors)
+    assert counts["adzuna_found"] == 0
 
 
 def test_collect_sources_runs_usajobs_on_monday(env_ok, monkeypatch):
@@ -226,6 +267,11 @@ def test_full_pipeline_publishes_when_not_dry(env_ok, conn, monkeypatch):
     monkeypatch.setattr(collector.notifier, "notify",
                         MagicMock(return_value={"qualifying": 1, "pushes_sent": 1, "email_sent": 1}))
     monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+    # R7: mock lifecycle_checker so the test doesn't make real HEAD requests
+    # and doesn't generate lifecycle-transition WP pushes.
+    monkeypatch.setattr(collector.lifecycle_checker, "check_lifecycle_batch",
+                        MagicMock(return_value={"transitions_to_closed": [],
+                                                 "transitions_to_active": []}))
 
     rc = collector.run(dry_run=False)
     assert rc == 0
@@ -783,6 +829,154 @@ def test_pipeline_url_upgrade_pushes_to_wordpress(env_ok, conn, monkeypatch):
             for j in batch)
         for batch in publish_calls
     ), f"URL upgrade not pushed to WP: {publish_calls}"
+
+
+def test_lifecycle_transitions_pushed_to_wordpress(env_ok, conn, monkeypatch):
+    """R7-4: when lifecycle_checker flips a job's status, the collector must
+    push a targeted WP meta update so the UI reflects the new status this
+    run. Without this, the WP table shows stale status until the next full
+    publish cycle (up to 24h)."""
+    existing = _sample_job("gh_x_1", title="People Analytics Manager",
+                           company="Netflix", source="greenhouse")
+    db.upsert_job(conn, existing)
+    reactivated_job = _sample_job("gh_y_2", title="Employee Listening Lead",
+                                   company="Google", source="greenhouse")
+    db.upsert_job(conn, reactivated_job)
+
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
+        [],
+        {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {"ats_snapshots": {}},
+    ))
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch",
+                        MagicMock(return_value=([], {})))
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
+    # Stub lifecycle_checker to report transitions directly (don't HEAD anything).
+    def fake_checker(conn, **kw):
+        return {
+            "checked": 2, "still_active": 0, "likely_closed": 1,
+            "unknown": 0, "ats_snapshot_hits": 2, "http_checks": 0,
+            "http_budget_deferred": 0, "errors": 0,
+            "transitions_to_closed": ["gh_x_1"],
+            "transitions_to_active": ["gh_y_2"],
+        }
+    monkeypatch.setattr(collector.lifecycle_checker, "check_lifecycle_batch",
+                        fake_checker)
+
+    publish_calls: list[list[dict]] = []
+    # Main batch empty (no to_publish). Return "healthy" response so the gate
+    # allows the lifecycle-transition push.
+    def fake_publish(jobs, **kw):
+        publish_calls.append(list(jobs))
+        if not jobs:
+            return {"created": 0, "updated": 0, "errors": 0, "queued": 0, "batches": 0}
+        return {"created": 0, "updated": len(jobs), "errors": 0, "queued": 0, "batches": 1}
+    # Force main_publish_healthy=True by faking a prior successful publish
+    # (empty to_publish yields batches=0 → not healthy). Simulate a scenario
+    # where we DID publish something.
+    # Use a job clearly distinct from the seeded DB rows so dedup doesn't
+    # collapse it (same company+city+similar-title would cross the 85 threshold).
+    fresh_publishable = _sample_job("fresh_1", title="Employee Listening Manager",
+                                     company="Microsoft")
+    fresh_publishable["location"] = "Redmond, WA"
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
+        [fresh_publishable],
+        {"jsearch_found": 1, "jooble_found": 0, "adzuna_found": 0,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {"ats_snapshots": {}},
+    ))
+
+    def fake_llm(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_llm)
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+
+    collector.run(dry_run=False)
+
+    # Expect 2+ publish calls: main batch, then a lifecycle-transition push
+    transition_pushes = [
+        batch for batch in publish_calls
+        if any(j.get("lifecycle_status") for j in batch)
+    ]
+    assert transition_pushes, f"no transition push observed: {publish_calls}"
+    flat = [j for batch in transition_pushes for j in batch]
+    ext_ids = {j["external_id"] for j in flat}
+    assert "gh_x_1" in ext_ids
+    assert "gh_y_2" in ext_ids
+    # Each transition payload carries title + lifecycle_status for the WP update
+    for j in flat:
+        assert j.get("title")
+        assert j.get("lifecycle_status") in ("active", "likely_closed")
+
+
+def test_url_upgrade_push_fires_on_partial_success(env_ok, conn, monkeypatch):
+    """R6-C4: if main publish had SOME batch succeed (queued < batches), WP is
+    up — the URL-upgrade push should still fire. Previously gated too strictly
+    on queued==0, which suppressed upgrades on a single transient 5xx."""
+    existing = _sample_job("existing", title="People Analytics Manager",
+                           company="Netflix")
+    existing["apply_url"] = "https://jooble.org/desc/existing"
+    db.upsert_job(conn, existing)
+
+    incoming = _sample_job("gh_netflix_1", title="People Analytics Manager",
+                           company="Netflix", source="greenhouse")
+    incoming["apply_url"] = "https://careers.netflix.com/jobs/1"
+    fresh_publishable = _sample_job("gh_netflix_2", title="Employee Listening Director",
+                                     company="Netflix", source="greenhouse")
+
+    monkeypatch.setattr(collector, "collect_sources", lambda conn=None: (
+        [incoming, fresh_publishable],
+        {"jsearch_found": 0, "jooble_found": 0, "adzuna_found": 0,
+         "usajobs_found": 0, "alerts_found": 0},
+        [], {"ats_snapshots": {}},
+    ))
+
+    def fake_batch(jobs, **kw):
+        for j in jobs:
+            j["llm_classification"] = "RELEVANT"
+            j["llm_confidence"] = 90
+            j["llm_provider"] = "groq"
+        return [], {"groq": len(jobs)}
+    monkeypatch.setattr(collector.llm_classifier, "classify_batch", fake_batch)
+    monkeypatch.setattr(collector.enrichment, "enrich_batch",
+                        lambda jobs, **kw: jobs)
+
+    publish_calls: list[list[dict]] = []
+    # Main publish: 2 batches attempted, 1 succeeded + 1 queued (partial) → healthy
+    first_response = {"created": 1, "updated": 0, "errors": 0, "queued": 1, "batches": 2}
+    def fake_publish(jobs, **kw):
+        publish_calls.append(list(jobs))
+        if len(publish_calls) == 1:
+            return first_response
+        # URL-upgrade push — return clean success
+        return {"created": 0, "updated": 1, "errors": 0, "queued": 0, "batches": 1}
+    monkeypatch.setattr(collector.wordpress, "publish", fake_publish)
+    monkeypatch.setattr(collector.wordpress, "process_retry_queue",
+                        MagicMock(return_value={"attempted": 0, "succeeded": 0, "failed": 0, "dropped": 0}))
+    monkeypatch.setattr(collector.notifier, "notify",
+                        MagicMock(return_value={"qualifying": 0, "pushes_sent": 0, "email_sent": 0}))
+    monkeypatch.setattr(collector, "ping_healthcheck", MagicMock())
+    monkeypatch.setattr(collector.lifecycle_checker, "check_lifecycle_batch",
+                        MagicMock(return_value={}))
+
+    collector.run(dry_run=False)
+
+    # Two publish calls: main (partial success), then URL-upgrade push
+    assert len(publish_calls) == 2
+    # The second call is the URL-upgrade push
+    assert any(j.get("external_id") == "existing" for j in publish_calls[1])
 
 
 def test_url_upgrade_push_skipped_when_main_publish_degraded(env_ok, conn, monkeypatch):

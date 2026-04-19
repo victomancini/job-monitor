@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 from datetime import datetime, timedelta, timezone
 
 
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     seniority_confidence TEXT,
     lifecycle_status TEXT DEFAULT 'active',
     last_lifecycle_check TEXT,
+    last_lifecycle_verdict TEXT,
     keyword_score INTEGER DEFAULT 0,
     keywords_matched TEXT,
     llm_classification TEXT,
@@ -162,18 +164,52 @@ _ADD_COLUMN_MIGRATIONS = [
     # last_seen_date (aggregator visibility) — records when we last verified
     # the job via ATS API membership or company career page HEAD request.
     ("last_lifecycle_check", "last_lifecycle_check TEXT"),
+    # R7-A: the most recent lifecycle_checker verdict — 'active', 'likely_closed',
+    # or 'unknown'. Disambiguates a Track B time-based likely_closed (no
+    # authoritative signal) from a lifecycle_checker-confirmed closure (ATS API
+    # 404 or source-page HEAD 404). Fast-path archival requires this column to
+    # equal 'likely_closed' so an 'unknown' HEAD verdict on an already-stale
+    # job can't short-circuit the 21-day grace window.
+    ("last_lifecycle_verdict", "last_lifecycle_verdict TEXT"),
 ]
 
 
-def connect(url: str | None = None, auth_token: str | None = None):
-    """Connect to Turso libSQL. Falls back to env vars if args omitted."""
+def connect(
+    url: str | None = None,
+    auth_token: str | None = None,
+    *,
+    max_attempts: int = 3,
+):
+    """Connect to Turso libSQL. Falls back to env vars if args omitted.
+
+    R7: retry with exponential backoff (2s, 4s) on transient connect errors.
+    Turso occasionally returns 5xx during regional failover; a single retry
+    bucket prevents a transient blip from killing the entire run. Final
+    exception bubbles up so pre-flight can exit cleanly.
+    """
     if libsql is None:
         raise RuntimeError("libsql is not installed in this environment")
     url = url or os.environ.get("TURSO_DB_URL", "")
     auth_token = auth_token or os.environ.get("TURSO_AUTH_TOKEN", "")
     if not url:
         raise ValueError("TURSO_DB_URL is required")
-    return libsql.connect(url, auth_token=auth_token)
+    backoffs = [2, 4]
+    last_exc: Exception | None = None
+    for attempt in range(max_attempts):
+        try:
+            return libsql.connect(url, auth_token=auth_token)
+        except Exception as e:  # noqa: BLE001 — libsql raises various types
+            last_exc = e
+            if attempt < max_attempts - 1:
+                wait = backoffs[min(attempt, len(backoffs) - 1)]
+                log.warning(
+                    "db.connect attempt %d/%d failed (%s) — retrying in %ds",
+                    attempt + 1, max_attempts, e, wait,
+                )
+                time.sleep(wait)
+    # All attempts exhausted — surface the last exception
+    assert last_exc is not None
+    raise last_exc
 
 
 def migrate(conn) -> None:
@@ -359,40 +395,69 @@ def get_jobs_for_lifecycle_check(conn, stale_days: int = 2, limit: int = 500) ->
     return [dict(zip(cols, row)) for row in cur.fetchall()]
 
 
-def record_lifecycle_check(conn, external_id: str, status: str) -> None:
-    """Stamp `last_lifecycle_check` to today and transition `lifecycle_status`
-    based on the checker result:
+def record_lifecycle_check(conn, external_id: str, status: str) -> str | None:
+    """Stamp `last_lifecycle_check` and `last_lifecycle_verdict` to today's
+    verdict, transitioning `lifecycle_status` based on the checker result.
+
+    Returns the NEW lifecycle_status IF it transitioned this call, otherwise
+    None. The caller (check_lifecycle_batch) collects transitions so the
+    collector can push a targeted WP meta update — without that, the WP table
+    would show the stale lifecycle_status until the next full publish cycle
+    (up to 24h).
+
+    Verdict semantics:
       - status='active'        → lifecycle_status='active'
       - status='likely_closed' → lifecycle_status='likely_closed'
-      - status='unknown'       → lifecycle_status unchanged; only timestamp updates
+      - status='unknown'       → lifecycle_status unchanged; timestamp + verdict
+                                 updated so the freshness-skip window applies
+                                 on subsequent runs.
+
+    R7-A: the verdict is stored separately from lifecycle_status so the
+    archiver fast-path can distinguish "lifecycle_checker said likely_closed"
+    (authoritative) from "Track B time-marked + HEAD later returned unknown"
+    (NOT authoritative — wait 21-day window).
     """
     today = _today()
+    # Read prior state so we can detect transitions and signal the caller.
+    prior = conn.execute(
+        "SELECT lifecycle_status FROM jobs WHERE external_id = ?",
+        (external_id,),
+    ).fetchone()
+    old_status = prior[0] if prior else None
+
     if status == "unknown":
         conn.execute(
-            "UPDATE jobs SET last_lifecycle_check = ?, updated_at = datetime('now') "
-            "WHERE external_id = ?",
-            (today, external_id),
-        )
-    else:
-        new_status = "active" if status == "active" else "likely_closed"
-        conn.execute(
-            "UPDATE jobs SET lifecycle_status = ?, last_lifecycle_check = ?, "
+            "UPDATE jobs SET last_lifecycle_check = ?, last_lifecycle_verdict = ?, "
             "updated_at = datetime('now') WHERE external_id = ?",
-            (new_status, today, external_id),
+            (today, status, external_id),
         )
+        conn.commit()
+        return None  # lifecycle_status never changes on unknown
+    new_status = "active" if status == "active" else "likely_closed"
+    conn.execute(
+        "UPDATE jobs SET lifecycle_status = ?, last_lifecycle_check = ?, "
+        "last_lifecycle_verdict = ?, updated_at = datetime('now') "
+        "WHERE external_id = ?",
+        (new_status, today, status, external_id),
+    )
     conn.commit()
+    return new_status if new_status != old_status else None
 
 
 def get_jobs_to_archive_confirmed_closed(conn, limit: int = 100) -> list[dict[str, Any]]:
     """R-audit: fast-path for jobs confirmed-closed by a source-of-truth check.
-    Returns active rows whose lifecycle_status was flipped to likely_closed via
-    last_lifecycle_check (i.e., a source-page or ATS API veto — not just
-    aggregator absence). These skip the 21-day window."""
+
+    R7-A: requires `last_lifecycle_verdict='likely_closed'` — an authoritative
+    verdict from lifecycle_checker (ATS API absence or source-page 404/410).
+    Track B time-based `likely_closed` rows have last_lifecycle_verdict NULL
+    (or 'unknown' after a later indecisive HEAD check) and must continue to
+    wait the 21-day window via the time-based path.
+    """
     cur = conn.execute(
         "SELECT id, external_id, wp_post_id, first_seen_date, last_seen_date "
         "FROM jobs WHERE is_active = 1 "
         "AND lifecycle_status = 'likely_closed' "
-        "AND last_lifecycle_check IS NOT NULL "
+        "AND last_lifecycle_verdict = 'likely_closed' "
         "LIMIT ?",
         (limit,),
     )

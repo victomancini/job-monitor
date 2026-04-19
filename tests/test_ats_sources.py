@@ -216,6 +216,90 @@ def test_should_skip_ats_slug_only_skips_not_found(conn):
     assert dbmod.should_skip_ats_slug(conn, "greenhouse", "unseen") is False
 
 
+# ─── R6-C1: successful_slugs guard against parse-failure mass-closure ───
+
+def test_greenhouse_successful_slugs_includes_genuine_empty_board(conn):
+    """Board returned `{"jobs": []}` — truly empty → slug is authoritative."""
+    body = {"jobs": []}
+    with patch("src.sources.greenhouse.retry_request",
+               return_value=_mock_resp(body, 200)), \
+         patch("src.sources.greenhouse.time.sleep"):
+        jobs, errors, meta = greenhouse.fetch(
+            companies={"acme": "Acme"}, conn=conn,
+        )
+    assert jobs == []
+    assert "acme" in meta["successful_slugs"]
+
+
+def test_greenhouse_successful_slugs_excludes_parse_failure(conn):
+    """R6-C1: API returned jobs but every record was malformed → slug must NOT
+    appear in successful_slugs. A parse-failure day shouldn't mass-close the
+    company's existing jobs via lifecycle_checker."""
+    # Each record is missing `id`, which `_map` requires → returns None. That
+    # doesn't raise, but it also doesn't count as a successful job. We still
+    # need to cover the path where _map raises — use an entry that raises.
+    body = {"jobs": [{"id": None}, {"id": None}]}
+    with patch("src.sources.greenhouse.retry_request",
+               return_value=_mock_resp(body, 200)), \
+         patch("src.sources.greenhouse.time.sleep"):
+        jobs, errors, meta = greenhouse.fetch(
+            companies={"acme": "Acme"}, conn=conn,
+        )
+    # Zero jobs yielded AND the payload was non-empty → not authoritative
+    assert jobs == []
+    # Non-empty payload with zero usable records → slug not marked successful
+    # (each None-id entry returns None, so no errors; but also no success;
+    # successful_slugs should be empty)
+    assert meta["successful_slugs"] == set()
+
+
+def test_greenhouse_successful_slugs_with_map_exceptions_excluded(conn):
+    """R6-C1: if _map raises for every record (e.g., unexpected schema), slug
+    is not successful."""
+    # Patch _map to raise on every call
+    body = {"jobs": [{"id": 1, "title": "x"}, {"id": 2, "title": "y"}]}
+    with patch("src.sources.greenhouse.retry_request",
+               return_value=_mock_resp(body, 200)), \
+         patch("src.sources.greenhouse._map", side_effect=RuntimeError("bad schema")), \
+         patch("src.sources.greenhouse.time.sleep"):
+        jobs, errors, meta = greenhouse.fetch(
+            companies={"acme": "Acme"}, conn=conn,
+        )
+    assert jobs == []
+    assert len(errors) == 2
+    assert meta["successful_slugs"] == set()
+    # And the DB status should be 'error', not 'empty'
+    status = dbmod.get_ats_status(conn, "greenhouse", "acme")
+    assert status is not None
+    assert status["status"] == "error"
+
+
+def test_lever_successful_slugs_parse_failure_excluded(conn):
+    body = [{"id": 1, "text": "x"}]
+    with patch("src.sources.lever.retry_request",
+               return_value=_mock_resp(body, 200)), \
+         patch("src.sources.lever._map", side_effect=RuntimeError("bad schema")), \
+         patch("src.sources.lever.time.sleep"):
+        jobs, errors, meta = lever.fetch(
+            companies={"acme": "Acme"}, conn=conn,
+        )
+    assert jobs == []
+    assert meta["successful_slugs"] == set()
+
+
+def test_ashby_successful_slugs_parse_failure_excluded(conn):
+    body = {"jobs": [{"id": 1, "title": "x"}]}
+    with patch("src.sources.ashby.retry_request",
+               return_value=_mock_resp(body, 200)), \
+         patch("src.sources.ashby._map", side_effect=RuntimeError("bad schema")), \
+         patch("src.sources.ashby.time.sleep"):
+        jobs, errors, meta = ashby.fetch(
+            companies={"acme": "Acme"}, conn=conn,
+        )
+    assert jobs == []
+    assert meta["successful_slugs"] == set()
+
+
 def test_set_ats_status_upserts(conn):
     dbmod.set_ats_status(conn, "lever", "slug", "not_found")
     dbmod.set_ats_status(conn, "lever", "slug", "active", jobs_found=5)

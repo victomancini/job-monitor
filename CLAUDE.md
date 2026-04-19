@@ -117,7 +117,8 @@ The pipeline builds this dict progressively. Sources populate the first block. P
 - IMPORTANT: SQLite has no ON UPDATE trigger. All UPDATE queries on jobs table MUST set updated_at = datetime('now') explicitly.
 - IMPORTANT: Brevo SMTP: host="smtp-relay.brevo.com", port=587, STARTTLS. Hardcode in notifier.py.
 - IMPORTANT: ALL jobs from source_name="google_alerts" MUST be routed to LLM classification regardless of keyword score. Override auto-include for this source.
-- IMPORTANT: Company boost: If company name matches any entry in companies.yaml Tier 1 vendors or Tier 2 vendors, add 15 points to keyword_score. This ensures generic-titled roles at EL/PA vendors reach LLM review.
+- IMPORTANT: Company boost: If company name matches any entry in companies.yaml Tier 1 or Tier 2 vendors AND the job's title has at least one positive keyword match, add 10 points to keyword_score (src/processors/keyword_filter.py:COMPANY_BOOST_POINTS). Originally +15; dropped to +10 in Phase B3 when gated on positive match. Title-level gate added in the R-audit to prevent aggregator self-mentions in the description from triggering boosts on unrelated roles (e.g., "Allbound SDR" at Culture Amp).
+- IMPORTANT: Phase B8 gated T3 terms: "employee experience" scores 5 when an analytics-class co-signal (analytics/insights/data/survey/listening) appears in title or first 400 chars of description. "workforce planning" uses an expanded co-signal (adds manager/director/lead/head/analyst/optimization/optimisation/strategy/strategic) and scores 15 points — the llm_review_min floor — because workforce-planning role titles often lead with a seniority word rather than an analytics word. Both are additionally gated by a NEGATIVE co-signal (nurse/shift/schedule/staffing/contact-centre) to exclude retail/hospital scheduling roles. See src/processors/keyword_filter.py B8_COSIGNALS and B8_NEGATIVE_COSIGNALS.
 
 ## Workflow
 

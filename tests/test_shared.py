@@ -92,3 +92,95 @@ def test_validate_required_env_present(monkeypatch):
 def test_env_trims_whitespace(monkeypatch):
     monkeypatch.setenv("FOO", "  value  ")
     assert shared.env("FOO") == "value"
+
+
+# ───── R7-C: HTTPS scheme enforcement ─────────────────────────
+
+def test_validate_env_scheme_accepts_https(monkeypatch):
+    monkeypatch.setenv("WP_URL", "https://site.example/")
+    monkeypatch.setenv("HEALTHCHECK_URL", "https://hc-ping.com/abc")
+    assert shared.validate_env_scheme() == []
+
+
+def test_validate_env_scheme_rejects_http_wp_url(monkeypatch):
+    monkeypatch.setenv("WP_URL", "http://site.example/")
+    monkeypatch.setenv("HEALTHCHECK_URL", "https://hc-ping.com/abc")
+    assert shared.validate_env_scheme() == ["WP_URL"]
+
+
+def test_validate_env_scheme_rejects_http_healthcheck(monkeypatch):
+    monkeypatch.setenv("WP_URL", "https://site.example/")
+    monkeypatch.setenv("HEALTHCHECK_URL", "http://my-hc.example/")
+    assert shared.validate_env_scheme() == ["HEALTHCHECK_URL"]
+
+
+def test_validate_env_scheme_reports_both_violations(monkeypatch):
+    monkeypatch.setenv("WP_URL", "http://site/")
+    monkeypatch.setenv("HEALTHCHECK_URL", "http://hc/")
+    assert set(shared.validate_env_scheme()) == {"WP_URL", "HEALTHCHECK_URL"}
+
+
+def test_validate_env_scheme_empty_urls_skip(monkeypatch):
+    """Missing URLs are caught by validate_required_env; scheme check should
+    be a no-op for empty values rather than false-flagging them."""
+    monkeypatch.delenv("WP_URL", raising=False)
+    monkeypatch.delenv("HEALTHCHECK_URL", raising=False)
+    assert shared.validate_env_scheme() == []
+
+
+def test_validate_env_scheme_case_insensitive(monkeypatch):
+    """HTTPS scheme match is case-insensitive per RFC 3986."""
+    monkeypatch.setenv("WP_URL", "HTTPS://site.example/")
+    monkeypatch.setenv("HEALTHCHECK_URL", "Https://hc.example/")
+    assert shared.validate_env_scheme() == []
+
+
+# ───── R7-2: raw_data size cap ────────────────────────────────
+
+def test_build_job_stores_small_raw_data_verbatim():
+    small = {"id": "abc", "title": "X", "company": "Y"}
+    j = shared.build_job(
+        source_name="jsearch",
+        external_id="jsearch_abc",
+        title="X",
+        company="Y",
+        source_url="https://example.com",
+        raw_data=small,
+    )
+    import json as _json
+    parsed = _json.loads(j["raw_data"])
+    assert parsed == small
+    assert "_truncated" not in parsed
+
+
+def test_build_job_truncates_oversized_raw_data():
+    """R7-2: >50KB payload gets replaced with a marker dict so row-size limits
+    on Turso aren't blown silently."""
+    huge_desc = "A" * (shared.RAW_DATA_MAX_BYTES + 10_000)
+    raw = {"id": "abc", "title": "X", "company": "Y", "description_raw": huge_desc}
+    j = shared.build_job(
+        source_name="jsearch",
+        external_id="jsearch_abc",
+        title="X",
+        company="Y",
+        source_url="https://example.com",
+        raw_data=raw,
+    )
+    import json as _json
+    parsed = _json.loads(j["raw_data"])
+    assert parsed["_truncated"] is True
+    assert parsed["_original_bytes"] > shared.RAW_DATA_MAX_BYTES
+    # Stored size well below the cap
+    assert len(j["raw_data"].encode("utf-8")) < 1_000
+
+
+def test_build_job_none_raw_data_stays_none():
+    j = shared.build_job(
+        source_name="jsearch",
+        external_id="jsearch_abc",
+        title="X",
+        company="Y",
+        source_url="https://example.com",
+        raw_data=None,
+    )
+    assert j["raw_data"] is None

@@ -186,6 +186,43 @@ def _mock_groq_result(text):
     return client
 
 
+# ───── R7-3: exception sanitization ──────────────────────────
+
+def test_sanitize_err_redacts_bearer_token():
+    """R7-3: bearer tokens in SDK error messages must be redacted before log."""
+    e = Exception('API error: Authorization: Bearer sk-abc123def456 invalid')
+    out = lc._sanitize_err(e)
+    assert "sk-abc123def456" not in out
+    assert "<redacted>" in out
+
+
+def test_sanitize_err_redacts_api_key_patterns():
+    for raw in [
+        "api_key=sk-abc123def456xyz is expired",
+        "api-key: gsk_aaaaaaaaaaaaaa rejected",
+        "X-RapidAPI-Key: 5f3e2d1c0b9a8765 rate limited",
+        "Authorization-Key: usajobs_aaabbbccc123 forbidden",
+    ]:
+        out = lc._sanitize_err(Exception(raw))
+        assert "aaa" not in out or "<redacted>" in out, \
+            f"failed to redact: {raw} → {out}"
+
+
+def test_sanitize_err_caps_length():
+    """Stack traces can be tens of KB — cap to keep log lines bounded."""
+    e = Exception("x" * 2000)
+    out = lc._sanitize_err(e, max_len=200)
+    assert len(out) == 200
+
+
+def test_sanitize_err_preserves_non_auth_content():
+    """Non-auth error text should pass through intact so debugging still works."""
+    e = Exception("rate limit exceeded: retry after 60s")
+    out = lc._sanitize_err(e)
+    assert "rate limit exceeded" in out
+    assert "retry after" in out
+
+
 def test_groq_success_first_call():
     j = job()
     ok = '{"classification": "RELEVANT", "confidence": 90, "reasoning": "core role"}'

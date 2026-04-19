@@ -275,6 +275,64 @@ def test_upsert_respects_caller_provided_company_normalized(conn):
 # while is_active=1.
 # Regression: N3 — dedup pool must include recently-archived rows so a job
 # re-emerging from a different aggregator dedups against its archived sibling.
+# ───── R7-1: db.connect retry ─────────────────────────────────
+
+def test_db_connect_retries_on_transient_error(monkeypatch):
+    """R7-1: a single transient error should be retried; the second attempt
+    succeeding returns a usable connection."""
+    from src import db as _db
+    attempts = {"count": 0}
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            attempts["count"] += 1
+            if attempts["count"] == 1:
+                raise RuntimeError("transient turso outage")
+            return "CONN_OK"
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
+    result = _db.connect()
+    assert result == "CONN_OK"
+    assert attempts["count"] == 2
+
+
+def test_db_connect_raises_after_exhausted_retries(monkeypatch):
+    """All attempts exhausted → the final exception bubbles up."""
+    from src import db as _db
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            raise RuntimeError("permanently down")
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
+    with pytest.raises(RuntimeError, match="permanently down"):
+        _db.connect(max_attempts=3)
+
+
+def test_db_connect_sleeps_backoff_between_attempts(monkeypatch):
+    """Backoff waits 2s after first failure, 4s after second."""
+    from src import db as _db
+    sleeps: list[float] = []
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            raise RuntimeError("down")
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda s: sleeps.append(s))
+    with pytest.raises(RuntimeError):
+        _db.connect(max_attempts=3)
+    assert sleeps == [2, 4]
+
+
 def test_get_active_jobs_for_dedup_includes_recent_archives(conn):
     db.upsert_job(conn, sample_job("active_one"))
     db.upsert_job(conn, sample_job("recently_archived"))

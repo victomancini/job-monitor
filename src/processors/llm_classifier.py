@@ -7,10 +7,37 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 from typing import Any
 
 from src.shared import env
+
+
+# R7: redact auth-bearing patterns from SDK exception messages before logging.
+# The OpenAI/Groq/Gemini SDKs occasionally surface the request body or header
+# values in error strings (particularly during schema-validation failures).
+# Matching is lenient — we'd rather redact aggressively than leak an API key.
+#
+# Two shapes supported:
+#   (a) "<keyword><sep><token>"          → key-like field followed by the value
+#   (b) "authorization: Bearer <token>"  → RFC 7235 scheme prefix between the
+#                                          keyword and the actual credential
+# The inner `(?:bearer\s+)?` in (a) absorbs the RFC-7235 "Bearer" prefix so
+# the token itself gets captured and redacted.
+_AUTH_REDACT_RE = re.compile(
+    r"(bearer|api[_-]?key|authorization|x-rapidapi-key|authorization-key)"
+    r"[:\s=]+(?:bearer\s+)?[\"']?([A-Za-z0-9_\-.=]{8,})",
+    re.IGNORECASE,
+)
+
+
+def _sanitize_err(e: Exception, max_len: int = 500) -> str:
+    """Stringify an exception for logging with obvious secret shapes redacted
+    and length capped so stack traces don't flood logs."""
+    msg = str(e)
+    msg = _AUTH_REDACT_RE.sub(r"\1: <redacted>", msg)
+    return msg[:max_len]
 
 log = logging.getLogger(__name__)
 
@@ -258,7 +285,7 @@ def classify_job(
         try:
             result = call()
         except Exception as e:  # noqa: BLE001 — every provider can raise different errors; always fall through
-            log.warning("%s classification failed: %s", name, e)
+            log.warning("%s classification failed: %s", name, _sanitize_err(e))
             result = None
         if result is not None:
             provider_used = name
@@ -330,7 +357,7 @@ def classify_batch(
             if r["provider"] != "keyword_only":
                 last_provider = r["provider"]
         except Exception as e:  # noqa: BLE001
-            errors.append(f"llm: failed on {job.get('external_id','?')}: {e}")
+            errors.append(f"llm: failed on {job.get('external_id','?')}: {_sanitize_err(e)}")
             # Don't update last_provider on exception — keep pacing from whatever
             # worked most recently.
         if i < len(jobs) - 1:
