@@ -10,6 +10,7 @@ import time
 from typing import Any
 
 from src import db
+from src.shared import days_since_posted as _days_since_posted
 from src.sources._http import retry_request
 
 log = logging.getLogger(__name__)
@@ -35,6 +36,23 @@ _WP_FIELDS = [
     "vendors_mentioned",
     # Phase 6 (R3): lifecycle state — 'active' | 'likely_closed'
     "lifecycle_status",
+    # R11 Phase 0: authoritative first_seen_date from Turso (so WP stops
+    # re-stamping today whenever a post is recreated), pre-computed
+    # days_since_posted integer (for reliable numeric sort), and an explicit
+    # is_brand_new flag (replaces fragile first_seen_date == today check).
+    "first_seen_date",
+    "days_since_posted",
+    "is_brand_new",
+    # R11 Phase 6: consensus transparency. When multiple sources agreed on
+    # the final is_remote / work_arrangement value, surface the count and
+    # their confidence so the table can render a "verified by N sources"
+    # tooltip. Stored as numeric + comma-separated strings to keep the WP
+    # meta layer simple (no nested JSON parsing in PHP).
+    "remote_vote_confidence",
+    "remote_vote_sources",
+    "remote_vote_agreement",
+    "work_arrangement_vote_confidence",
+    "work_arrangement_vote_sources",
 ]
 
 
@@ -59,12 +77,42 @@ def _build_headers(username: str, app_password: str) -> dict[str, str]:
 
 
 def _payload(job: dict[str, Any]) -> dict[str, Any]:
+    # R11 Phase 0: compute days_since_posted here so PHP doesn't re-parse dates
+    # with the site's local timezone. is_brand_new is populated by
+    # db.upsert_job as a side effect on the created branch — default False so
+    # the NEW badge only fires when we have proof this run created the row.
+    if job.get("days_since_posted") is None:
+        dsp = _days_since_posted(job.get("date_posted"), job.get("first_seen_date"))
+        if dsp is not None:
+            job["days_since_posted"] = dsp
+    if "is_brand_new" not in job:
+        job["is_brand_new"] = 1 if job.get("_is_brand_new") else 0
+    # R11 Phase 6: flatten _consensus into WP meta. The plugin will render
+    # "verified by N sources" tooltips off these fields. Numeric confidence
+    # is rounded to 2 decimals for display; the source list is a CSV so PHP
+    # can explode() without JSON parsing.
+    consensus = job.get("_consensus") or {}
+    for field in ("is_remote", "work_arrangement"):
+        entry = consensus.get(field)
+        if not entry:
+            continue
+        wp_prefix = "remote" if field == "is_remote" else "work_arrangement"
+        conf = entry.get("confidence")
+        if isinstance(conf, (int, float)):
+            job[f"{wp_prefix}_vote_confidence"] = round(float(conf), 2)
+        sources = entry.get("sources") or []
+        if sources:
+            job[f"{wp_prefix}_vote_sources"] = ",".join(str(s) for s in sources)
+            if field == "is_remote":
+                job["remote_vote_agreement"] = len(sources)
     out = {}
     for k in _WP_FIELDS:
         v = job.get(k)
         if v is None:
             continue
-        if isinstance(v, (int, float)):
+        if isinstance(v, bool):
+            out[k] = 1 if v else 0
+        elif isinstance(v, (int, float)):
             out[k] = v
         else:
             out[k] = str(v)

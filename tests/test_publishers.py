@@ -129,6 +129,109 @@ def test_wordpress_payload_includes_vendors_mentioned():
     assert captured["jobs"][0]["vendors_mentioned"] == "Qualtrics,Medallia,Python,SQL"
 
 
+def test_wordpress_payload_includes_r11_freshness_fields():
+    """R11 Phase 0: first_seen_date + days_since_posted + is_brand_new must
+    reach WordPress so the plugin stops re-stamping today on recreated posts
+    and can sort freshness numerically without timezone drift."""
+    from datetime import datetime, timedelta, timezone
+    seven_days_ago = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+    j = _job()
+    j.update({
+        "date_posted": seven_days_ago,
+        "first_seen_date": seven_days_ago,
+        "_is_brand_new": False,
+    })
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 0, "updated": 1, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert payload["first_seen_date"] == seven_days_ago
+    assert payload["days_since_posted"] == 7
+    assert payload["is_brand_new"] == 0
+
+
+def test_wordpress_payload_brand_new_flag_set_on_creation():
+    """When Turso just inserted the row, is_brand_new=1 reaches WP so the NEW
+    badge can render on exactly the day the job first appeared."""
+    from datetime import datetime, timezone
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    j = _job()
+    j.update({
+        "first_seen_date": today,
+        "_is_brand_new": True,
+    })
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert payload["is_brand_new"] == 1
+    assert payload["days_since_posted"] == 0
+
+
+def test_wordpress_payload_ships_consensus_vote_fields():
+    """R11 Phase 6: consensus transparency. WP rendering needs the per-field
+    agreement count + source list to render the 'verified by N sources'
+    tooltip on the Remote cell."""
+    j = _job()
+    j["_consensus"] = {
+        "is_remote": {
+            "value": "hybrid",
+            "confidence": 0.82,
+            "sources": ["greenhouse", "text_classifier"],
+        },
+        "work_arrangement": {
+            "value": "hybrid",
+            "confidence": 0.82,
+            "sources": ["greenhouse", "text_classifier"],
+        },
+    }
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert payload["remote_vote_confidence"] == 0.82
+    assert payload["remote_vote_sources"] == "greenhouse,text_classifier"
+    assert payload["remote_vote_agreement"] == 2
+    assert payload["work_arrangement_vote_sources"] == "greenhouse,text_classifier"
+
+
+def test_wordpress_payload_without_consensus_omits_vote_fields():
+    """Jobs never touched by consensus voting (no observations) shouldn't
+    ship empty vote fields that would clutter WP meta."""
+    j = _job()
+    # No _consensus key
+    captured = {}
+
+    def capture(method, url, *, headers, json, **kw):
+        captured.update(json)
+        return _mock_resp({"created": 1, "updated": 0, "errors": 0, "post_ids": {}})
+
+    with patch("src.publishers.wordpress.retry_request", side_effect=capture):
+        wordpress.publish([j], wp_url="https://s", username="u", app_password="p")
+
+    payload = captured["jobs"][0]
+    assert "remote_vote_confidence" not in payload
+    assert "remote_vote_sources" not in payload
+
+
 def test_wordpress_update_existing_not_duplicate(conn):
     """Same external_id → endpoint returns 'updated', not 'created'."""
     body = {"created": 0, "updated": 1, "errors": 0, "post_ids": {"jsearch_1": 101}}

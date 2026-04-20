@@ -54,6 +54,111 @@ def _effective_threshold(a: dict[str, Any], b: dict[str, Any]) -> float:
     return DUPLICATE_THRESHOLD
 
 
+# R11 Phase 3: consensus voting ─────────────────────────────────
+# Categorical fields get a weighted-majority vote across observations. On
+# ties, restrictiveness breaks the tie (so "hybrid" wins over "remote" when
+# the vote is dead-even — a candidate would rather discover an onsite
+# requirement than falsely assume full remote). The minimum confidence to
+# *override* a source-supplied flat value. Below this, we leave the flat
+# value alone but still expose consensus for display.
+_CONSENSUS_FIELDS_CATEGORICAL = ("is_remote", "work_arrangement")
+_CONSENSUS_OVERRIDE_MIN_CONF = 0.65
+_RESTRICTIVENESS = {"onsite": 0, "hybrid": 1, "remote": 2}
+
+
+def _restrictiveness_key(value: str) -> int:
+    return _RESTRICTIVENESS.get(str(value).lower(), 3)
+
+
+def compute_consensus(
+    observations: list[dict[str, Any]],
+) -> tuple[Any, float, list[str]] | None:
+    """Categorical weighted vote. Returns (winner_value, confidence, sources)
+    where confidence is winner_weight / total_weight (∈ (0, 1]) and sources is
+    the list of source_names that voted for the winner. Returns None for
+    empty observations."""
+    if not observations:
+        return None
+    totals: dict[Any, float] = {}
+    by_value: dict[Any, list[str]] = {}
+    total = 0.0
+    for obs in observations:
+        val = obs.get("value")
+        conf = float(obs.get("confidence", 0.5))
+        if val is None or val == "" or val == "unknown":
+            continue
+        totals[val] = totals.get(val, 0.0) + conf
+        by_value.setdefault(val, []).append(obs.get("source", "?"))
+        total += conf
+    if not totals:
+        return None
+    # Sort: max weight first, restrictiveness (onsite > hybrid > remote) next
+    ranked = sorted(
+        totals.items(),
+        key=lambda kv: (-kv[1], _restrictiveness_key(kv[0])),
+    )
+    winner_val, winner_weight = ranked[0]
+    confidence = winner_weight / total if total > 0 else 0.0
+    return winner_val, confidence, by_value[winner_val]
+
+
+def merge_field_sources(
+    primary: dict[str, Any], peer: dict[str, Any]
+) -> None:
+    """Concatenate peer's _field_sources observations into primary's. Called
+    when two batch peers collapse — preserves both sources' votes rather than
+    dropping one. In-place mutation of `primary`."""
+    peer_fs = peer.get("_field_sources") or {}
+    if not peer_fs:
+        return
+    primary_fs = primary.setdefault("_field_sources", {})
+    for field, obs_list in peer_fs.items():
+        primary_fs.setdefault(field, []).extend(obs_list)
+
+
+def apply_consensus(jobs: list[dict[str, Any]]) -> dict[str, int]:
+    """For each job, compute categorical consensus per tracked field and
+    update the flat value when vote confidence >= override threshold.
+
+    Stashes the vote result on the job dict under `_consensus[field] =
+    {value, confidence, sources}` so downstream (publisher, WP) can render
+    per-field trust badges. Does not touch fields without observations."""
+    stats = {
+        "jobs": 0, "votes_applied": 0, "overrides": 0,
+        "tied_to_source": 0, "below_threshold": 0,
+    }
+    for job in jobs:
+        stats["jobs"] += 1
+        fs = job.get("_field_sources") or {}
+        consensus = job.setdefault("_consensus", {})
+        for field in _CONSENSUS_FIELDS_CATEGORICAL:
+            obs = fs.get(field) or []
+            result = compute_consensus(obs)
+            if result is None:
+                continue
+            winner, confidence, sources = result
+            consensus[field] = {
+                "value": winner,
+                "confidence": round(confidence, 3),
+                "sources": sources,
+            }
+            stats["votes_applied"] += 1
+            # Decide whether to promote the consensus winner into the flat
+            # field. Only do so when (a) confidence is high enough and
+            # (b) winner differs from the current flat value. Low-confidence
+            # votes leave the flat value alone.
+            current = job.get(field)
+            if winner == current:
+                stats["tied_to_source"] += 1
+                continue
+            if confidence >= _CONSENSUS_OVERRIDE_MIN_CONF:
+                job[field] = winner
+                stats["overrides"] += 1
+            else:
+                stats["below_threshold"] += 1
+    return stats
+
+
 def _merge_locations(primary: str, new: str) -> str:
     """Merge a new location into a primary (possibly already-merged) location string.
     Rules:
@@ -207,10 +312,19 @@ def deduplicate(
                     displaced = kept[match_idx]
                     skipped.append({**displaced, "_dedup_score": score,
                                     "_dedup_against": job.get("external_id")})
-                    kept[match_idx] = {**job, "location": merged_loc}
+                    # R11 Phase 3: carry the displaced peer's provenance into
+                    # the new primary so consensus voting sees every source's
+                    # observation. Without this, peer merges lose half the
+                    # votes and consensus collapses to the newest arrival.
+                    new_primary = {**job, "location": merged_loc}
+                    merge_field_sources(new_primary, displaced)
+                    kept[match_idx] = new_primary
                 else:
-                    # Keep the existing primary, but update its location.
-                    kept[match_idx] = {**kept[match_idx], "location": merged_loc}
+                    # Keep the existing primary, but update its location and
+                    # accumulate the peer's provenance observations.
+                    existing_primary = {**kept[match_idx], "location": merged_loc}
+                    merge_field_sources(existing_primary, job)
+                    kept[match_idx] = existing_primary
                     skipped.append({**job, "_dedup_score": score,
                                     "_dedup_against": match.get("external_id")})
             else:

@@ -1,0 +1,28 @@
+﻿2026-04-20T14:24:44.3270180Z ##[group]Run actions/upload-artifact@v4
+2026-04-20T14:24:44.3270577Z with:
+2026-04-20T14:24:44.3270830Z   name: shadow-log-22
+2026-04-20T14:24:44.3271120Z   path: shadow_log.jsonl
+2026-04-20T14:24:44.3271401Z   retention-days: 14
+2026-04-20T14:24:44.3271684Z   if-no-files-found: ignore
+2026-04-20T14:24:44.3272278Z   compression-level: 6
+2026-04-20T14:24:44.3272565Z   overwrite: false
+2026-04-20T14:24:44.3272838Z   include-hidden-files: false
+2026-04-20T14:24:44.3273120Z env:
+2026-04-20T14:24:44.3273439Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T14:24:44.3274141Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T14:24:44.3274642Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T14:24:44.3275097Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T14:24:44.3275544Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T14:24:44.3276006Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T14:24:44.3276408Z ##[endgroup]
+2026-04-20T14:24:44.5395334Z With the provided path, there will be 1 file uploaded
+2026-04-20T14:24:44.5400885Z Artifact name is valid!
+2026-04-20T14:24:44.5402453Z Root directory input is valid!
+2026-04-20T14:24:44.8832692Z Beginning upload of artifact content to blob storage
+2026-04-20T14:24:45.3358409Z Uploaded bytes 135284
+2026-04-20T14:24:45.4042480Z Finished uploading artifact content to blob storage!
+2026-04-20T14:24:45.4045822Z SHA256 digest of uploaded artifact zip is ff10598520731f98943bd56c8a625a28bc41d2245321a365c6dd463aaf5a7919
+2026-04-20T14:24:45.4047234Z Finalizing artifact upload
+2026-04-20T14:24:45.6036773Z Artifact shadow-log-22.zip successfully finalized. Artifact ID 6533896117
+2026-04-20T14:24:45.6038123Z Artifact shadow-log-22 has been successfully uploaded! Final size is 135284 bytes. Artifact ID is 6533896117
+2026-04-20T14:24:45.6048279Z Artifact download URL: https://github.com/victomancini/job-monitor/actions/runs/24671298398/artifacts/6533896117

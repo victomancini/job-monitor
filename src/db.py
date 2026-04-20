@@ -62,6 +62,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     enrichment_date TEXT,
     vendors_mentioned TEXT,
     date_posted TEXT,
+    field_sources TEXT,
     first_seen_date TEXT NOT NULL,
     last_seen_date TEXT NOT NULL,
     is_active INTEGER DEFAULT 1,
@@ -141,6 +142,7 @@ _JOB_COLUMNS = [
     "enrichment_source", "enrichment_date",
     "vendors_mentioned",
     "date_posted", "first_seen_date", "last_seen_date",
+    "field_sources",
     "is_active", "wp_post_id", "raw_data",
 ]
 
@@ -171,6 +173,12 @@ _ADD_COLUMN_MIGRATIONS = [
     # equal 'likely_closed' so an 'unknown' HEAD verdict on an already-stale
     # job can't short-circuit the 21-day grace window.
     ("last_lifecycle_verdict", "last_lifecycle_verdict TEXT"),
+    # R11 Phase 1: per-field provenance (JSON). Keys are field names
+    # (is_remote, salary_min, etc.), values are lists of
+    # {source, value, confidence} observations. Consensus voting in the
+    # deduplicator (R11 Phase 3) reads this to adjudicate cross-source
+    # disagreements instead of last-write-wins.
+    ("field_sources", "field_sources TEXT"),
 ]
 
 
@@ -338,10 +346,19 @@ def migrate(conn) -> None:
 
 
 def upsert_job(conn, job: dict[str, Any]) -> str:
-    """Insert or update a job by external_id. Returns 'created' or 'updated'."""
+    """Insert or update a job by external_id. Returns 'created' or 'updated'.
+
+    Side effects on the job dict (R11 Phase 0):
+    - Sets job["first_seen_date"] to the authoritative Turso value so the WP
+      publisher can ship it. Previously WP's INSERT branch restamped this to
+      today whenever a post was recreated, which caused the NEW badge to fire
+      on jobs Turso had seen for weeks.
+    - Sets job["_is_brand_new"] = True iff we created the Turso row this call.
+    """
     today = _today()
     row = conn.execute(
-        "SELECT id FROM jobs WHERE external_id = ?", (job["external_id"],)
+        "SELECT id, date_posted, first_seen_date FROM jobs WHERE external_id = ?",
+        (job["external_id"],),
     ).fetchone()
 
     values = {col: job.get(col) for col in _JOB_COLUMNS}
@@ -350,6 +367,12 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
         values["is_active"] = 1
     if isinstance(values.get("raw_data"), (dict, list)):
         values["raw_data"] = json.dumps(values["raw_data"])
+    # R11 Phase 1: serialize in-memory _field_sources (dict of field →
+    # list of observations) into the field_sources column (JSON). Guards
+    # against accidental dict values leaking to other code paths.
+    fs = job.get("_field_sources")
+    if fs:
+        values["field_sources"] = json.dumps(fs, default=str)
     # Derive company_normalized if the caller didn't. Lazy import so db.py has
     # no hard dependency on processors.
     if not values.get("company_normalized") and values.get("company"):
@@ -369,13 +392,35 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
             tuple(insert_vals.values()),
         )
         conn.commit()
+        job["first_seen_date"] = today
+        job["_is_brand_new"] = True
         return "created"
 
     # Phase 6 (R3): re-seeing a job proves it's still active, even if the source
     # adapter didn't set lifecycle_status explicitly. Force it back to 'active'
     # so 'likely_closed' rows recover on re-appearance.
     values["lifecycle_status"] = "active"
-    update_cols = [c for c in values.keys() if c != "first_seen_date"]
+
+    # R11 Phase 0: date_posted is the posting date, not the scrape date. Keep
+    # the earliest observation across runs — a Jooble "updated=today" coming
+    # in for a Greenhouse posting first seen a week ago must not overwrite
+    # the earlier, more accurate value.
+    existing_dp = row[1] if len(row) > 1 else None
+    existing_fsd = row[2] if len(row) > 2 else None
+    incoming_dp = values.get("date_posted")
+    if incoming_dp and existing_dp:
+        values["date_posted"] = min(incoming_dp, existing_dp)
+    elif existing_dp and not incoming_dp:
+        values["date_posted"] = existing_dp
+
+    # R11 Phase 0: never overwrite columns with None on UPDATE. A source
+    # re-seeing a job without a value it doesn't emit (e.g., Jooble skipping
+    # salary, Adzuna skipping is_remote) must not wipe data another source
+    # provided earlier. first_seen_date is separately immutable.
+    update_cols = [
+        c for c in values.keys()
+        if c != "first_seen_date" and values[c] is not None
+    ]
     set_clause = ", ".join(f"{c} = ?" for c in update_cols) + ", updated_at = datetime('now')"
     # Resurrection: if a previously-archived row (is_active=0 with archived_date
     # and days_active set) reappears in a fresh batch, clear the archival state
@@ -389,6 +434,9 @@ def upsert_job(conn, job: dict[str, Any]) -> str:
         conn, f"UPDATE jobs SET {set_clause} WHERE external_id = ?", params,
     )
     conn.commit()
+    if existing_fsd:
+        job["first_seen_date"] = existing_fsd
+    job["_is_brand_new"] = False
     return "updated"
 
 

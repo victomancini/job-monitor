@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 import requests
 
 from src.shared import AGGREGATOR_HOSTS, format_salary_range, is_aggregator_host
+from src.processors import schema_org
 
 log = logging.getLogger(__name__)
 
@@ -356,6 +357,24 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
         _apply_assumed_defaults(job)
         return job
 
+    # R11 Phase 5: guardrails. Check circuit breaker + fetch budget BEFORE
+    # issuing HTTP — tripped hosts skip straight to aggregator fallback, and
+    # an exhausted budget defers the tail of the batch rather than dragging
+    # past Turso's stream idle window.
+    host_for_guards = _host(url)
+    if not _circuit_breaker.allow(host_for_guards):
+        log.info("enrich_job[%s] skipped: circuit breaker tripped for %s",
+                 job.get("external_id"), host_for_guards)
+        job["enrichment_source"] = "aggregator"
+        _apply_assumed_defaults(job)
+        return job
+    if not _fetch_budget.take():
+        log.info("enrich_job[%s] skipped: run fetch budget exhausted",
+                 job.get("external_id"))
+        job["enrichment_source"] = "aggregator"
+        _apply_assumed_defaults(job)
+        return job
+
     try:
         resp = requests.get(
             url,
@@ -365,14 +384,22 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
         )
     except requests.RequestException as e:
         log.warning("enrichment: failed to fetch %s: %s", url[:80], e)
+        _circuit_breaker.record_failure(host_for_guards)
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
         return job
     except Exception as e:  # noqa: BLE001 — any fetch error routes to aggregator fallback
         log.warning("enrichment: unexpected error fetching %s: %s", url[:80], e)
+        _circuit_breaker.record_failure(host_for_guards)
         job["enrichment_source"] = "aggregator"
         _apply_assumed_defaults(job)
         return job
+    # Record success/failure into the circuit breaker so the host's next
+    # consecutive failure starts from the right counter.
+    if resp.status_code == 200:
+        _circuit_breaker.record_success(host_for_guards)
+    else:
+        _circuit_breaker.record_failure(host_for_guards)
 
     # Phase A / R9-Part-2: HTTP redirect rewrite. `is_aggregator_host()`
     # replaces exact-match `in AGGREGATOR_HOSTS`, so regional subdomains
@@ -415,6 +442,21 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
             job["apply_url"] = body_redirect
 
     text = _extract_text(resp.text or "")
+
+    # R11 Phase 4: when we're on a non-aggregator page, try to extract
+    # schema.org JobPosting markup. Emits provenance observations with
+    # reliability 0.85 — consensus voting (Phase 3) weights them against
+    # the aggregator's structured field. No-op on aggregator pages or when
+    # the page lacks ld+json. Tolerant of parse errors.
+    if not is_aggregator_host(orig_host):
+        try:
+            n = schema_org.apply_to_job(job, resp.text or "")
+            if n:
+                log.info("enrich_job[%s] schema.org emitted %d observation(s)",
+                         job.get("external_id"), n)
+        except Exception as e:  # noqa: BLE001 — schema parsing must not break enrichment
+            log.warning("enrich_job[%s] schema.org extraction failed: %s",
+                        job.get("external_id"), e)
 
     # Salary — only mark confirmed when source page is the first to provide it
     # or it corroborates a description-inferred value. Aggregator-provided salary
@@ -513,6 +555,128 @@ def _warn_if_still_aggregator(job: dict[str, Any]) -> None:
                 job.get("external_id"), url[:200])
 
 
+# R11 Phase 5: enrichment guardrails. Three layered protections stop any
+# single run from stampeding the Turso stream timeout or hammering a
+# misbehaving host:
+#   1. _CircuitBreaker — per-host failure counting with quarantine
+#   2. _FetchBudget    — hard ceiling on total GETs per run
+#   3. priority sort   — high-signal jobs (LLM RELEVANT, Tier 1/2, high
+#      keyword_score) go first so the budget cap lands on the cheap jobs
+MAX_ENRICHMENT_FETCHES_PER_RUN = 300
+HOST_CIRCUIT_BREAKER_THRESHOLD = 5
+
+
+class _CircuitBreaker:
+    """Per-host consecutive-failure counter. Once a host crosses the threshold
+    it's tripped for the rest of the run — subsequent `allow()` calls return
+    False without issuing HTTP. A successful fetch resets the counter.
+
+    Protects against a single pathological host (e.g., Jooble 403'ing 40
+    requests in a row) eating enrichment time budget and wasting HTTP
+    retries on a guaranteed failure."""
+
+    def __init__(self, threshold: int = HOST_CIRCUIT_BREAKER_THRESHOLD) -> None:
+        self.threshold = threshold
+        self._failures: dict[str, int] = defaultdict(int)
+        self._tripped: set[str] = set()
+        self._lock = threading.Lock()
+
+    def allow(self, host: str) -> bool:
+        if not host:
+            return True
+        with self._lock:
+            return host not in self._tripped
+
+    def record_success(self, host: str) -> None:
+        if not host:
+            return
+        with self._lock:
+            self._failures[host] = 0
+            self._tripped.discard(host)
+
+    def record_failure(self, host: str) -> None:
+        if not host:
+            return
+        with self._lock:
+            self._failures[host] += 1
+            if self._failures[host] >= self.threshold:
+                if host not in self._tripped:
+                    log.warning("enrichment: circuit breaker tripped for %s "
+                                "after %d consecutive failures", host, self._failures[host])
+                self._tripped.add(host)
+
+    def snapshot(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "tripped_hosts": sorted(self._tripped),
+                "total_failures": sum(self._failures.values()),
+            }
+
+
+class _FetchBudget:
+    """Hard ceiling on GETs per batch. When the budget is exhausted, `take()`
+    returns False and the caller falls back to the aggregator branch (same
+    behavior as a fetch failure). Protects against runaway enrichment
+    (schema.org adds per-page GETs; a big batch on a slow day could drag
+    past Turso's ~15 min stream idle timeout)."""
+
+    def __init__(self, limit: int = MAX_ENRICHMENT_FETCHES_PER_RUN) -> None:
+        self.limit = limit
+        self._used = 0
+        self._lock = threading.Lock()
+
+    def take(self) -> bool:
+        with self._lock:
+            if self._used >= self.limit:
+                return False
+            self._used += 1
+            return True
+
+    def snapshot(self) -> dict[str, int]:
+        with self._lock:
+            return {"used": self._used, "limit": self.limit}
+
+
+# Global per-run instances. enrich_batch reinstantiates at the start of a
+# run to reset state; direct calls to enrich_job share the current run's
+# instances. Kept at module level so tests can inspect/reset cleanly.
+_circuit_breaker = _CircuitBreaker()
+_fetch_budget = _FetchBudget()
+
+
+def _reset_guardrails() -> None:
+    """Clear per-run guardrail state. Called at the start of enrich_batch."""
+    global _circuit_breaker, _fetch_budget
+    _circuit_breaker = _CircuitBreaker()
+    _fetch_budget = _FetchBudget()
+
+
+def _priority_key(job: dict[str, Any]) -> tuple[int, int, int]:
+    """Higher priority jobs sort FIRST. Used to reorder the batch so budget
+    exhaustion lands on the low-value tail, not the top prospects.
+
+    Tuple: (llm_tier, keyword_score_bucket, has_canonical_ats_source).
+    Negated so Python's ascending sort puts best first.
+    """
+    llm = (job.get("llm_classification") or "").upper()
+    llm_tier = {
+        "RELEVANT": 3,
+        "PARTIALLY_RELEVANT": 2,
+        "unvalidated": 1,
+    }.get(llm, 0)
+    kw = int(job.get("keyword_score") or 0)
+    kw_bucket = kw // 10  # 0..10 buckets
+    # ATS-sourced jobs already have canonical data; we deprioritize them
+    # for additional fetches since the source already provides what we'd
+    # verify. Aggregator jobs (jsearch/jooble/adzuna) benefit most.
+    is_canonical_source = job.get("source_name") in (
+        "greenhouse", "lever", "ashby", "usajobs"
+    )
+    ats_priority = 0 if is_canonical_source else 1
+    # Negate to sort descending
+    return (-llm_tier, -kw_bucket, -ats_priority)
+
+
 class _HostThrottle:
     """Per-host sequential throttle: any two fetches to the same host are
     separated by at least `min_gap` seconds. Distinct hosts proceed in parallel.
@@ -552,9 +716,20 @@ def enrich_batch(
     """Enrich a list of jobs in place. By default parallelizes across hosts
     using `DEFAULT_ENRICHMENT_WORKERS` threads while still serializing same-host
     fetches to `delay` seconds apart. Pass `max_workers=1` for the old
-    sequential behavior."""
+    sequential behavior.
+
+    R11 Phase 5: resets the per-run circuit breaker and fetch budget on
+    entry, and sorts jobs by `_priority_key` so when the budget cap hits,
+    it lands on the low-value tail (unvalidated + low keyword score) rather
+    than the top prospects (LLM RELEVANT + high score).
+    """
     if not jobs:
         return jobs
+    _reset_guardrails()
+    # Priority ordering: work through highest-signal jobs first. The list is
+    # mutated in place (consensus voting stashed _consensus on these same
+    # dicts upstream — caller still holds the same references).
+    jobs.sort(key=_priority_key)
     workers = max_workers if max_workers is not None else DEFAULT_ENRICHMENT_WORKERS
     if workers <= 1:
         for i, job in enumerate(jobs):

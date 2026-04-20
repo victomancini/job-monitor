@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -241,3 +242,133 @@ def test_build_job_none_raw_data_stays_none():
         raw_data=None,
     )
     assert j["raw_data"] is None
+
+
+# ───── R11 Phase 0: days_since_posted helper ──────────────────
+
+def _utc_minus(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
+
+
+def test_days_since_posted_prefers_date_posted():
+    assert shared.days_since_posted(_utc_minus(5), _utc_minus(10)) == 5
+
+
+def test_days_since_posted_falls_back_to_first_seen():
+    assert shared.days_since_posted(None, _utc_minus(7)) == 7
+
+
+def test_days_since_posted_none_when_both_missing():
+    assert shared.days_since_posted(None, None) is None
+
+
+def test_days_since_posted_returns_zero_for_today():
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    assert shared.days_since_posted(today, None) == 0
+
+
+def test_days_since_posted_accepts_iso_datetime_prefix():
+    """Some sources emit full ISO timestamps; helper must tolerate the T suffix."""
+    iso = _utc_minus(3) + "T12:34:56Z"
+    assert shared.days_since_posted(iso, None) == 3
+
+
+def test_days_since_posted_invalid_input_is_none():
+    assert shared.days_since_posted("not-a-date", None) is None
+    assert shared.days_since_posted("", "") is None
+
+
+def test_days_since_posted_never_negative():
+    """Future date (clock skew, bad source data) clamps to 0, not negative."""
+    future = (datetime.now(timezone.utc) + timedelta(days=5)).strftime("%Y-%m-%d")
+    assert shared.days_since_posted(future, None) == 0
+
+
+# ───── R11 Phase 1: field provenance ────────────────────────
+
+def test_source_reliability_known_source():
+    assert shared.source_reliability("greenhouse") == 0.90
+    assert shared.source_reliability("jsearch") == 0.55
+    assert shared.source_reliability("jooble") == 0.50
+
+
+def test_source_reliability_unknown_source_defaults_to_half():
+    assert shared.source_reliability("some_new_source") == 0.50
+
+
+def test_record_field_attaches_provenance():
+    job = {"is_remote": "remote"}
+    shared.record_field(job, "is_remote", source="jsearch")
+    fs = job["_field_sources"]
+    assert fs["is_remote"] == [{
+        "source": "jsearch",
+        "value": "remote",
+        "confidence": 0.55,
+    }]
+
+
+def test_record_field_accumulates_multiple_observations():
+    """Two sources observing the same field attach two entries — consensus
+    voting (Phase 3) reads the history to adjudicate."""
+    job = {"is_remote": "hybrid"}
+    shared.record_field(job, "is_remote", source="jsearch")
+    shared.record_field(job, "is_remote", source="greenhouse")
+    observations = job["_field_sources"]["is_remote"]
+    assert len(observations) == 2
+    assert observations[0]["source"] == "jsearch"
+    assert observations[1]["source"] == "greenhouse"
+    assert observations[1]["confidence"] == 0.90
+
+
+def test_record_field_skips_empty_and_unknown():
+    """A source saying 'I don't know' must not count as a vote."""
+    job = {"is_remote": "unknown", "location": "", "salary_min": None}
+    shared.record_field(job, "is_remote", source="jsearch")
+    shared.record_field(job, "location", source="jsearch")
+    shared.record_field(job, "salary_min", source="jsearch")
+    assert job.get("_field_sources") is None or job["_field_sources"] == {}
+
+
+def test_record_field_explicit_confidence_override():
+    job = {"is_remote": "remote"}
+    shared.record_field(job, "is_remote", source="jsearch", confidence=0.99)
+    assert job["_field_sources"]["is_remote"][0]["confidence"] == 0.99
+
+
+def test_build_job_auto_records_provenance():
+    """Every source that uses build_job gets provenance for free — no
+    per-source retrofit needed when the field carries a real value."""
+    j = shared.build_job(
+        source_name="greenhouse",
+        external_id="gh_1",
+        title="People Analytics Manager",
+        company="Netflix",
+        source_url="https://example.com/1",
+        location="Los Gatos, CA",
+        location_country="US",
+        is_remote="hybrid",
+        salary_min=150000,
+        salary_max=200000,
+        date_posted="2026-04-15",
+    )
+    fs = j["_field_sources"]
+    assert "is_remote" in fs and fs["is_remote"][0]["source"] == "greenhouse"
+    assert "location" in fs
+    assert "salary_min" in fs and fs["salary_min"][0]["value"] == 150000
+    assert "date_posted" in fs
+    # Unknown/empty fields skipped
+    assert "work_arrangement" not in fs
+
+
+def test_build_job_skips_provenance_on_unknown_remote():
+    """Default is_remote='unknown' should NOT generate a provenance entry —
+    it's a non-vote, not an observation."""
+    j = shared.build_job(
+        source_name="jooble",
+        external_id="jooble_1",
+        title="X",
+        company="Y",
+        source_url="https://example.com",
+    )
+    fs = j.get("_field_sources", {})
+    assert "is_remote" not in fs

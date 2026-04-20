@@ -56,7 +56,17 @@ add_action('init', function() {
         // Phase 5 (R3): comma-separated vendor/tool mentions from description
         'vendors_mentioned',
         // Phase 6 (R3): lifecycle state ('active' | 'likely_closed')
-        'lifecycle_status'];
+        'lifecycle_status',
+        // R11 Phase 0: Python-computed integer days since posting; sortable
+        // without re-parsing dates in the site's local timezone. NEW badge
+        // trigger sourced from Python's upsert return instead of fragile
+        // first_seen_date == today comparison.
+        'days_since_posted', 'is_brand_new',
+        // R11 Phase 6: consensus-voting transparency. When multiple sources
+        // agreed on a value (e.g., greenhouse + text_classifier both say
+        // hybrid), we render "verified by N sources" in the cell tooltip.
+        'remote_vote_confidence', 'remote_vote_sources', 'remote_vote_agreement',
+        'work_arrangement_vote_confidence', 'work_arrangement_vote_sources'];
     foreach ($fields as $field) {
         register_post_meta('job_listing', $field, [
             'show_in_rest' => true,
@@ -152,7 +162,15 @@ function jm_batch_update($request) {
             // Phase 5 (R3): comma-separated vendor/tool mentions from description
             'vendors_mentioned',
             // Phase 6 (R3): lifecycle state ('active' | 'likely_closed')
-            'lifecycle_status'];
+            'lifecycle_status',
+            // R11 Phase 0: integer days-since-posting for reliable numeric
+            // sort; is_brand_new flag for NEW badge (1 when Turso created the
+            // row this run, 0 otherwise). first_seen_date is handled out of
+            // band below — NEVER overwritten with a later date here.
+            'days_since_posted','is_brand_new',
+            // R11 Phase 6: per-field consensus vote metadata for tooltip.
+            'remote_vote_confidence','remote_vote_sources','remote_vote_agreement',
+            'work_arrangement_vote_confidence','work_arrangement_vote_sources'];
         $meta = [];
         foreach ($allowed as $k) {
             if (isset($job[$k])) {
@@ -171,6 +189,19 @@ function jm_batch_update($request) {
 
         if (!empty($existing)) {
             $post_id = $existing[0]->ID;
+            // R11 Phase 0: first_seen_date is authoritative from Turso. Only
+            // update WP meta if it's missing or the incoming value is earlier
+            // (ISO YYYY-MM-DD strings compare correctly via strcmp). Never
+            // overwrite with a later date — that was the NEW-today bug: if a
+            // WP post was ever lost and recreated, the old INSERT path stamped
+            // today's date on a job Turso had seen for weeks.
+            if (isset($job['first_seen_date'])) {
+                $existing_fsd = get_post_meta($post_id, 'first_seen_date', true);
+                $incoming_fsd = sanitize_text_field($job['first_seen_date']);
+                if (!$existing_fsd || strcmp($incoming_fsd, $existing_fsd) < 0) {
+                    $meta['first_seen_date'] = $incoming_fsd;
+                }
+            }
             // R8-H3: include post_content so description rewrites from the
             // source (e.g., aggregator re-scrapes a longer description) are
             // not silently dropped after the first insert. Only update when
@@ -183,7 +214,12 @@ function jm_batch_update($request) {
             $results['updated']++;
             $results['post_ids'][$job['external_id']] = $post_id;
         } else {
-            $meta['first_seen_date'] = current_time('Y-m-d', true);
+            // R11 Phase 0: prefer Python-supplied first_seen_date (Turso's
+            // system of record). Falls back to today only for payloads
+            // predating the change so we don't lose new inserts either way.
+            $meta['first_seen_date'] = isset($job['first_seen_date'])
+                ? sanitize_text_field($job['first_seen_date'])
+                : current_time('Y-m-d', true);
             $pid = wp_insert_post([
                 'post_type' => 'job_listing',
                 'post_title' => sanitize_text_field(mb_substr($job['title'], 0, 200)),
@@ -293,6 +329,26 @@ register_deactivation_hook(__FILE__, function() {
     $ts = wp_next_scheduled('jm_daily_archive');
     if ($ts) wp_unschedule_event($ts, 'jm_daily_archive');
 });
+
+// R11 Phase 6: consensus tooltip helper. When multiple sources agreed on
+// the final value, render a `title=` attribute that surfaces the source
+// list on hover — no CSS changes needed, uses the browser's native tooltip.
+// Returns a trailing space + attribute (e.g. ' title="verified by 2 sources"')
+// or empty string when there's no consensus data to show.
+function jm_consensus_tooltip($agreement, $sources, $confidence) {
+    $agreement = (int)$agreement;
+    if ($agreement < 2) {
+        return '';
+    }
+    $parts = [sprintf('verified by %d sources', $agreement)];
+    if (!empty($sources)) {
+        $parts[] = $sources;
+    }
+    if ($confidence !== '' && $confidence !== null) {
+        $parts[] = sprintf('confidence %.2f', (float)$confidence);
+    }
+    return ' title="' . esc_attr(implode(' | ', $parts)) . '"';
+}
 
 // ── Phase F5: confidence badge helper ─────────────────────
 // Produces a compact inline badge. Green = page-confirmed, gray = aggregator-only,
@@ -496,23 +552,30 @@ function jm_build_job_posting_jsonld($post_id, $post_title) {
     return $doc;
 }
 
-// Phase B (R2): render the Posted column with freshness color coding.
-// Accepts date_posted (preferred) and first_seen_date (fallback, labeled "Seen").
-// Returns a <td>...</td> cell with data-order set to the raw days count so
-// DataTables sorts numerically.
-function jm_freshness_cell($date_posted, $first_seen) {
-    $ref_date = $date_posted ?: $first_seen;
+// R11 Phase 0: freshness cell. Prefers Python-computed integer
+// `days_since_posted` (no timezone drift) for both sort key and display.
+// Falls back to PHP date arithmetic only for legacy posts without the meta.
+// NEW badge sourced from `is_brand_new` — true only when Turso created the
+// row this run. The previous `first_seen_date === today` check fired on any
+// WP post recreated from a lost/cleared state, falsely stamping weeks-old
+// jobs as new.
+function jm_freshness_cell($date_posted, $first_seen, $days_since_posted = null, $is_brand_new = false) {
+    if ($days_since_posted !== null && $days_since_posted !== '') {
+        $days = max(0, (int)$days_since_posted);
+        $has_ref = true;
+    } else {
+        $ref_date = $date_posted ?: $first_seen;
+        if (!$ref_date) {
+            return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
+        }
+        $ts = strtotime($ref_date . ' UTC');
+        if ($ts === false) {
+            return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
+        }
+        $days = max(0, (int)((time() - $ts) / 86400));
+        $has_ref = true;
+    }
     $label = $date_posted ? '' : 'Seen ';
-    if (!$ref_date) {
-        return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
-    }
-    // R8-M6: `time()` is UTC; parse $ref_date as UTC too so the day-count
-    // math isn't skewed by site timezone vs. the UTC-stored first_seen_date.
-    $ts = strtotime($ref_date . ' UTC');
-    if ($ts === false) {
-        return '<td data-order="99999"><span class="freshness-stale">Unknown</span></td>';
-    }
-    $days = max(0, (int)((time() - $ts) / 86400));
     if ($days <= 3) { $class = 'freshness-hot'; }
     elseif ($days <= 7) { $class = 'freshness-warm'; }
     elseif ($days <= 14) { $class = 'freshness-cool'; }
@@ -520,10 +583,7 @@ function jm_freshness_cell($date_posted, $first_seen) {
     if ($days === 0) { $text = $label . 'Today'; }
     elseif ($days === 1) { $text = $label . '1 day ago'; }
     else { $text = $label . $days . ' days ago'; }
-    // R8-M7: first_seen_date is stored as UTC (see jm_batch_update), so
-    // compare against the UTC "today" not the site-local one.
-    $is_new = ($first_seen && $first_seen === current_time('Y-m-d', true));
-    $badge = $is_new ? ' <span class="badge-new">NEW</span>' : '';
+    $badge = $is_brand_new ? ' <span class="badge-new">NEW</span>' : '';
     return '<td data-order="' . $days . '"><span class="' . esc_attr($class) . '">' . esc_html($text) . '</span>' . $badge . '</td>';
 }
 
@@ -712,7 +772,12 @@ add_shortcode('job_table', function() {
         $r .= '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
         $r .= '<td>' . esc_html($category_v) . '</td>';
         $r .= '<td>' . esc_html($level_v) . '</td>';
-        $r .= '<td data-search="' . esc_attr($remote_v) . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        $remote_tip = jm_consensus_tooltip(
+            get_post_meta($j->ID, 'remote_vote_agreement', true),
+            get_post_meta($j->ID, 'remote_vote_sources', true),
+            get_post_meta($j->ID, 'remote_vote_confidence', true)
+        );
+        $r .= '<td data-search="' . esc_attr($remote_v) . '"' . $remote_tip . '>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
         $r .= '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
         $r .= jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
         $r .= '<td data-search="' . esc_attr($source_v) . '">' . esc_html($source_v) . '</td>';
@@ -732,7 +797,9 @@ add_shortcode('job_table', function() {
         $r .= '<td>' . $apply_cell . '</td>';
         $r .= jm_freshness_cell(
             get_post_meta($j->ID, 'date_posted', true),
-            get_post_meta($j->ID, 'first_seen_date', true)
+            get_post_meta($j->ID, 'first_seen_date', true),
+            get_post_meta($j->ID, 'days_since_posted', true),
+            get_post_meta($j->ID, 'is_brand_new', true) === '1'
         );
         $r .= '</tr>';
         $rows_html .= $r;
@@ -834,14 +901,21 @@ add_shortcode('job_archive_table', function() {
         $r .= '<td>' . $location . jm_confidence_badge($loc_conf) . '</td>';
         $r .= '<td>' . esc_html($category_v) . '</td>';
         $r .= '<td>' . esc_html($level_v) . '</td>';
-        $r .= '<td data-search="' . esc_attr($remote_v) . '">' . $remote . jm_confidence_badge($remote_conf) . '</td>';
+        $remote_tip = jm_consensus_tooltip(
+            get_post_meta($j->ID, 'remote_vote_agreement', true),
+            get_post_meta($j->ID, 'remote_vote_sources', true),
+            get_post_meta($j->ID, 'remote_vote_confidence', true)
+        );
+        $r .= '<td data-search="' . esc_attr($remote_v) . '"' . $remote_tip . '>' . $remote . jm_confidence_badge($remote_conf) . '</td>';
         $r .= '<td data-order="' . $salary_min . '">' . $salary . jm_confidence_badge($salary_conf) . '</td>';
         $r .= jm_relevance_cell(get_post_meta($j->ID, 'llm_classification', true));
         $r .= '<td data-search="' . esc_attr($source_v) . '">' . esc_html($source_v) . '</td>';
         $r .= '<td>' . $apply_cell . '</td>';
         $r .= jm_freshness_cell(
             get_post_meta($j->ID, 'date_posted', true),
-            get_post_meta($j->ID, 'first_seen_date', true)
+            get_post_meta($j->ID, 'first_seen_date', true),
+            get_post_meta($j->ID, 'days_since_posted', true),
+            get_post_meta($j->ID, 'is_brand_new', true) === '1'
         );
         $r .= '<td>' . esc_html(get_post_meta($j->ID, 'days_active', true)) . '</td>';
         $r .= '<td>' . esc_html(get_post_meta($j->ID, 'archived_date', true)) . '</td>';

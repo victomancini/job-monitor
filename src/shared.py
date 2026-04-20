@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from datetime import date, datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -100,6 +101,116 @@ def load_companies() -> dict[str, Any]:
     return load_yaml("companies.yaml")
 
 
+# R11 Phase 1: source reliability priors. Drives consensus voting in
+# processors/deduplicator.py (R11 Phase 3). Canonical ATS APIs are high-
+# confidence — they ARE the company's system of record. Aggregators vary:
+# Jooble/Adzuna tag `is_remote` loosely, JSearch's remote flag fires on any
+# mention of "remote" in the description. The text classifier (Phase 2) is
+# deterministic but conservative. Schema.org JobPosting extraction (Phase 4)
+# when available is near-canonical. Fresh calibration will come from shadow-
+# log labels; these are starter priors.
+SOURCE_RELIABILITY: dict[str, float] = {
+    "greenhouse": 0.90,
+    "lever": 0.90,
+    "ashby": 0.90,
+    "usajobs": 0.90,
+    "siop": 0.80,
+    "onemodel": 0.80,
+    "included_ai": 0.75,
+    "schema_org": 0.85,
+    "text_classifier": 0.75,
+    "jobspy_linkedin": 0.60,
+    "jobspy_indeed": 0.60,
+    "jobspy_glassdoor": 0.60,
+    "jobspy_zip_recruiter": 0.55,
+    "jsearch": 0.55,
+    "adzuna": 0.55,
+    "jooble": 0.50,
+    "google_alerts": 0.40,
+}
+
+# Fields that carry enough signal-fusion value to merit provenance tracking.
+# Pure text fields like title/company/description aren't tracked — they're
+# either the same across sources (dedup handles variance) or too long to
+# vote on. Focus on the ones that affect downstream filtering.
+PROVENANCE_FIELDS: tuple[str, ...] = (
+    "is_remote",
+    "work_arrangement",
+    "location",
+    "location_country",
+    "salary_min",
+    "salary_max",
+    "date_posted",
+)
+
+
+def source_reliability(source_name: str) -> float:
+    return SOURCE_RELIABILITY.get(source_name, 0.50)
+
+
+def record_field(
+    job: dict[str, Any],
+    field: str,
+    *,
+    source: str,
+    confidence: float | None = None,
+) -> None:
+    """Attach a provenance entry for a field the job dict already carries.
+
+    Reads the value from job[field] (so build_job's formatting / coercion
+    applies once), then appends a {source, value, confidence} observation to
+    job["_field_sources"][field]. Multiple sources observing the same job
+    accumulate observations — consensus voting in Phase 3 reads the history.
+
+    No-op when the field is None/empty or the sentinel 'unknown' — a source
+    saying "I don't know" shouldn't count as a vote against whoever does.
+    """
+    value = job.get(field)
+    if value is None or value == "" or value == "unknown":
+        return
+    if confidence is None:
+        confidence = source_reliability(source)
+    fs = job.setdefault("_field_sources", {})
+    fs.setdefault(field, []).append({
+        "source": source,
+        "value": value,
+        "confidence": confidence,
+    })
+
+
+def apply_provenance(job: dict[str, Any], source_name: str) -> None:
+    """Record provenance for every meaningful field the given source set.
+    Called automatically by build_job; manually by sources that construct
+    job dicts outside build_job (none today, but the hook exists)."""
+    for f in PROVENANCE_FIELDS:
+        record_field(job, f, source=source_name)
+
+
+def days_since_posted(
+    date_posted: str | None,
+    first_seen_date: str | None,
+) -> int | None:
+    """R11 Phase 0: integer days since a job was first observable.
+
+    Prefers `date_posted` (what the company says) over `first_seen_date` (when
+    we first saw it). Returns None when neither is a parseable YYYY-MM-DD.
+
+    Moved from PHP to Python so the freshness sort in WordPress doesn't
+    re-parse dates with the site's local timezone and drift off UTC. The WP
+    plugin reads the integer and uses it as both data-order and display.
+    """
+    ref = date_posted or first_seen_date
+    if not ref:
+        return None
+    try:
+        ref_dt = datetime.strptime(ref[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None
+    now = datetime.now(timezone.utc)
+    delta = (now - ref_dt).days
+    return max(0, delta)
+
+
 def format_salary_range(salary_min: float | None, salary_max: float | None) -> str | None:
     """Format as '$120K-$180K', '$120K+', 'Up to $180K', or None."""
     def fmt(v: float) -> str:
@@ -135,7 +246,7 @@ def build_job(
     """Return a standardized job dict populated by sources.
 
     `apply_url` — best direct application link. Falls back to `source_url` if empty."""
-    return {
+    job = {
         "external_id": external_id,
         "title": (title or "").strip(),
         "company": (company or "").strip(),
@@ -154,6 +265,11 @@ def build_job(
         "date_posted": date_posted,
         "raw_data": _serialize_raw_data(raw_data),
     }
+    # R11 Phase 1: record per-field provenance for the signal-fusion pipeline
+    # (consensus voting in R11 Phase 3 reads this). No-op for fields the
+    # source left at None/'unknown'.
+    apply_provenance(job, source_name)
+    return job
 
 
 def _serialize_raw_data(raw: Any) -> str | None:

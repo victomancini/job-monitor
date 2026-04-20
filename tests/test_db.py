@@ -542,3 +542,157 @@ def test_log_run_and_consecutive_zeros(conn):
             "duration_seconds": 1.0, "consecutive_zero_runs": 0,
         })
     assert db.get_consecutive_zero_runs(conn) == 3
+
+
+# ───── R11 Phase 0: first_seen_date + date_posted preservation ─────────
+
+def test_upsert_preserves_first_seen_date_on_update(conn):
+    """The NEW-today bug root cause: Turso's first_seen_date must stay fixed
+    once set. The update path on line 378 is supposed to filter it out; this
+    regression locks that in and also verifies the job dict is populated with
+    the authoritative value for the WP publisher to ship."""
+    j1 = sample_job("fsd_1")
+    db.upsert_job(conn, j1)
+    first = conn.execute(
+        "SELECT first_seen_date FROM jobs WHERE external_id=?", ("fsd_1",)
+    ).fetchone()[0]
+    assert j1["first_seen_date"] == first
+    assert j1["_is_brand_new"] is True
+
+    # Manually backdate so we can detect accidental reset
+    conn.execute(
+        "UPDATE jobs SET first_seen_date='2026-01-01' WHERE external_id=?", ("fsd_1",)
+    )
+    conn.commit()
+
+    j2 = sample_job("fsd_1", title="Senior People Analytics Manager")
+    db.upsert_job(conn, j2)
+    preserved = conn.execute(
+        "SELECT first_seen_date FROM jobs WHERE external_id=?", ("fsd_1",)
+    ).fetchone()[0]
+    assert preserved == "2026-01-01"
+    assert j2["first_seen_date"] == "2026-01-01"  # publisher reads this
+    assert j2["_is_brand_new"] is False
+
+
+def test_upsert_update_does_not_wipe_existing_values_with_none(conn):
+    """A source re-seeing a job without a field it doesn't emit must not wipe
+    data another source already provided. Secondary R11 bug: the update path
+    formerly SET every column including None-valued ones, erasing salary from
+    Greenhouse the moment Jooble re-observed the same role without salary."""
+    j_full = sample_job("preserve_1")
+    db.upsert_job(conn, j_full)
+    row = conn.execute(
+        "SELECT salary_min, salary_max, llm_reasoning FROM jobs WHERE external_id=?",
+        ("preserve_1",),
+    ).fetchone()
+    assert row[0] == 150000.0
+    assert row[1] == 200000.0
+    assert row[2] == "Core people analytics role."
+
+    # Second source re-sees the job with NO salary and NO llm_reasoning
+    j_sparse = {
+        "external_id": "preserve_1",
+        "title": "People Analytics Manager",
+        "company": "Netflix",
+        "source_url": "https://jooble.org/job/1",
+        "source_name": "jooble",
+    }
+    db.upsert_job(conn, j_sparse)
+    row = conn.execute(
+        "SELECT salary_min, salary_max, llm_reasoning FROM jobs WHERE external_id=?",
+        ("preserve_1",),
+    ).fetchone()
+    assert row[0] == 150000.0, "salary_min must not be wiped by a later None"
+    assert row[1] == 200000.0, "salary_max must not be wiped"
+    assert row[2] == "Core people analytics role.", "llm_reasoning must not be wiped"
+
+
+def test_upsert_date_posted_keeps_earliest(conn):
+    """date_posted is the posting date, not the scrape date. Jooble's
+    `updated=today` for a Greenhouse posting first seen a week ago must not
+    overwrite the earlier, more accurate date."""
+    j1 = sample_job("dp_1")
+    j1["date_posted"] = "2026-04-01"
+    db.upsert_job(conn, j1)
+
+    # Later source reports today as date_posted (Jooble pathology)
+    j2 = sample_job("dp_1")
+    j2["date_posted"] = "2026-04-20"
+    db.upsert_job(conn, j2)
+
+    dp = conn.execute(
+        "SELECT date_posted FROM jobs WHERE external_id=?", ("dp_1",)
+    ).fetchone()[0]
+    assert dp == "2026-04-01", "earlier date_posted must win"
+
+
+def test_upsert_date_posted_preserved_when_incoming_none(conn):
+    j1 = sample_job("dp_2")
+    j1["date_posted"] = "2026-04-10"
+    db.upsert_job(conn, j1)
+
+    j2 = sample_job("dp_2")
+    j2["date_posted"] = None
+    db.upsert_job(conn, j2)
+
+    dp = conn.execute(
+        "SELECT date_posted FROM jobs WHERE external_id=?", ("dp_2",)
+    ).fetchone()[0]
+    assert dp == "2026-04-10"
+
+
+def test_upsert_is_brand_new_flag_transitions(conn):
+    """NEW badge trigger: _is_brand_new must be True only on the run that
+    actually inserts the Turso row, False on every subsequent update."""
+    j1 = sample_job("bn_1")
+    db.upsert_job(conn, j1)
+    assert j1["_is_brand_new"] is True
+
+    j2 = sample_job("bn_1")
+    db.upsert_job(conn, j2)
+    assert j2["_is_brand_new"] is False
+
+    j3 = sample_job("bn_1")
+    db.upsert_job(conn, j3)
+    assert j3["_is_brand_new"] is False
+
+
+# ───── R11 Phase 1: field_sources column + provenance round-trip ────
+
+def test_upsert_persists_field_sources_json(conn):
+    """Provenance dict populated by build_job must round-trip through the
+    field_sources column so consensus voting in a later batch can read
+    the full history across runs."""
+    j = sample_job("fs_1")
+    j["_field_sources"] = {
+        "is_remote": [
+            {"source": "jsearch", "value": "remote", "confidence": 0.55},
+            {"source": "greenhouse", "value": "hybrid", "confidence": 0.90},
+        ],
+        "salary_min": [
+            {"source": "greenhouse", "value": 150000, "confidence": 0.90},
+        ],
+    }
+    db.upsert_job(conn, j)
+    row = conn.execute(
+        "SELECT field_sources FROM jobs WHERE external_id=?", ("fs_1",)
+    ).fetchone()
+    assert row[0] is not None
+    loaded = json.loads(row[0])
+    assert len(loaded["is_remote"]) == 2
+    assert loaded["is_remote"][1]["source"] == "greenhouse"
+    assert loaded["salary_min"][0]["value"] == 150000
+
+
+def test_upsert_field_sources_column_null_when_absent(conn):
+    """Jobs without provenance (legacy code paths, bypass sources) don't
+    crash — the column stays NULL rather than serializing None or {}."""
+    j = sample_job("fs_nullable")
+    # No _field_sources key at all
+    assert "_field_sources" not in j
+    db.upsert_job(conn, j)
+    row = conn.execute(
+        "SELECT field_sources FROM jobs WHERE external_id=?", ("fs_nullable",)
+    ).fetchone()
+    assert row[0] is None

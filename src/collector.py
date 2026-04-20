@@ -315,7 +315,7 @@ def apply_vendor_mentions(jobs: list[dict[str, Any]]) -> None:
         job["vendors_mentioned"] = vendors_to_str(extract_vendors(job.get("description", "")))
 
 
-def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
+def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, Any]:
     """Fetch source/apply URLs and extract salary/remote/location. Returns stats dict."""
     if not jobs:
         return {"enriched_from_source": 0, "aggregator_only": 0}
@@ -323,6 +323,11 @@ def apply_enrichment(jobs: list[dict[str, Any]]) -> dict[str, int]:
     return {
         "enriched_from_source": sum(1 for j in jobs if j.get("enrichment_source") == "source_page"),
         "aggregator_only": sum(1 for j in jobs if j.get("enrichment_source") == "aggregator"),
+        # R11 Phase 5: guardrail observability. Tripped hosts + budget usage
+        # surface in Healthchecks so we can see when a run hit the cap or
+        # quarantined a misbehaving domain.
+        "circuit_breaker": enrichment._circuit_breaker.snapshot(),
+        "fetch_budget": enrichment._fetch_budget.snapshot(),
     }
 
 
@@ -482,11 +487,28 @@ def run(dry_run: bool = False) -> int:
     # 5d. Vendor/tool mentions (Phase 5 R3)
     apply_vendor_mentions(to_publish)
 
+    # 5e. R11 Phase 2: re-derive work_arrangement / is_remote from description
+    # text as an independent observation. Adds provenance without touching the
+    # flat values — consensus voting in the deduplicator adjudicates conflicts
+    # with the aggregator-supplied fields (JSearch's job_is_remote=true firing
+    # on "this role is not remote" is the canonical case this fixes).
+    from src.processors import text_classifier
+    text_stats = text_classifier.classify_batch(to_publish)
+    log.info("text_classifier: %s", text_stats)
+
     # 6. Deduplicator (batch + DB)
     log.info("=== Phase 4: deduplicator ===")
     active_rows = db.get_active_jobs_for_dedup(conn)
     to_publish, skipped_dupes = deduplicator.deduplicate(to_publish, active_db_rows=active_rows)
     log.info("deduplicator: %d kept / %d skipped as dupes", len(to_publish), len(skipped_dupes))
+
+    # 6b. R11 Phase 3: consensus voting across every observation the pipeline
+    # collected — source structured field + text_classifier + peer merges.
+    # Overrides the flat is_remote / work_arrangement when confidence is high
+    # enough, so an aggregator's false "remote" flag loses to a three-source
+    # "hybrid" consensus. Records the vote on the job dict under _consensus.
+    consensus_stats = deduplicator.apply_consensus(to_publish)
+    log.info("consensus: %s", consensus_stats)
 
     # 6a. Apply apply_url upgrades for dropped-as-dupe jobs whose direct URL
     # beats the DB row's aggregator URL (R-audit Issue 1d).
