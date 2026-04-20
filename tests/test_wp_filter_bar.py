@@ -53,8 +53,10 @@ def test_filter_bar_accepts_value_map(plugin_src):
 def test_remote_cell_has_data_search(plugin_src):
     """Remote column cell: data-search carries the logical value
     ('remote'/'hybrid'/'onsite'/'unknown') so the filter regex matches
-    exactly, independent of the confidence badge HTML in the cell."""
-    assert "data-search=\"' . esc_attr($remote_v) . '\">" in plugin_src
+    exactly, independent of the confidence badge HTML in the cell.
+    R11 Phase 6 added a `title=` tooltip attribute between data-search and
+    the closing `>`, so this test matches the prefix portion only."""
+    assert "data-search=\"' . esc_attr($remote_v) . '\"" in plugin_src
 
 
 def test_source_cell_has_data_search(plugin_src):

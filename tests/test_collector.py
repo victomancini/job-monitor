@@ -498,7 +498,11 @@ def test_apply_enrichment_returns_stats(monkeypatch):
     monkeypatch.setattr(collector.enrichment, "enrich_batch", fake_enrich_batch)
     jobs = [{"external_id": "a"}, {"external_id": "b"}]
     stats = collector.apply_enrichment(jobs)
-    assert stats == {"enriched_from_source": 1, "aggregator_only": 1}
+    # R11 Phase 5: stats dict now also carries circuit_breaker + fetch_budget
+    # snapshots for Healthchecks observability. Assert on the enrichment
+    # source counts without locking the dict shape.
+    assert stats["enriched_from_source"] == 1
+    assert stats["aggregator_only"] == 1
 
 
 def test_apply_defaults_sets_onsite_assumed():
