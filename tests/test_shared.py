@@ -149,6 +149,21 @@ def test_is_aggregator_host_matches_regional_subdomains():
         assert shared.is_aggregator_host(h), f"should match: {h}"
 
 
+def test_is_aggregator_host_matches_adzuna_all_country_tlds():
+    """R10: the 2026-04-20 log showed www.adzuna.ca and www.adzuna.com.au
+    flowing through as aggregator=False. Adzuna operates in 16+ countries;
+    every TLD must match."""
+    for h in [
+        "www.adzuna.ca", "adzuna.ca",
+        "www.adzuna.com.au", "adzuna.com.au",
+        "www.adzuna.de", "www.adzuna.fr",
+        "www.adzuna.nl", "www.adzuna.it",
+        "www.adzuna.in", "www.adzuna.sg",
+        "www.adzuna.co.za", "www.adzuna.com.br",
+    ]:
+        assert shared.is_aggregator_host(h), f"should match adzuna TLD: {h}"
+
+
 def test_is_aggregator_host_rejects_company_domains():
     for h in [
         "careers.netflix.com", "boards.greenhouse.io",

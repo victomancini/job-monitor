@@ -279,8 +279,13 @@ def test_upsert_respects_caller_provided_company_normalized(conn):
 
 def test_db_connect_retries_on_transient_error(monkeypatch):
     """R7-1: a single transient error should be retried; the second attempt
-    succeeding returns a usable connection."""
+    succeeding returns a usable connection.
+
+    R10: `connect()` now returns an _AutoReconnectConnection wrapper instead
+    of the raw libsql connection. Assert the wrapper was produced and that
+    the underlying libsql connect was retried."""
     from src import db as _db
+    from unittest.mock import MagicMock
     attempts = {"count": 0}
 
     class FakeLibsql:
@@ -289,13 +294,13 @@ def test_db_connect_retries_on_transient_error(monkeypatch):
             attempts["count"] += 1
             if attempts["count"] == 1:
                 raise RuntimeError("transient turso outage")
-            return "CONN_OK"
+            return MagicMock(name="raw_conn")
 
     monkeypatch.setattr(_db, "libsql", FakeLibsql)
     monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
     monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
     result = _db.connect()
-    assert result == "CONN_OK"
+    assert isinstance(result, _db._AutoReconnectConnection)
     assert attempts["count"] == 2
 
 
@@ -313,6 +318,137 @@ def test_db_connect_raises_after_exhausted_retries(monkeypatch):
     monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
     with pytest.raises(RuntimeError, match="permanently down"):
         _db.connect(max_attempts=3)
+
+
+# ───── R10: AutoReconnectConnection stream-expiration handling ─────────
+
+def test_is_stream_error_detects_turso_patterns():
+    """R10: regex for the exact error shape seen in 2026-04-20 GH Actions run."""
+    from src import db as _db
+    # The literal error string from the failing run, plus other variants
+    for msg in [
+        "Hrana: `api error: `status=404 Not Found, body={\"error\":\"stream not found: abc\"}`",
+        "stream closed",
+        "Stream Expired after long idle",  # case-insensitive
+    ]:
+        assert _db._is_stream_error(Exception(msg)), f"should detect: {msg!r}"
+
+
+def test_is_stream_error_rejects_normal_exceptions():
+    from src import db as _db
+    assert not _db._is_stream_error(Exception("connection refused"))
+    assert not _db._is_stream_error(Exception("syntax error"))
+    assert not _db._is_stream_error(RuntimeError("random"))
+
+
+def test_auto_reconnect_wrapper_catches_stream_error_on_execute(monkeypatch):
+    """R10: the exact bug from 2026-04-20. A stale stream fails once, the
+    wrapper reconnects, and the retry succeeds."""
+    from src import db as _db
+    from unittest.mock import MagicMock
+
+    call_log: list[str] = []
+
+    class FakeConn:
+        def __init__(self, name):
+            self.name = name
+        def execute(self, *a, **kw):
+            call_log.append(f"{self.name}.execute")
+            if self.name == "stale":
+                raise ValueError(
+                    'Hrana: `api error: `status=404 Not Found, body={"error":"stream not found: xyz"}``'
+                )
+            return MagicMock(name=f"{self.name}_cursor")
+        def commit(self):
+            call_log.append(f"{self.name}.commit")
+        def close(self):
+            pass
+
+    conns = iter([FakeConn("stale"), FakeConn("fresh")])
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            return next(conns)
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
+
+    wrapper = _db.connect()
+    # First execute on the wrapper: underlying 'stale' conn raises stream
+    # error → wrapper reconnects to 'fresh' and retries.
+    result = wrapper.execute("SELECT 1")
+    assert result is not None
+    # Verify the call order: stale.execute (raised), fresh.execute (returned)
+    assert call_log == ["stale.execute", "fresh.execute"]
+
+
+def test_auto_reconnect_wrapper_only_reconnects_on_stream_errors(monkeypatch):
+    """Non-stream errors (bad SQL, type mismatch) must propagate unchanged —
+    we don't want the wrapper to hide real bugs behind a silent reconnect."""
+    from src import db as _db
+    from unittest.mock import MagicMock
+
+    class FakeConn:
+        def __init__(self):
+            self.execute_calls = 0
+        def execute(self, *a, **kw):
+            self.execute_calls += 1
+            raise ValueError("syntax error near 'SELEC'")
+        def commit(self):
+            pass
+        def close(self):
+            pass
+
+    fake = FakeConn()
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            return fake
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
+
+    wrapper = _db.connect()
+    with pytest.raises(ValueError, match="syntax error"):
+        wrapper.execute("SELEC * FROM jobs")
+    # Only one attempt; no reconnect fired
+    assert fake.execute_calls == 1
+
+
+def test_auto_reconnect_wrapper_commit_recovers_from_stream_error(monkeypatch):
+    """commit() has the same stream-expiration recovery as execute()."""
+    from src import db as _db
+
+    class FakeConn:
+        def __init__(self, name, raise_on_commit):
+            self.name = name
+            self.raise_on_commit = raise_on_commit
+            self.commit_calls = 0
+        def execute(self, *a, **kw):
+            pass
+        def commit(self):
+            self.commit_calls += 1
+            if self.raise_on_commit:
+                raise ValueError("stream not found: xyz")
+        def close(self):
+            pass
+
+    conns = iter([FakeConn("stale", True), FakeConn("fresh", False)])
+
+    class FakeLibsql:
+        @staticmethod
+        def connect(url, auth_token=None):
+            return next(conns)
+
+    monkeypatch.setattr(_db, "libsql", FakeLibsql)
+    monkeypatch.setenv("TURSO_DB_URL", "libsql://x")
+    monkeypatch.setattr(_db.time, "sleep", lambda *a, **kw: None)
+    wrapper = _db.connect()
+    wrapper.commit()  # stale commit raises → reconnect → fresh commit succeeds
 
 
 def test_db_connect_sleeps_backoff_between_attempts(monkeypatch):

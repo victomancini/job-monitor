@@ -488,11 +488,29 @@ def enrich_job(job: dict[str, Any]) -> dict[str, Any]:
 def _warn_if_still_aggregator(job: dict[str, Any]) -> None:
     """R9-Part-2-C: after enrichment runs, log a warning if apply_url is
     still on an aggregator host. Makes unresolved URLs visible in pipeline
-    logs so ops can see how many jobs slipped through redirect following."""
+    logs so ops can see how many jobs slipped through redirect following.
+
+    R10: suppress the warning for terminal-aggregator sources where the
+    posting IS the canonical apply page. `jobspy_linkedin` produces URLs
+    like https://www.linkedin.com/jobs/view/<id> — LinkedIn is the
+    application surface; there's no company-page redirect to chase. Same
+    reasoning would apply to jobspy_indeed / jobspy_glassdoor / etc., but
+    those sometimes DO have a redirect and we want the visibility when
+    they fail, so we only whitelist the known-terminal ones.
+    """
     url = job.get("apply_url") or ""
-    if is_aggregator_host(_host(url)):
-        log.warning("apply_url not resolved for %s: %s",
-                    job.get("external_id"), url[:200])
+    if not is_aggregator_host(_host(url)):
+        return
+    source = job.get("source_name") or ""
+    if source in ("jobspy_linkedin",):
+        # Terminal by design — LinkedIn job view IS the apply page. Log at
+        # DEBUG so verbose traces still show it but the default WARNING
+        # signal stays clean for real leaks.
+        log.debug("apply_url is terminal LinkedIn URL for %s (expected): %s",
+                  job.get("external_id"), url[:200])
+        return
+    log.warning("apply_url not resolved for %s: %s",
+                job.get("external_id"), url[:200])
 
 
 class _HostThrottle:

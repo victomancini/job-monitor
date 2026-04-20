@@ -174,25 +174,27 @@ _ADD_COLUMN_MIGRATIONS = [
 ]
 
 
-def connect(
-    url: str | None = None,
-    auth_token: str | None = None,
-    *,
-    max_attempts: int = 3,
-):
-    """Connect to Turso libSQL. Falls back to env vars if args omitted.
+def _is_stream_error(e: BaseException) -> bool:
+    """Detect Turso/Hrana stream-expiration errors. These happen when the
+    server evicts a long-idle stream — the connection object itself is still
+    alive but every execute on it fails with 'stream not found'. Pattern
+    observed in GH Actions logs 2026-04-20:
 
-    R7: retry with exponential backoff (2s, 4s) on transient connect errors.
-    Turso occasionally returns 5xx during regional failover; a single retry
-    bucket prevents a transient blip from killing the entire run. Final
-    exception bubbles up so pre-flight can exit cleanly.
+        ValueError: Hrana: `api error: `status=404 Not Found,
+        body={"error":"stream not found: ..."}``
+
+    The only remedy is to establish a fresh connection.
     """
-    if libsql is None:
-        raise RuntimeError("libsql is not installed in this environment")
-    url = url or os.environ.get("TURSO_DB_URL", "")
-    auth_token = auth_token or os.environ.get("TURSO_AUTH_TOKEN", "")
-    if not url:
-        raise ValueError("TURSO_DB_URL is required")
+    s = str(e).lower()
+    return ("stream not found" in s
+            or "stream closed" in s
+            or "stream expired" in s)
+
+
+def _raw_libsql_connect(url: str, auth_token: str, *, max_attempts: int = 3):
+    """Low-level libsql.connect with the same backoff behavior we use for
+    initial connections. Pulled out so the auto-reconnect wrapper can call it
+    without recursing through the public `connect()`."""
     backoffs = [2, 4]
     last_exc: Exception | None = None
     for attempt in range(max_attempts):
@@ -207,9 +209,90 @@ def connect(
                     attempt + 1, max_attempts, e, wait,
                 )
                 time.sleep(wait)
-    # All attempts exhausted — surface the last exception
     assert last_exc is not None
     raise last_exc
+
+
+class _AutoReconnectConnection:
+    """Wrapper around a libsql Connection that catches stream-expiration
+    errors on `execute()` / `commit()` and transparently reconnects +
+    retries once.
+
+    Rationale: long-running phases (enrichment with 1 req/host throttling,
+    lifecycle checker with HTTP budget) can idle the Turso stream for 10+
+    minutes. The server evicts the stream but the client holds on to it.
+    Next write fails. Without auto-reconnect, the first post-enrichment
+    call (fetch_retry_queue in Phase 5) crashes the whole pipeline — which
+    is exactly what happened in the 2026-04-20 run.
+
+    Tests using sqlite3.Connection directly bypass this wrapper entirely.
+    Only libsql connections created via `db.connect()` get wrapped.
+    """
+
+    def __init__(self, url: str, auth_token: str, *, max_attempts: int = 3) -> None:
+        self._url = url
+        self._auth = auth_token
+        self._conn = _raw_libsql_connect(url, auth_token, max_attempts=max_attempts)
+
+    def _reconnect(self) -> None:
+        log.warning("db: Turso stream expired — reconnecting")
+        self._conn = _raw_libsql_connect(self._url, self._auth)
+
+    def execute(self, *args, **kwargs):
+        try:
+            return self._conn.execute(*args, **kwargs)
+        except Exception as e:  # noqa: BLE001
+            if _is_stream_error(e):
+                self._reconnect()
+                return self._conn.execute(*args, **kwargs)
+            raise
+
+    def commit(self):
+        try:
+            return self._conn.commit()
+        except Exception as e:  # noqa: BLE001
+            if _is_stream_error(e):
+                self._reconnect()
+                return self._conn.commit()
+            raise
+
+    def close(self):
+        try:
+            return self._conn.close()
+        except Exception:  # noqa: BLE001 — best-effort close
+            return None
+
+    def __getattr__(self, name):
+        # Delegate any other attribute access (cursor, rowcount, etc.) to the
+        # underlying connection. Any call path not wrapped above loses the
+        # auto-reconnect protection — that's by design; those are rare.
+        return getattr(self._conn, name)
+
+
+def connect(
+    url: str | None = None,
+    auth_token: str | None = None,
+    *,
+    max_attempts: int = 3,
+):
+    """Connect to Turso libSQL. Falls back to env vars if args omitted.
+
+    R7: retry with exponential backoff (2s, 4s) on transient connect errors.
+    Turso occasionally returns 5xx during regional failover; a single retry
+    bucket prevents a transient blip from killing the entire run.
+
+    R10: returns an `_AutoReconnectConnection` that self-heals when the
+    Turso stream expires mid-pipeline (enrichment can idle the conn 10+
+    minutes). `max_attempts` applies to the INITIAL connect only; runtime
+    stream reconnects always get fresh backoff via `_raw_libsql_connect`.
+    """
+    if libsql is None:
+        raise RuntimeError("libsql is not installed in this environment")
+    url = url or os.environ.get("TURSO_DB_URL", "")
+    auth_token = auth_token or os.environ.get("TURSO_AUTH_TOKEN", "")
+    if not url:
+        raise ValueError("TURSO_DB_URL is required")
+    return _AutoReconnectConnection(url, auth_token, max_attempts=max_attempts)
 
 
 def _execute_with_retry(conn, sql: str, params: tuple | list = ()) -> Any:

@@ -21,9 +21,27 @@ RSS_FETCH_TIMEOUT_SEC = 15.0
 _RSS_USER_AGENT = "Mozilla/5.0 (compatible; job-monitor-rss/1.0)"
 
 
+def _normalize_feed_url(url: str) -> str:
+    """Config drift guard: GH Actions logs on 2026-04-20 showed three RSS
+    feeds set without a URL scheme (`"No scheme supplied"` from requests).
+    Auto-prepend https:// when the env var value starts with a hostname
+    rather than a scheme. Preserves empty strings and already-schemed URLs."""
+    u = (url or "").strip()
+    if not u:
+        return u
+    if u.startswith(("http://", "https://")):
+        return u
+    # Crude heuristic: starts with a known scheme keyword → leave alone;
+    # otherwise assume the operator forgot the scheme and prepend https.
+    if "://" in u:
+        return u  # already some scheme we don't recognize — don't clobber
+    return "https://" + u
+
+
 def _fetch_feed(url: str):
     """Return a parsed feedparser object. On network failure returns a
     feedparser-shaped empty object so callers can treat it uniformly."""
+    url = _normalize_feed_url(url)
     try:
         resp = requests.get(
             url,

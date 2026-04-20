@@ -468,6 +468,45 @@ def test_unresolved_aggregator_url_triggers_warning_log(caplog):
     ), f"expected unresolved warning, got: {[r.getMessage() for r in caplog.records]}"
 
 
+def test_linkedin_terminal_url_does_NOT_trigger_unresolved_warning(caplog):
+    """R10: jobspy_linkedin produces https://www.linkedin.com/jobs/view/<id>.
+    LinkedIn IS the application surface — there's no company redirect to
+    chase. Previously these threw 3+ warnings per run, polluting the signal
+    we use to identify real unresolved leaks."""
+    import logging as _l
+    j = _job(source_url="https://www.linkedin.com/jobs/view/4404058381",
+             apply_url="https://www.linkedin.com/jobs/view/4404058381")
+    j["source_name"] = "jobspy_linkedin"
+    # LinkedIn returns 200 but no redirect; we expect a debug log, not a warning.
+    with caplog.at_level(_l.WARNING, logger="src.processors.enrichment"), \
+         patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>x</p>",
+                                                       "https://www.linkedin.com/jobs/view/4404058381",
+                                                       200)), \
+         patch("src.processors.enrichment._head_final_url", return_value=""):
+        en.enrich_job(j)
+    assert not any(
+        "apply_url not resolved" in r.getMessage() for r in caplog.records
+    ), "LinkedIn terminal URL should not emit unresolved warning"
+
+
+def test_non_linkedin_aggregator_still_warns(caplog):
+    """Flipside of R10: we keep warning for OTHER unresolved aggregators
+    (jooble.org, other jobspy sources) — only jobspy_linkedin is whitelisted."""
+    import logging as _l
+    j = _job(source_url="https://jooble.org/desc/stuck",
+             apply_url="https://jooble.org/desc/stuck")
+    j["source_name"] = "jooble"
+    with caplog.at_level(_l.WARNING, logger="src.processors.enrichment"), \
+         patch("src.processors.enrichment.requests.get",
+               return_value=_mock_resp_with_final_url("<p>opaque</p>",
+                                                       "https://jooble.org/desc/stuck",
+                                                       200)), \
+         patch("src.processors.enrichment._head_final_url", return_value=""):
+        en.enrich_job(j)
+    assert any("apply_url not resolved" in r.getMessage() for r in caplog.records)
+
+
 def test_resolved_aggregator_url_does_NOT_trigger_warning(caplog):
     """Flipside: when we DO resolve the URL, no warning fires."""
     import logging as _l

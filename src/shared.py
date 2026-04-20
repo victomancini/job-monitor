@@ -30,7 +30,14 @@ RAW_DATA_MAX_BYTES = 50_000
 # enrichment.py because `host in AGGREGATOR_HOSTS` was False.
 AGGREGATOR_ROOT_DOMAINS: frozenset[str] = frozenset({
     "jooble.org",
-    "adzuna.com", "adzuna.co.uk",
+    # All Adzuna country TLDs. Observed live in the 2026-04-20 log:
+    # www.adzuna.ca and www.adzuna.com.au were silently flowing through as
+    # aggregator=False because only .com/.co.uk were listed. Adzuna operates
+    # in 16 countries; list them all to stop the leak.
+    "adzuna.com", "adzuna.co.uk", "adzuna.ca", "adzuna.com.au",
+    "adzuna.de", "adzuna.fr", "adzuna.nl", "adzuna.it", "adzuna.pl",
+    "adzuna.at", "adzuna.ch", "adzuna.ru", "adzuna.in", "adzuna.sg",
+    "adzuna.co.za", "adzuna.com.br", "adzuna.com.mx",
     "indeed.com",
     "google.com",
     "linkedin.com",

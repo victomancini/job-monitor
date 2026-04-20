@@ -1,0 +1,419 @@
+﻿2026-04-20T12:44:15.6898973Z ##[group]Run python src/collector.py
+2026-04-20T12:44:15.6899365Z [36;1mpython src/collector.py[0m
+2026-04-20T12:44:15.6920228Z shell: /usr/bin/bash -e {0}
+2026-04-20T12:44:15.6920510Z env:
+2026-04-20T12:44:15.6920823Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T12:44:15.6921515Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T12:44:15.6921997Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T12:44:15.6922422Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T12:44:15.6922836Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T12:44:15.6923245Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T12:44:15.6923874Z   JSEARCH_API_KEY: ***
+2026-04-20T12:44:15.6924220Z   JOOBLE_API_KEY: ***
+2026-04-20T12:44:15.6924505Z   ADZUNA_APP_ID: ***
+2026-04-20T12:44:15.6924829Z   ADZUNA_APP_KEY: ***
+2026-04-20T12:44:15.6925132Z   USAJOBS_EMAIL: ***
+2026-04-20T12:44:15.6925498Z   USAJOBS_API_KEY: ***
+2026-04-20T12:44:15.6925930Z   GROQ_API_KEY: ***
+2026-04-20T12:44:15.6926276Z   GEMINI_API_KEY: ***
+2026-04-20T12:44:15.6927142Z   OPENAI_API_KEY: ***
+2026-04-20T12:44:15.6927575Z   TURSO_DB_URL: ***
+2026-04-20T12:44:15.6929492Z   TURSO_AUTH_TOKEN: ***
+2026-04-20T12:44:15.6929817Z   WP_URL: ***
+2026-04-20T12:44:15.6930085Z   WP_USERNAME: ***
+2026-04-20T12:44:15.6930412Z   WP_APP_PASSWORD: ***
+2026-04-20T12:44:15.6930688Z   WP_SHARED_SECRET: 
+2026-04-20T12:44:15.6931015Z   BREVO_SMTP_USER: ***
+2026-04-20T12:44:15.6932220Z   BREVO_SMTP_PASS: ***
+2026-04-20T12:44:15.6932565Z   NOTIFICATION_EMAIL: ***
+2026-04-20T12:44:15.6932918Z   PUSHOVER_USER_KEY: ***
+2026-04-20T12:44:15.6933268Z   PUSHOVER_APP_TOKEN: ***
+2026-04-20T12:44:15.6933716Z   HEALTHCHECK_URL: ***
+2026-04-20T12:44:15.6934182Z   GOOGLE_ALERT_RSS_1: ***
+2026-04-20T12:44:15.6934647Z   GOOGLE_ALERT_RSS_2: ***
+2026-04-20T12:44:15.6935110Z   GOOGLE_ALERT_RSS_3: ***
+2026-04-20T12:44:15.6935559Z   GOOGLE_ALERT_RSS_4: ***
+2026-04-20T12:44:15.6936013Z   GOOGLE_ALERT_RSS_5: ***
+2026-04-20T12:44:15.6936457Z   GOOGLE_ALERT_SIOP: ***
+2026-04-20T12:44:15.6936749Z   TALKWALKER_RSS_1: ***
+2026-04-20T12:44:15.6937043Z   TALKWALKER_RSS_2: ***
+2026-04-20T12:44:15.6937321Z   TALKWALKER_RSS_3: ***
+2026-04-20T12:44:15.6937565Z ##[endgroup]
+2026-04-20T12:44:17.4860492Z 2026-04-20 12:44:17,485 INFO collector: === Phase 1: sources ===
+2026-04-20T12:45:07.3864172Z 2026-04-20 12:45:07,386 WARNING src.sources._http: HTTP 503 on https://api.adzuna.com/v1/api/jobs/gb/search/1 (attempt 1) — retrying
+2026-04-20T12:45:09.6582624Z 2026-04-20 12:45:09,657 WARNING src.sources._http: HTTP 503 on https://api.adzuna.com/v1/api/jobs/gb/search/1 (attempt 2) — retrying
+2026-04-20T12:45:36.0040148Z 2026-04-20 12:45:36,003 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T12:45:36.0042743Z 2026-04-20 12:45:36,003 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T12:45:36.0045053Z 2026-04-20 12:45:36,004 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T12:46:53.2178783Z 2026-04-20 12:46:53,217 WARNING src.sources._http: ReadTimeout on https://api.lever.co/v0/postings/netflix (attempt 1) — retrying
+2026-04-20T12:47:46.1769125Z 2026-04-20 12:47:46,176 - INFO - JobSpy:Linkedin - finished scraping
+2026-04-20T12:47:47.3802260Z 2026-04-20 12:47:47,379 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:47:47.3803844Z 2026-04-20 12:47:47,380 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:47:47.5136272Z 2026-04-20 12:47:47,513 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:47:53.9383957Z 2026-04-20 12:47:53,938 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:47:53.9385792Z 2026-04-20 12:47:53,938 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:47:53.9863111Z 2026-04-20 12:47:53,986 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:08.4268747Z 2026-04-20 12:48:08,426 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:48:08.4270319Z 2026-04-20 12:48:08,426 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:48:08.4860220Z 2026-04-20 12:48:08,485 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:20.4209103Z 2026-04-20 12:48:20,420 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:48:20.4210581Z 2026-04-20 12:48:20,420 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:48:20.4636540Z 2026-04-20 12:48:20,463 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:29.1046384Z 2026-04-20 12:48:29,104 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:48:29.1047756Z 2026-04-20 12:48:29,104 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:48:29.1509488Z 2026-04-20 12:48:29,150 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:35.4635054Z 2026-04-20 12:48:35,463 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:48:35.4636582Z 2026-04-20 12:48:35,463 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:48:35.5147995Z 2026-04-20 12:48:35,514 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:49.7772595Z 2026-04-20 12:48:49,777 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T12:48:49.7773920Z 2026-04-20 12:48:49,777 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T12:48:49.8270684Z 2026-04-20 12:48:49,826 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T12:48:51.3486195Z 2026-04-20 12:48:51,348 INFO collector: sources: {'jsearch_found': 10, 'jooble_found': 122, 'adzuna_found': 240, 'usajobs_found': 183, 'alerts_found': 0, 'greenhouse_found': 6270, 'lever_found': 92, 'ashby_found': 332, 'jobspy_found': 55, 'onemodel_found': 0, 'included_ai_found': 0, 'siop_found': 0}
+2026-04-20T12:48:51.3488233Z 2026-04-20 12:48:51,348 INFO collector: === Phase 2: keyword filter ===
+2026-04-20T12:50:59.3732862Z 2026-04-20 12:50:59,373 INFO collector: keyword_filter: 71 candidates / 7233 rejects
+2026-04-20T12:50:59.3733891Z 2026-04-20 12:50:59,373 INFO collector: === Phase 3: LLM classifier ===
+2026-04-20T12:51:00.5732652Z 2026-04-20 12:51:00,572 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:03.5495899Z 2026-04-20 12:51:03,549 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:06.8511087Z 2026-04-20 12:51:06,850 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:09.7407168Z 2026-04-20 12:51:09,740 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:12.9153812Z 2026-04-20 12:51:12,915 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:16.0014468Z 2026-04-20 12:51:16,001 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:19.3478933Z 2026-04-20 12:51:19,347 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:22.3309946Z 2026-04-20 12:51:22,330 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:24.9245738Z 2026-04-20 12:51:24,924 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:51:24.9247624Z 2026-04-20 12:51:24,924 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:51:31.7457924Z 2026-04-20 12:51:31,745 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:34.3403504Z 2026-04-20 12:51:34,340 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:51:34.3405142Z 2026-04-20 12:51:34,340 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:51:41.1230818Z 2026-04-20 12:51:41,122 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:43.7069384Z 2026-04-20 12:51:43,706 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:51:43.7070629Z 2026-04-20 12:51:43,706 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:51:49.7254326Z 2026-04-20 12:51:49,725 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:51:52.3170257Z 2026-04-20 12:51:52,316 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:51:52.3171683Z 2026-04-20 12:51:52,317 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:51:58.8696121Z 2026-04-20 12:51:58,869 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:01.4843328Z 2026-04-20 12:52:01,484 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:01.4844728Z 2026-04-20 12:52:01,484 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:52:05.9807806Z 2026-04-20 12:52:05,980 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:08.5768400Z 2026-04-20 12:52:08,576 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:08.5770393Z 2026-04-20 12:52:08,576 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:52:14.1497246Z 2026-04-20 12:52:14,149 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:16.7367538Z 2026-04-20 12:52:16,736 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:16.7369185Z 2026-04-20 12:52:16,736 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:52:22.2715598Z 2026-04-20 12:52:22,271 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:24.8782816Z 2026-04-20 12:52:24,878 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:24.8784547Z 2026-04-20 12:52:24,878 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:52:30.2190403Z 2026-04-20 12:52:30,217 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:32.8066573Z 2026-04-20 12:52:32,806 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:32.8067847Z 2026-04-20 12:52:32,806 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:52:38.1958850Z 2026-04-20 12:52:38,195 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:41.0869393Z 2026-04-20 12:52:41,086 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:41.0870759Z 2026-04-20 12:52:41,086 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:52:47.1957046Z 2026-04-20 12:52:47,195 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:49.8250117Z 2026-04-20 12:52:49,824 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:49.8252388Z 2026-04-20 12:52:49,825 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:52:54.3889883Z 2026-04-20 12:52:54,388 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:52:56.9824782Z 2026-04-20 12:52:56,982 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:52:56.9826936Z 2026-04-20 12:52:56,982 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:53:02.3893739Z 2026-04-20 12:53:02,388 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:04.9893266Z 2026-04-20 12:53:04,989 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:04.9895340Z 2026-04-20 12:53:04,989 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:53:10.6856235Z 2026-04-20 12:53:10,685 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:13.2899371Z 2026-04-20 12:53:13,289 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:13.2901090Z 2026-04-20 12:53:13,289 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:53:18.8735938Z 2026-04-20 12:53:18,873 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:21.5029836Z 2026-04-20 12:53:21,502 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:21.5031674Z 2026-04-20 12:53:21,502 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:53:27.0113184Z 2026-04-20 12:53:27,011 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:29.6006047Z 2026-04-20 12:53:29,600 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:29.6007878Z 2026-04-20 12:53:29,600 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:53:35.0750717Z 2026-04-20 12:53:35,074 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:37.6718111Z 2026-04-20 12:53:37,671 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:37.6719905Z 2026-04-20 12:53:37,671 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:53:42.1756678Z 2026-04-20 12:53:42,175 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:44.7643938Z 2026-04-20 12:53:44,764 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:44.7646223Z 2026-04-20 12:53:44,764 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:53:51.5249400Z 2026-04-20 12:53:51,524 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:53:54.1205076Z 2026-04-20 12:53:54,120 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:53:54.1206961Z 2026-04-20 12:53:54,120 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:53:58.5152601Z 2026-04-20 12:53:58,514 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:01.3963910Z 2026-04-20 12:54:01,395 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:01.3965093Z 2026-04-20 12:54:01,396 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:54:06.8772582Z 2026-04-20 12:54:06,876 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:09.4782556Z 2026-04-20 12:54:09,477 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:09.4784574Z 2026-04-20 12:54:09,478 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:54:15.9170623Z 2026-04-20 12:54:15,916 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:18.5113849Z 2026-04-20 12:54:18,511 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:18.5115112Z 2026-04-20 12:54:18,511 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:54:22.8310753Z 2026-04-20 12:54:22,830 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:25.4266611Z 2026-04-20 12:54:25,426 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:25.4268411Z 2026-04-20 12:54:25,426 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:54:30.8176122Z 2026-04-20 12:54:30,817 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:33.4137293Z 2026-04-20 12:54:33,413 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:33.4138241Z 2026-04-20 12:54:33,413 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:54:38.8085454Z 2026-04-20 12:54:38,808 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:41.4128643Z 2026-04-20 12:54:41,412 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:41.4130477Z 2026-04-20 12:54:41,412 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:54:46.7858787Z 2026-04-20 12:54:46,785 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:49.3823704Z 2026-04-20 12:54:49,382 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:49.3825055Z 2026-04-20 12:54:49,382 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:54:56.8611801Z 2026-04-20 12:54:56,860 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:54:59.4553131Z 2026-04-20 12:54:59,455 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:54:59.4555203Z 2026-04-20 12:54:59,455 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:55:03.9344998Z 2026-04-20 12:55:03,934 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:06.5415514Z 2026-04-20 12:55:06,541 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:06.5417000Z 2026-04-20 12:55:06,541 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:55:12.1466053Z 2026-04-20 12:55:12,146 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:14.7402484Z 2026-04-20 12:55:14,739 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:14.7404410Z 2026-04-20 12:55:14,740 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:55:20.7365514Z 2026-04-20 12:55:20,736 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:23.3294043Z 2026-04-20 12:55:23,329 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:23.3295633Z 2026-04-20 12:55:23,329 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:55:27.8091196Z 2026-04-20 12:55:27,808 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:30.4100157Z 2026-04-20 12:55:30,409 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:30.4102260Z 2026-04-20 12:55:30,410 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:55:35.9478090Z 2026-04-20 12:55:35,947 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:38.5382499Z 2026-04-20 12:55:38,534 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:38.5383925Z 2026-04-20 12:55:38,538 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:55:44.1066969Z 2026-04-20 12:55:44,106 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:46.7190771Z 2026-04-20 12:55:46,718 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:46.7192833Z 2026-04-20 12:55:46,719 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:55:51.8147465Z 2026-04-20 12:55:51,814 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:51.8149002Z 2026-04-20 12:55:51,814 INFO openai._base_client: Retrying request to /chat/completions in 1.000000 seconds
+2026-04-20T12:55:53.3302031Z 2026-04-20 12:55:53,329 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:55:55.9150728Z 2026-04-20 12:55:55,914 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:55:55.9152825Z 2026-04-20 12:55:55,915 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:56:02.8946935Z 2026-04-20 12:56:02,894 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:05.5039839Z 2026-04-20 12:56:05,503 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:05.5042527Z 2026-04-20 12:56:05,504 INFO openai._base_client: Retrying request to /chat/completions in 4.000000 seconds
+2026-04-20T12:56:10.0126406Z 2026-04-20 12:56:10,012 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:12.6037188Z 2026-04-20 12:56:12,603 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:12.6038403Z 2026-04-20 12:56:12,603 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:56:18.9893257Z 2026-04-20 12:56:18,989 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:21.5942602Z 2026-04-20 12:56:21,593 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:21.5944792Z 2026-04-20 12:56:21,594 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:56:28.2869776Z 2026-04-20 12:56:28,286 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:30.9112351Z 2026-04-20 12:56:30,910 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:30.9113781Z 2026-04-20 12:56:30,911 INFO openai._base_client: Retrying request to /chat/completions in 5.000000 seconds
+2026-04-20T12:56:36.8848273Z 2026-04-20 12:56:36,884 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:39.4803377Z 2026-04-20 12:56:39,480 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:39.4805286Z 2026-04-20 12:56:39,480 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:56:45.8842415Z 2026-04-20 12:56:45,883 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:48.4724178Z 2026-04-20 12:56:48,472 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:48.4726096Z 2026-04-20 12:56:48,472 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:56:55.9727923Z 2026-04-20 12:56:55,972 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:56:58.5764510Z 2026-04-20 12:56:58,576 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:56:58.5766530Z 2026-04-20 12:56:58,576 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:57:06.1752291Z 2026-04-20 12:57:06,174 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:57:08.7967932Z 2026-04-20 12:57:08,796 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:08.7969446Z 2026-04-20 12:57:08,796 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:57:15.8836879Z 2026-04-20 12:57:15,883 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:15.8838667Z 2026-04-20 12:57:15,883 INFO openai._base_client: Retrying request to /chat/completions in 1.000000 seconds
+2026-04-20T12:57:17.2280123Z 2026-04-20 12:57:17,227 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:57:19.8238568Z 2026-04-20 12:57:19,823 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:19.8240228Z 2026-04-20 12:57:19,823 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:57:26.3761924Z 2026-04-20 12:57:26,375 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:57:28.9793166Z 2026-04-20 12:57:28,978 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:28.9794800Z 2026-04-20 12:57:28,978 INFO openai._base_client: Retrying request to /chat/completions in 8.000000 seconds
+2026-04-20T12:57:37.7746552Z 2026-04-20 12:57:37,774 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:57:40.3738203Z 2026-04-20 12:57:40,373 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:40.3739665Z 2026-04-20 12:57:40,373 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:57:47.1904961Z 2026-04-20 12:57:47,190 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:57:49.7955591Z 2026-04-20 12:57:49,795 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:57:49.7956839Z 2026-04-20 12:57:49,795 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:57:57.5069151Z 2026-04-20 12:57:57,506 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:58:00.4568697Z 2026-04-20 12:58:00,456 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:00.4570410Z 2026-04-20 12:58:00,456 INFO openai._base_client: Retrying request to /chat/completions in 6.000000 seconds
+2026-04-20T12:58:06.9493205Z 2026-04-20 12:58:06,949 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:58:09.5535826Z 2026-04-20 12:58:09,553 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:09.5537261Z 2026-04-20 12:58:09,553 INFO openai._base_client: Retrying request to /chat/completions in 7.000000 seconds
+2026-04-20T12:58:17.4542242Z 2026-04-20 12:58:17,453 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:58:20.0472094Z 2026-04-20 12:58:20,046 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:20.0479735Z 2026-04-20 12:58:20,047 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98720, Requested 2080. Please try again in 11m31.2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:20.7154330Z 2026-04-20 12:58:20,715 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:21.5153718Z 2026-04-20 12:58:21,515 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:25.6144088Z 2026-04-20 12:58:25,613 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:25.6148034Z 2026-04-20 12:58:25,614 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98714, Requested 2144. Please try again in 12m21.312s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:25.6528542Z 2026-04-20 12:58:25,652 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:26.6191214Z 2026-04-20 12:58:26,618 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:30.7185062Z 2026-04-20 12:58:30,718 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:30.7190754Z 2026-04-20 12:58:30,718 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98708, Requested 2149. Please try again in 12m20.448s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:30.7547713Z 2026-04-20 12:58:30,754 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:31.7866137Z 2026-04-20 12:58:31,786 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:35.8882738Z 2026-04-20 12:58:35,888 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:35.8888845Z 2026-04-20 12:58:35,888 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98701, Requested 2709. Please try again in 20m18.24s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:35.9250700Z 2026-04-20 12:58:35,924 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:36.7728660Z 2026-04-20 12:58:36,772 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:40.9018595Z 2026-04-20 12:58:40,901 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:40.9023252Z 2026-04-20 12:58:40,902 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98695, Requested 2482. Please try again in 16m56.927999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:40.9411923Z 2026-04-20 12:58:40,940 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:41.7344081Z 2026-04-20 12:58:41,734 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:45.8880015Z 2026-04-20 12:58:45,887 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:45.8925451Z 2026-04-20 12:58:45,892 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98691, Requested 1983. Please try again in 9m42.336s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:45.9296786Z 2026-04-20 12:58:45,929 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:46.8430677Z 2026-04-20 12:58:46,842 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:50.9393405Z 2026-04-20 12:58:50,939 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:50.9400107Z 2026-04-20 12:58:50,939 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98685, Requested 2004. Please try again in 9m55.296s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:50.9757586Z 2026-04-20 12:58:50,975 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:51.9327147Z 2026-04-20 12:58:51,932 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:58:56.0458389Z 2026-04-20 12:58:56,045 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:58:56.0463779Z 2026-04-20 12:58:56,046 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98678, Requested 2325. Please try again in 14m26.592s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:58:56.0848961Z 2026-04-20 12:58:56,084 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:58:57.0830244Z 2026-04-20 12:58:57,082 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:01.1970347Z 2026-04-20 12:59:01,196 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:01.1976281Z 2026-04-20 12:59:01,197 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98673, Requested 1974. Please try again in 9m19.008s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:01.2344477Z 2026-04-20 12:59:01,234 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:02.2749061Z 2026-04-20 12:59:02,274 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:06.3842148Z 2026-04-20 12:59:06,383 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:06.3847294Z 2026-04-20 12:59:06,384 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98667, Requested 1959. Please try again in 9m0.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:06.4201477Z 2026-04-20 12:59:06,419 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:07.2952531Z 2026-04-20 12:59:07,294 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:11.5226114Z 2026-04-20 12:59:11,522 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:11.5231525Z 2026-04-20 12:59:11,522 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98661, Requested 1957. Please try again in 8m53.952s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:11.5587208Z 2026-04-20 12:59:11,558 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:12.5717258Z 2026-04-20 12:59:12,571 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:16.7498827Z 2026-04-20 12:59:16,749 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:16.7505239Z 2026-04-20 12:59:16,750 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98655, Requested 1934. Please try again in 8m28.896s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:16.7877624Z 2026-04-20 12:59:16,787 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:16.8733605Z 2026-04-20 12:59:16,872 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:16.8738894Z 2026-04-20 12:59:16,873 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 10, model: gemini-2.5-flash-lite\nPlease retry in 43.145584932s.', 'status': 'RESOURCE_EXHA
+2026-04-20T12:59:19.1762640Z 2026-04-20 12:59:19,176 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T12:59:20.2932102Z 2026-04-20 12:59:20,292 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:20.2939344Z 2026-04-20 12:59:20,293 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98650, Requested 1546. Please try again in 2m49.344s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:20.3295899Z 2026-04-20 12:59:20,329 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:21.9067744Z 2026-04-20 12:59:21,906 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:26.0063755Z 2026-04-20 12:59:26,006 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:26.0070245Z 2026-04-20 12:59:26,006 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98644, Requested 1566. Please try again in 3m1.44s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:26.0452167Z 2026-04-20 12:59:26,045 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:26.8641799Z 2026-04-20 12:59:26,863 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:30.9597233Z 2026-04-20 12:59:30,959 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T12:59:30.9602468Z 2026-04-20 12:59:30,959 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98638, Requested 1569. Please try again in 2m58.848s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T12:59:30.9962221Z 2026-04-20 12:59:30,996 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T12:59:32.0258740Z 2026-04-20 12:59:32,025 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T12:59:32.0301233Z 2026-04-20 12:59:32,029 INFO collector: llm: 68 to publish / providers={'groq': 56, 'gemini': 14, 'openai': 1}
+2026-04-20T12:59:32.2625235Z 2026-04-20 12:59:32,262 INFO collector: === Phase 4: deduplicator ===
+2026-04-20T12:59:38.0710262Z 2026-04-20 12:59:38,070 INFO collector: deduplicator: 42 kept / 26 skipped as dupes
+2026-04-20T12:59:38.2297290Z 2026-04-20 12:59:38,229 INFO collector: apply_url upgrade: jooble_201324908561329557 -> https://jooble.org/jdp/-3508306115948697941
+2026-04-20T12:59:38.2701857Z 2026-04-20 12:59:38,270 INFO collector: === Phase 4.5: enrichment ===
+2026-04-20T12:59:38.2720248Z 2026-04-20 12:59:38,271 INFO src.processors.enrichment: enrich_job[jsearch_bak9ydjfUcqe26SHAAAAAA==] source=jsearch url=https://cowlitz.wd5.myworkdayjobs.com/ilani/job/ilani/Workforce-Analytics-Manager_R-04128-1 host=cowlitz.wd5.myworkdayjobs.com aggregator=False
+2026-04-20T12:59:38.2732869Z 2026-04-20 12:59:38,273 INFO src.processors.enrichment: enrich_job[jsearch_-wprVirLnIAm6OeJAAAAAA==] source=jsearch url=https://www.linkedin.com/jobs/view/director-workforce-analytics-at-advantage-solutions-4380621990 host=www.linkedin.com aggregator=True
+2026-04-20T12:59:38.2749077Z 2026-04-20 12:59:38,274 INFO src.processors.enrichment: enrich_job[jsearch_sqbpUGwH0lFVrPD8AAAAAA==] source=jsearch url=https://www.whatjobs.com/jobs/director-workforce-analytics/remote?id=2605608221 host=www.whatjobs.com aggregator=False
+2026-04-20T12:59:38.2760842Z 2026-04-20 12:59:38,275 INFO src.processors.enrichment: enrich_job[jsearch_6UYSfnFaf4bcAnekAAAAAA==] source=jsearch url=https://builtin.com/job/director-workforce-analytics-and-strategy-hybrid-ny/9023193 host=builtin.com aggregator=False
+2026-04-20T12:59:38.7111818Z 2026-04-20 12:59:38,710 INFO src.processors.enrichment: enrich_job[jsearch_bak9ydjfUcqe26SHAAAAAA==] HTTP status=200 redirected=False final_host=cowlitz.wd5.myworkdayjobs.com
+2026-04-20T12:59:38.7121732Z 2026-04-20 12:59:38,711 INFO src.processors.enrichment: enrich_job[jooble_-5487407538774413611] source=jooble url=https://jooble.org/jdp/-5487407538774413611 host=jooble.org aggregator=True
+2026-04-20T12:59:38.8412900Z 2026-04-20 12:59:38,840 INFO src.processors.enrichment: enrich_job[jsearch_6UYSfnFaf4bcAnekAAAAAA==] HTTP status=200 redirected=False final_host=builtin.com
+2026-04-20T12:59:38.9002891Z 2026-04-20 12:59:38,900 INFO src.processors.enrichment: enrich_job[jsearch_-wprVirLnIAm6OeJAAAAAA==] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T12:59:38.9551014Z 2026-04-20 12:59:38,954 INFO src.processors.enrichment: enrich_job[jooble_-5487407538774413611] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:39.2766344Z 2026-04-20 12:59:39,276 INFO src.processors.enrichment: enrich_job[jsearch_VJKoNOSZFJQC0Yl1AAAAAA==] source=jsearch url=https://www.whatjobs.com/jobs/associate-director-workforce-analytics-solutions/new-jersey?id=2629815 host=www.whatjobs.com aggregator=False
+2026-04-20T12:59:39.3466444Z 2026-04-20 12:59:39,346 INFO src.processors.enrichment: enrich_job[jsearch_sqbpUGwH0lFVrPD8AAAAAA==] HTTP status=200 redirected=False final_host=www.whatjobs.com
+2026-04-20T12:59:39.4310064Z 2026-04-20 12:59:39,430 WARNING src.processors.enrichment: apply_url not resolved for jooble_-5487407538774413611: https://jooble.org/jdp/-5487407538774413611
+2026-04-20T12:59:39.7122306Z 2026-04-20 12:59:39,711 INFO src.processors.enrichment: enrich_job[jooble_8718276104813549967] source=jooble url=https://jooble.org/jdp/8718276104813549967 host=jooble.org aggregator=True
+2026-04-20T12:59:39.9360942Z 2026-04-20 12:59:39,935 INFO src.processors.enrichment: enrich_job[jooble_8718276104813549967] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:40.0961222Z 2026-04-20 12:59:40,095 WARNING src.processors.enrichment: apply_url not resolved for jsearch_-wprVirLnIAm6OeJAAAAAA==: https://www.linkedin.com/jobs/view/director-workforce-analytics-at-advantage-solutions-4380621990
+2026-04-20T12:59:40.2286185Z 2026-04-20 12:59:40,228 WARNING src.processors.enrichment: apply_url not resolved for jooble_8718276104813549967: https://jooble.org/jdp/8718276104813549967
+2026-04-20T12:59:40.7125717Z 2026-04-20 12:59:40,712 INFO src.processors.enrichment: enrich_job[jooble_4006907133188642870] source=jooble url=https://jooble.org/jdp/4006907133188642870 host=jooble.org aggregator=True
+2026-04-20T12:59:40.7702480Z 2026-04-20 12:59:40,769 INFO src.processors.enrichment: enrich_job[jsearch_VJKoNOSZFJQC0Yl1AAAAAA==] HTTP status=200 redirected=False final_host=www.whatjobs.com
+2026-04-20T12:59:40.9314290Z 2026-04-20 12:59:40,931 INFO src.processors.enrichment: enrich_job[jooble_4006907133188642870] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:41.0697634Z 2026-04-20 12:59:41,069 WARNING src.processors.enrichment: apply_url not resolved for jooble_4006907133188642870: https://jooble.org/jdp/4006907133188642870
+2026-04-20T12:59:41.7127196Z 2026-04-20 12:59:41,712 INFO src.processors.enrichment: enrich_job[jooble_4422493689246616587] source=jooble url=https://jooble.org/jdp/4422493689246616587 host=jooble.org aggregator=True
+2026-04-20T12:59:41.9305732Z 2026-04-20 12:59:41,930 INFO src.processors.enrichment: enrich_job[jooble_4422493689246616587] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:42.0474429Z 2026-04-20 12:59:42,046 WARNING src.processors.enrichment: apply_url not resolved for jooble_4422493689246616587: https://jooble.org/jdp/4422493689246616587
+2026-04-20T12:59:42.7128506Z 2026-04-20 12:59:42,712 INFO src.processors.enrichment: enrich_job[jooble_-6513249260418183201] source=jooble url=https://jooble.org/jdp/-6513249260418183201 host=jooble.org aggregator=True
+2026-04-20T12:59:42.7715640Z 2026-04-20 12:59:42,770 INFO src.processors.enrichment: enrich_job[jooble_-6513249260418183201] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:42.8757491Z 2026-04-20 12:59:42,875 WARNING src.processors.enrichment: apply_url not resolved for jooble_-6513249260418183201: https://jooble.org/jdp/-6513249260418183201
+2026-04-20T12:59:43.7129494Z 2026-04-20 12:59:43,712 INFO src.processors.enrichment: enrich_job[jooble_-6294192859018850989] source=jooble url=https://jooble.org/jdp/-6294192859018850989 host=jooble.org aggregator=True
+2026-04-20T12:59:43.7648836Z 2026-04-20 12:59:43,764 INFO src.processors.enrichment: enrich_job[jooble_-6294192859018850989] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:44.0601065Z 2026-04-20 12:59:44,059 WARNING src.processors.enrichment: apply_url not resolved for jooble_-6294192859018850989: https://jooble.org/jdp/-6294192859018850989
+2026-04-20T12:59:44.7128435Z 2026-04-20 12:59:44,712 INFO src.processors.enrichment: enrich_job[jooble_-8422425632983326069] source=jooble url=https://jooble.org/jdp/-8422425632983326069 host=jooble.org aggregator=True
+2026-04-20T12:59:44.7626728Z 2026-04-20 12:59:44,762 INFO src.processors.enrichment: enrich_job[jooble_-8422425632983326069] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:45.0312105Z 2026-04-20 12:59:45,030 WARNING src.processors.enrichment: apply_url not resolved for jooble_-8422425632983326069: https://jooble.org/jdp/-8422425632983326069
+2026-04-20T12:59:45.7130293Z 2026-04-20 12:59:45,712 INFO src.processors.enrichment: enrich_job[jooble_6695548115830387680] source=jooble url=https://jooble.org/jdp/6695548115830387680 host=jooble.org aggregator=True
+2026-04-20T12:59:45.9350729Z 2026-04-20 12:59:45,934 INFO src.processors.enrichment: enrich_job[jooble_6695548115830387680] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:46.2015809Z 2026-04-20 12:59:46,201 WARNING src.processors.enrichment: apply_url not resolved for jooble_6695548115830387680: https://jooble.org/jdp/6695548115830387680
+2026-04-20T12:59:46.2024585Z 2026-04-20 12:59:46,202 INFO src.processors.enrichment: enrich_job[adzuna_5704840025] source=adzuna url=https://www.adzuna.com/details/5704840025?utm_medium=api&utm_source=*** host=www.adzuna.com aggregator=True
+2026-04-20T12:59:46.7135851Z 2026-04-20 12:59:46,712 INFO src.processors.enrichment: enrich_job[jooble_3169455418079108501] source=jooble url=https://jooble.org/jdp/3169455418079108501 host=jooble.org aggregator=True
+2026-04-20T12:59:46.7705015Z 2026-04-20 12:59:46,770 INFO src.processors.enrichment: enrich_job[jooble_3169455418079108501] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:46.8204187Z 2026-04-20 12:59:46,820 INFO src.processors.enrichment: enrich_job[adzuna_5704840025] HTTP status=200 redirected=False final_host=www.adzuna.com
+2026-04-20T12:59:46.8776416Z 2026-04-20 12:59:46,877 WARNING src.processors.enrichment: apply_url not resolved for jooble_3169455418079108501: https://jooble.org/jdp/3169455418079108501
+2026-04-20T12:59:46.8785252Z 2026-04-20 12:59:46,878 INFO src.processors.enrichment: enrich_job[adzuna_5703725949] source=adzuna url=https://www.adzuna.co.uk/jobs/details/5703725949?utm_medium=api&utm_source=*** host=www.adzuna.co.uk aggregator=True
+2026-04-20T12:59:47.5588338Z 2026-04-20 12:59:47,558 INFO src.processors.enrichment: enrich_job[adzuna_5703725949] HTTP status=200 redirected=False final_host=www.adzuna.co.uk
+2026-04-20T12:59:47.6687548Z 2026-04-20 12:59:47,668 WARNING src.processors.enrichment: apply_url not resolved for adzuna_5704840025: https://www.adzuna.com/details/5704840025?utm_medium=api&utm_source=***
+2026-04-20T12:59:47.6698392Z 2026-04-20 12:59:47,669 INFO src.processors.enrichment: enrich_job[adzuna_5702834460] source=adzuna url=https://www.adzuna.ca/details/5702834460?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T12:59:47.7128568Z 2026-04-20 12:59:47,712 INFO src.processors.enrichment: enrich_job[jooble_-4468619351581755000] source=jooble url=https://jooble.org/jdp/-4468619351581755000 host=jooble.org aggregator=True
+2026-04-20T12:59:47.7632780Z 2026-04-20 12:59:47,763 INFO src.processors.enrichment: enrich_job[jooble_-4468619351581755000] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:48.0330554Z 2026-04-20 12:59:48,032 WARNING src.processors.enrichment: apply_url not resolved for jooble_-4468619351581755000: https://jooble.org/jdp/-4468619351581755000
+2026-04-20T12:59:48.1787923Z 2026-04-20 12:59:48,178 INFO src.processors.enrichment: enrich_job[adzuna_5702834460] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T12:59:48.4530804Z 2026-04-20 12:59:48,452 WARNING src.processors.enrichment: apply_url not resolved for adzuna_5703725949: https://www.adzuna.co.uk/jobs/details/5703725949?utm_medium=api&utm_source=***
+2026-04-20T12:59:48.6702210Z 2026-04-20 12:59:48,669 INFO src.processors.enrichment: enrich_job[adzuna_5702235154] source=adzuna url=https://www.adzuna.ca/details/5702235154?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T12:59:48.7134597Z 2026-04-20 12:59:48,713 INFO src.processors.enrichment: enrich_job[jooble_-2099121581115119289] source=jooble url=https://jooble.org/jdp/-2099121581115119289 host=jooble.org aggregator=True
+2026-04-20T12:59:48.9316052Z 2026-04-20 12:59:48,931 INFO src.processors.enrichment: enrich_job[jooble_-2099121581115119289] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:49.0432594Z 2026-04-20 12:59:49,042 WARNING src.processors.enrichment: apply_url not resolved for jooble_-2099121581115119289: https://jooble.org/jdp/-2099121581115119289
+2026-04-20T12:59:49.0441536Z 2026-04-20 12:59:49,043 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] source=adzuna url=https://www.adzuna.com.au/details/5702135260?utm_medium=api&utm_source=*** host=www.adzuna.com.au aggregator=False
+2026-04-20T12:59:49.1425484Z 2026-04-20 12:59:49,142 INFO src.processors.enrichment: enrich_job[adzuna_5702235154] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T12:59:49.5345260Z 2026-04-20 12:59:49,534 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] HTTP status=200 redirected=False final_host=www.adzuna.com.au
+2026-04-20T12:59:49.5388919Z 2026-04-20 12:59:49,538 INFO src.processors.enrichment: enrich_job[usajobs_865498800] source=usajobs url=https://www.usajobs.gov:443/job/865498800 host=www.usajobs.gov:443 aggregator=False
+2026-04-20T12:59:49.6699963Z 2026-04-20 12:59:49,669 INFO src.processors.enrichment: enrich_job[adzuna_5696932925] source=adzuna url=https://www.adzuna.ca/details/5696932925?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T12:59:49.7136522Z 2026-04-20 12:59:49,713 INFO src.processors.enrichment: enrich_job[jooble_5918110456944402403] source=jooble url=https://jooble.org/jdp/5918110456944402403 host=jooble.org aggregator=True
+2026-04-20T12:59:49.7422264Z 2026-04-20 12:59:49,742 INFO src.processors.enrichment: enrich_job[usajobs_865498800] HTTP status=200 redirected=False final_host=www.usajobs.gov:443
+2026-04-20T12:59:49.7813132Z 2026-04-20 12:59:49,781 INFO src.processors.enrichment: enrich_job[jooble_5918110456944402403] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T12:59:49.8792122Z 2026-04-20 12:59:49,878 WARNING src.processors.enrichment: apply_url not resolved for jooble_5918110456944402403: https://jooble.org/jdp/5918110456944402403
+2026-04-20T12:59:49.8811719Z 2026-04-20 12:59:49,881 INFO src.processors.enrichment: enrich_job[gh_airbnb_7653015] source=greenhouse url=https://careers.airbnb.com/positions/7653015?gh_jid=7653015 host=careers.airbnb.com aggregator=False
+2026-04-20T12:59:50.0444729Z 2026-04-20 12:59:50,043 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] source=adzuna url=https://www.adzuna.com.au/details/5702135260?utm_medium=api&utm_source=*** host=www.adzuna.com.au aggregator=False
+2026-04-20T12:59:50.1721645Z 2026-04-20 12:59:50,171 INFO src.processors.enrichment: enrich_job[adzuna_5696932925] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T12:59:50.1786840Z 2026-04-20 12:59:50,178 INFO src.processors.enrichment: enrich_job[gh_pinterest_7568861] source=greenhouse url=https://www.pinterestcareers.com/jobs/?gh_jid=7568861 host=www.pinterestcareers.com aggregator=False
+2026-04-20T12:59:50.3412846Z 2026-04-20 12:59:50,341 INFO src.processors.enrichment: enrich_job[gh_pinterest_7568861] HTTP status=403 redirected=False final_host=www.pinterestcareers.com
+2026-04-20T12:59:50.3447280Z 2026-04-20 12:59:50,344 INFO src.processors.enrichment: enrich_job[gh_databricks_8485471002] source=greenhouse url=https://databricks.com/company/careers/open-positions/job?gh_jid=8485471002 host=databricks.com aggregator=False
+2026-04-20T12:59:50.4608911Z 2026-04-20 12:59:50,460 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] HTTP status=200 redirected=False final_host=www.adzuna.com.au
+2026-04-20T12:59:50.4660143Z 2026-04-20 12:59:50,465 INFO src.processors.enrichment: enrich_job[gh_figma_5737300004] source=greenhouse url=https://boards.greenhouse.io/figma/jobs/5737300004?gh_jid=5737300004 host=boards.greenhouse.io aggregator=False
+2026-04-20T12:59:50.5389984Z 2026-04-20 12:59:50,538 INFO src.processors.enrichment: enrich_job[usajobs_864919200] source=usajobs url=https://www.usajobs.gov:443/job/864919200 host=www.usajobs.gov:443 aggregator=False
+2026-04-20T12:59:50.6696023Z 2026-04-20 12:59:50,669 INFO src.processors.enrichment: enrich_job[usajobs_864919200] HTTP status=200 redirected=False final_host=www.usajobs.gov:443
+2026-04-20T12:59:50.6755836Z 2026-04-20 12:59:50,675 INFO src.processors.enrichment: enrich_job[adzuna_5696894519] source=adzuna url=https://www.adzuna.ca/details/5696894519?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T12:59:50.6836940Z 2026-04-20 12:59:50,683 INFO src.processors.enrichment: enrich_job[gh_airtable_8235618002] source=greenhouse url=https://job-boards.greenhouse.io/airtable/jobs/8235618002 host=job-boards.greenhouse.io aggregator=False
+2026-04-20T12:59:50.7613130Z 2026-04-20 12:59:50,761 INFO src.processors.enrichment: enrich_job[gh_airbnb_7653015] HTTP status=200 redirected=False final_host=careers.airbnb.com
+2026-04-20T12:59:50.7672025Z 2026-04-20 12:59:50,766 INFO src.processors.enrichment: enrich_job[gh_duolingo_8449530002] source=greenhouse url=https://careers.duolingo.com/jobs/8449530002?gh_jid=8449530002 host=careers.duolingo.com aggregator=False
+2026-04-20T12:59:50.8416802Z 2026-04-20 12:59:50,841 INFO src.processors.enrichment: enrich_job[gh_figma_5737300004] HTTP status=200 redirected=True final_host=job-boards.greenhouse.io
+2026-04-20T12:59:50.8478573Z 2026-04-20 12:59:50,847 INFO src.processors.enrichment: enrich_job[gh_dropbox_7536374] source=greenhouse url=https://jobs.dropbox.com/listing/7536374?gh_jid=7536374 host=jobs.dropbox.com aggregator=False
+2026-04-20T12:59:50.8498406Z 2026-04-20 12:59:50,849 INFO src.processors.enrichment: enrich_job[gh_databricks_8485471002] HTTP status=200 redirected=True final_host=www.databricks.com
+2026-04-20T12:59:50.8708847Z 2026-04-20 12:59:50,870 INFO src.processors.enrichment: enrich_job[gh_airtable_8235618002] HTTP status=200 redirected=False final_host=job-boards.greenhouse.io
+2026-04-20T12:59:50.8790983Z 2026-04-20 12:59:50,878 INFO src.processors.enrichment: enrich_job[gh_datadog_7607540] source=greenhouse url=https://careers.datadoghq.com/detail/7607540/?gh_jid=7607540 host=careers.datadoghq.com aggregator=False
+2026-04-20T12:59:51.0558656Z 2026-04-20 12:59:51,055 INFO src.processors.enrichment: enrich_job[gh_duolingo_8449530002] HTTP status=200 redirected=False final_host=careers.duolingo.com
+2026-04-20T12:59:51.0571890Z 2026-04-20 12:59:51,056 INFO src.processors.enrichment: enrich_job[gh_okta_7649312] source=greenhouse url=https://www.okta.com/company/careers/opportunity/7649312?gh_jid=7649312 host=www.okta.com aggregator=False
+2026-04-20T12:59:51.1023751Z 2026-04-20 12:59:51,102 INFO src.processors.enrichment: enrich_job[gh_datadog_7607540] HTTP status=200 redirected=False final_host=careers.datadoghq.com
+2026-04-20T12:59:51.1093821Z 2026-04-20 12:59:51,109 INFO src.processors.enrichment: enrich_job[gh_mongodb_7766266] source=greenhouse url=https://www.mongodb.com/careers/job/?gh_jid=7766266 host=www.mongodb.com aggregator=False
+2026-04-20T12:59:51.2041715Z 2026-04-20 12:59:51,203 INFO src.processors.enrichment: enrich_job[adzuna_5696894519] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T12:59:51.2106461Z 2026-04-20 12:59:51,210 INFO src.processors.enrichment: enrich_job[ashby_notion_704a8769-cc09-4d4e-987d-a27a025374e7] source=ashby url=https://jobs.ashbyhq.com/notion/704a8769-cc09-4d4e-987d-a27a025374e7 host=jobs.ashbyhq.com aggregator=False
+2026-04-20T12:59:51.2764719Z 2026-04-20 12:59:51,276 INFO src.processors.enrichment: enrich_job[gh_mongodb_7766266] HTTP status=200 redirected=False final_host=www.mongodb.com
+2026-04-20T12:59:51.2774805Z 2026-04-20 12:59:51,277 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_0d8326a793b3e351] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4404058381 host=www.linkedin.com aggregator=True
+2026-04-20T12:59:51.4714695Z 2026-04-20 12:59:51,471 INFO src.processors.enrichment: enrich_job[gh_dropbox_7536374] HTTP status=403 redirected=True final_host=www.dropbox.jobs
+2026-04-20T12:59:51.4768286Z 2026-04-20 12:59:51,476 INFO src.processors.enrichment: enrich_job[ashby_notion_704a8769-cc09-4d4e-987d-a27a025374e7] HTTP status=200 redirected=False final_host=jobs.ashbyhq.com
+2026-04-20T12:59:51.6667470Z 2026-04-20 12:59:51,666 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_0d8326a793b3e351] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T12:59:51.8492760Z 2026-04-20 12:59:51,848 INFO src.processors.enrichment: enrich_job[gh_dropbox_7571497] source=greenhouse url=https://jobs.dropbox.com/listing/7571497?gh_jid=7571497 host=jobs.dropbox.com aggregator=False
+2026-04-20T12:59:52.1337184Z 2026-04-20 12:59:52,133 INFO src.processors.enrichment: enrich_job[gh_dropbox_7571497] HTTP status=403 redirected=True final_host=www.dropbox.jobs
+2026-04-20T12:59:52.2777800Z 2026-04-20 12:59:52,277 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_d1b9c20396cb3fa0] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4372774542 host=www.linkedin.com aggregator=True
+2026-04-20T12:59:52.4261662Z 2026-04-20 12:59:52,425 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_0d8326a793b3e351: https://www.linkedin.com/jobs/view/4404058381
+2026-04-20T12:59:52.9104117Z 2026-04-20 12:59:52,910 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_d1b9c20396cb3fa0] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T12:59:53.2459935Z 2026-04-20 12:59:53,245 INFO src.processors.enrichment: enrich_job[gh_okta_7649312] HTTP status=200 redirected=False final_host=www.okta.com
+2026-04-20T12:59:53.2781784Z 2026-04-20 12:59:53,277 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_8a3d6db49b1c1714] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4372941019 host=www.linkedin.com aggregator=True
+2026-04-20T12:59:53.9587728Z 2026-04-20 12:59:53,958 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_8a3d6db49b1c1714] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T12:59:54.2222366Z 2026-04-20 12:59:54,221 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_d1b9c20396cb3fa0: https://www.linkedin.com/jobs/view/4372774542
+2026-04-20T12:59:55.2435402Z 2026-04-20 12:59:55,243 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_8a3d6db49b1c1714: https://www.linkedin.com/jobs/view/4372941019
+2026-04-20T12:59:55.2450122Z 2026-04-20 12:59:55,244 INFO collector: enrichment: {'enriched_from_source': 27, 'aggregator_only': 15}
+2026-04-20T12:59:56.1947864Z 2026-04-20 12:59:56,194 INFO collector: === Phase 5: WordPress publish ===
+2026-04-20T12:59:56.2027820Z Traceback (most recent call last):
+2026-04-20T12:59:56.2035918Z   File "/home/runner/work/job-monitor/job-monitor/src/collector.py", line 725, in <module>
+2026-04-20T12:59:56.2036521Z     sys.exit(_cli())
+2026-04-20T12:59:56.2036890Z              ^^^^^^
+2026-04-20T12:59:56.2037695Z   File "/home/runner/work/job-monitor/job-monitor/src/collector.py", line 721, in _cli
+2026-04-20T12:59:56.2038229Z     return run(dry_run=args.dry_run)
+2026-04-20T12:59:56.2038544Z            ^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-20T12:59:56.2039016Z   File "/home/runner/work/job-monitor/job-monitor/src/collector.py", line 537, in run
+2026-04-20T12:59:56.2039522Z     retry_result = wordpress.process_retry_queue(
+2026-04-20T12:59:56.2039885Z                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-20T12:59:56.2040743Z   File "/home/runner/work/job-monitor/job-monitor/src/publishers/wordpress.py", line 210, in process_retry_queue
+2026-04-20T12:59:56.2041630Z     pending = db.fetch_retry_queue(conn, max_attempts=3)
+2026-04-20T12:59:56.2042026Z               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-04-20T12:59:56.2042552Z   File "/home/runner/work/job-monitor/job-monitor/src/db.py", line 556, in fetch_retry_queue
+2026-04-20T12:59:56.2043052Z     cur = conn.execute(
+2026-04-20T12:59:56.2043320Z           ^^^^^^^^^^^^^
+2026-04-20T12:59:56.2043889Z ValueError: Hrana: `api error: `status=404 Not Found, body={"error":"stream not found: aa84a45f:019daaf9-9b97-7402-b454-89c8ff68cb8e"}``
+2026-04-20T12:59:56.4363289Z ##[error]Process completed with exit code 1.

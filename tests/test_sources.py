@@ -240,6 +240,41 @@ def test_google_alerts_no_feeds_configured():
     assert errors == []
 
 
+# ───── R10: schemeless RSS URL auto-prepends https:// ─────
+
+def test_google_alerts_normalizes_schemeless_url():
+    """R10 regression: 3 feeds on the 2026-04-20 run failed with 'No scheme
+    supplied' because the env var was set to a bare hostname. The normalizer
+    should prepend https:// so the fetch proceeds."""
+    assert google_alerts._normalize_feed_url("alerts.example.com/rss") \
+        == "https://alerts.example.com/rss"
+
+
+def test_google_alerts_normalizer_preserves_existing_scheme():
+    for u in [
+        "https://feeds.example.com/a",
+        "http://feeds.example.com/b",  # HTTP preserved, not upgraded here
+    ]:
+        assert google_alerts._normalize_feed_url(u) == u
+
+
+def test_google_alerts_normalizer_empty_stays_empty():
+    assert google_alerts._normalize_feed_url("") == ""
+    assert google_alerts._normalize_feed_url(None) == ""
+
+
+def test_google_alerts_normalizer_preserves_whitespace_stripped_url():
+    assert google_alerts._normalize_feed_url("  alerts.example.com/rss  ") \
+        == "https://alerts.example.com/rss"
+
+
+def test_google_alerts_normalizer_leaves_unknown_scheme_alone():
+    """If an operator deliberately sets 'ftp://...' (weird but possible),
+    don't clobber it."""
+    assert google_alerts._normalize_feed_url("ftp://example.com/file") \
+        == "ftp://example.com/file"
+
+
 def test_google_alerts_deduplicates_within_batch():
     """Same link across multiple feeds → one job."""
     e = MagicMock()
