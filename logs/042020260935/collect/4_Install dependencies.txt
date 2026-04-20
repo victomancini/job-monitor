@@ -1,0 +1,187 @@
+﻿2026-04-20T13:00:05.4933768Z ##[group]Run pip install -r requirements.txt
+2026-04-20T13:00:05.4935692Z [36;1mpip install -r requirements.txt[0m
+2026-04-20T13:00:05.4966640Z shell: /usr/bin/bash -e {0}
+2026-04-20T13:00:05.4967881Z env:
+2026-04-20T13:00:05.4969085Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4970954Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:00:05.4972828Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4974534Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4976455Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4978210Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:00:05.4979745Z ##[endgroup]
+2026-04-20T13:00:06.5571401Z Collecting requests>=2.31.0 (from -r requirements.txt (line 1))
+2026-04-20T13:00:06.6368464Z   Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+2026-04-20T13:00:07.1756300Z Collecting rapidfuzz>=3.14.0 (from -r requirements.txt (line 2))
+2026-04-20T13:00:07.1871791Z   Downloading rapidfuzz-3.14.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (12 kB)
+2026-04-20T13:00:07.2169483Z Collecting google-genai>=1.70.0 (from -r requirements.txt (line 3))
+2026-04-20T13:00:07.2286489Z   Downloading google_genai-1.73.1-py3-none-any.whl.metadata (52 kB)
+2026-04-20T13:00:07.3024943Z Collecting openai>=1.30.0 (from -r requirements.txt (line 4))
+2026-04-20T13:00:07.3135066Z   Downloading openai-2.32.0-py3-none-any.whl.metadata (31 kB)
+2026-04-20T13:00:07.3474866Z Collecting libsql>=0.1.11 (from -r requirements.txt (line 5))
+2026-04-20T13:00:07.3600576Z   Downloading libsql-0.1.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (281 bytes)
+2026-04-20T13:00:07.3803701Z Collecting feedparser>=6.0.12 (from -r requirements.txt (line 6))
+2026-04-20T13:00:07.3922085Z   Downloading feedparser-6.0.12-py3-none-any.whl.metadata (2.7 kB)
+2026-04-20T13:00:07.4364943Z Collecting pyyaml>=6.0.1 (from -r requirements.txt (line 7))
+2026-04-20T13:00:07.4482771Z   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+2026-04-20T13:00:07.4688703Z Collecting python-dateutil>=2.8.2 (from -r requirements.txt (line 8))
+2026-04-20T13:00:07.4805294Z   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:07.5160380Z Collecting pytest>=8.0.0 (from -r requirements.txt (line 9))
+2026-04-20T13:00:07.5279060Z   Downloading pytest-9.0.3-py3-none-any.whl.metadata (7.6 kB)
+2026-04-20T13:00:07.5517795Z Collecting beautifulsoup4>=4.12.0 (from -r requirements.txt (line 11))
+2026-04-20T13:00:07.5631047Z   Downloading beautifulsoup4-4.14.3-py3-none-any.whl.metadata (3.8 kB)
+2026-04-20T13:00:07.5918475Z Collecting python-jobspy>=1.1.0 (from -r requirements.txt (line 12))
+2026-04-20T13:00:07.6037918Z   Downloading python_jobspy-1.1.82-py3-none-any.whl.metadata (10 kB)
+2026-04-20T13:00:07.7343307Z Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.7460485Z   Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+2026-04-20T13:00:07.7694374Z Collecting idna<4,>=2.5 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.7806563Z   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:07.8086638Z Collecting urllib3<3,>=1.26 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.8200386Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+2026-04-20T13:00:07.8449413Z Collecting certifi>=2023.5.7 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.8564963Z   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:07.8823043Z Collecting anyio<5.0.0,>=4.8.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.8935311Z   Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+2026-04-20T13:00:07.9282503Z Collecting google-auth<3.0.0,>=2.48.1 (from google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.9398794Z   Downloading google_auth-2.49.2-py3-none-any.whl.metadata (6.2 kB)
+2026-04-20T13:00:07.9666481Z Collecting httpx<1.0.0,>=0.28.1 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.9776965Z   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+2026-04-20T13:00:08.0873935Z Collecting pydantic<3.0.0,>=2.9.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.0988108Z   Downloading pydantic-2.13.2-py3-none-any.whl.metadata (108 kB)
+2026-04-20T13:00:08.1363874Z Collecting tenacity<9.2.0,>=8.2.3 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.1479275Z   Downloading tenacity-9.1.4-py3-none-any.whl.metadata (1.2 kB)
+2026-04-20T13:00:08.2344462Z Collecting websockets<17.0,>=13.0.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.2458042Z   Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+2026-04-20T13:00:08.2674979Z Collecting typing-extensions<5.0.0,>=4.14.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.2784875Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+2026-04-20T13:00:08.2969648Z Collecting distro<2,>=1.7.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3081686Z   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+2026-04-20T13:00:08.3262941Z Collecting sniffio (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3373118Z   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+2026-04-20T13:00:08.3657224Z Collecting pyasn1-modules>=0.2.1 (from google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3774592Z   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+2026-04-20T13:00:08.5519457Z Collecting cryptography>=38.0.3 (from google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.5630643Z   Downloading cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+2026-04-20T13:00:08.5925176Z Collecting httpcore==1.* (from httpx<1.0.0,>=0.28.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6039533Z   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+2026-04-20T13:00:08.6242336Z Collecting h11>=0.16 (from httpcore==1.*->httpx<1.0.0,>=0.28.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6359199Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+2026-04-20T13:00:08.6544000Z Collecting annotated-types>=0.6.0 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6656158Z   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+2026-04-20T13:00:09.2968501Z Collecting pydantic-core==2.46.2 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:09.3081250Z   Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+2026-04-20T13:00:09.3274253Z Collecting typing-inspection>=0.4.2 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:09.3387264Z   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+2026-04-20T13:00:09.4185308Z Collecting jiter<1,>=0.10.0 (from openai>=1.30.0->-r requirements.txt (line 4))
+2026-04-20T13:00:09.4298555Z   Downloading jiter-0.14.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+2026-04-20T13:00:09.5306553Z Collecting tqdm>4 (from openai>=1.30.0->-r requirements.txt (line 4))
+2026-04-20T13:00:09.5419414Z   Downloading tqdm-4.67.3-py3-none-any.whl.metadata (57 kB)
+2026-04-20T13:00:09.5666814Z Collecting sgmllib3k (from feedparser>=6.0.12->-r requirements.txt (line 6))
+2026-04-20T13:00:09.5779714Z   Downloading sgmllib3k-1.0.0.tar.gz (5.8 kB)
+2026-04-20T13:00:09.5835433Z   Installing build dependencies: started
+2026-04-20T13:00:10.5565870Z   Installing build dependencies: finished with status 'done'
+2026-04-20T13:00:10.5571952Z   Getting requirements to build wheel: started
+2026-04-20T13:00:10.8902892Z   Getting requirements to build wheel: finished with status 'done'
+2026-04-20T13:00:10.8911725Z   Preparing metadata (pyproject.toml): started
+2026-04-20T13:00:11.0587929Z   Preparing metadata (pyproject.toml): finished with status 'done'
+2026-04-20T13:00:11.0786226Z Collecting six>=1.5 (from python-dateutil>=2.8.2->-r requirements.txt (line 8))
+2026-04-20T13:00:11.0978508Z   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+2026-04-20T13:00:11.1103396Z Collecting iniconfig>=1.0.1 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1214459Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:11.1432117Z Collecting packaging>=22 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1545301Z   Downloading packaging-26.1-py3-none-any.whl.metadata (3.5 kB)
+2026-04-20T13:00:11.1736678Z Collecting pluggy<2,>=1.5 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1846737Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+2026-04-20T13:00:11.2105165Z Collecting pygments>=2.7.2 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.2222224Z   Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:11.2467481Z Collecting soupsieve>=1.6.1 (from beautifulsoup4>=4.12.0->-r requirements.txt (line 11))
+2026-04-20T13:00:11.2578557Z   Downloading soupsieve-2.8.3-py3-none-any.whl.metadata (4.6 kB)
+2026-04-20T13:00:11.4268476Z Collecting NUMPY==1.26.3 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.4385984Z   Downloading numpy-1.26.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (61 kB)
+2026-04-20T13:00:11.4695704Z Collecting markdownify<0.14.0,>=0.13.1 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.4812858Z   Downloading markdownify-0.13.1-py3-none-any.whl.metadata (8.5 kB)
+2026-04-20T13:00:11.5847454Z Collecting pandas<3.0.0,>=2.1.0 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.5964494Z   Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+2026-04-20T13:00:12.0099933Z Collecting regex<2025.0.0,>=2024.4.28 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.0225026Z   Downloading regex-2024.11.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (40 kB)
+2026-04-20T13:00:12.0437186Z Collecting tls-client<2.0.0,>=1.0.1 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.0550590Z   Downloading tls_client-1.0.1-py3-none-any.whl.metadata (5.0 kB)
+2026-04-20T13:00:12.0973377Z Collecting pytz>=2020.1 (from pandas<3.0.0,>=2.1.0->python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.1087896Z   Downloading pytz-2026.1.post1-py2.py3-none-any.whl.metadata (22 kB)
+2026-04-20T13:00:12.1315745Z Collecting tzdata>=2022.7 (from pandas<3.0.0,>=2.1.0->python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.1429187Z   Downloading tzdata-2026.1-py2.py3-none-any.whl.metadata (1.4 kB)
+2026-04-20T13:00:12.2356693Z Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.2474813Z   Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+2026-04-20T13:00:12.2670323Z Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.2781818Z   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+2026-04-20T13:00:12.3070812Z Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.3183498Z   Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:12.3394507Z Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+2026-04-20T13:00:12.3529463Z Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (216 kB)
+2026-04-20T13:00:12.3762530Z Downloading idna-3.11-py3-none-any.whl (71 kB)
+2026-04-20T13:00:12.3896464Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+2026-04-20T13:00:12.4041852Z Downloading rapidfuzz-3.14.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (3.1 MB)
+2026-04-20T13:00:12.4531145Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.1/3.1 MB 64.5 MB/s  0:00:00
+2026-04-20T13:00:12.4650872Z Downloading google_genai-1.73.1-py3-none-any.whl (783 kB)
+2026-04-20T13:00:12.4711381Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 783.6/783.6 kB 151.2 MB/s  0:00:00
+2026-04-20T13:00:12.4824262Z Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+2026-04-20T13:00:12.4958887Z Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+2026-04-20T13:00:12.5093709Z Downloading google_auth-2.49.2-py3-none-any.whl (240 kB)
+2026-04-20T13:00:12.5231130Z Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+2026-04-20T13:00:12.5363684Z Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+2026-04-20T13:00:12.5497237Z Downloading pydantic-2.13.2-py3-none-any.whl (471 kB)
+2026-04-20T13:00:12.5642286Z Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+2026-04-20T13:00:12.5725227Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 308.3 MB/s  0:00:00
+2026-04-20T13:00:12.5837146Z Downloading tenacity-9.1.4-py3-none-any.whl (28 kB)
+2026-04-20T13:00:12.5971315Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+2026-04-20T13:00:12.6106054Z Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+2026-04-20T13:00:12.6243705Z Downloading openai-2.32.0-py3-none-any.whl (1.2 MB)
+2026-04-20T13:00:12.6310292Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 220.8 MB/s  0:00:00
+2026-04-20T13:00:12.6425046Z Downloading jiter-0.14.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (353 kB)
+2026-04-20T13:00:12.6569871Z Downloading libsql-0.1.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.1 MB)
+2026-04-20T13:00:12.6843812Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.1/5.1 MB 194.5 MB/s  0:00:00
+2026-04-20T13:00:12.6956515Z Downloading feedparser-6.0.12-py3-none-any.whl (81 kB)
+2026-04-20T13:00:12.7095876Z Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+2026-04-20T13:00:12.7151227Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 169.6 MB/s  0:00:00
+2026-04-20T13:00:12.7264578Z Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+2026-04-20T13:00:12.7402748Z Downloading pytest-9.0.3-py3-none-any.whl (375 kB)
+2026-04-20T13:00:12.7548087Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+2026-04-20T13:00:12.7684450Z Downloading beautifulsoup4-4.14.3-py3-none-any.whl (107 kB)
+2026-04-20T13:00:12.7824331Z Downloading python_jobspy-1.1.82-py3-none-any.whl (52 kB)
+2026-04-20T13:00:12.7966698Z Downloading numpy-1.26.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (18.0 MB)
+2026-04-20T13:00:12.8557526Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 18.0/18.0 MB 311.6 MB/s  0:00:00
+2026-04-20T13:00:12.8676362Z Downloading markdownify-0.13.1-py3-none-any.whl (10 kB)
+2026-04-20T13:00:12.8809823Z Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.4 MB)
+2026-04-20T13:00:12.9299351Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 274.2 MB/s  0:00:00
+2026-04-20T13:00:12.9418810Z Downloading regex-2024.11.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (796 kB)
+2026-04-20T13:00:12.9484587Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 796.9/796.9 kB 164.1 MB/s  0:00:00
+2026-04-20T13:00:12.9597094Z Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+2026-04-20T13:00:12.9732218Z Downloading tls_client-1.0.1-py3-none-any.whl (41.3 MB)
+2026-04-20T13:00:13.0890199Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 41.3/41.3 MB 361.8 MB/s  0:00:00
+2026-04-20T13:00:13.1068939Z Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+2026-04-20T13:00:13.1200165Z Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+2026-04-20T13:00:13.1334683Z Downloading cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+2026-04-20T13:00:13.1477865Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 345.3 MB/s  0:00:00
+2026-04-20T13:00:13.1590241Z Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+2026-04-20T13:00:13.1727380Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+2026-04-20T13:00:13.1854547Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+2026-04-20T13:00:13.1985005Z Downloading packaging-26.1-py3-none-any.whl (95 kB)
+2026-04-20T13:00:13.2119240Z Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+2026-04-20T13:00:13.2254388Z Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+2026-04-20T13:00:13.2385967Z Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+2026-04-20T13:00:13.2461303Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 193.2 MB/s  0:00:00
+2026-04-20T13:00:13.2573625Z Downloading pytz-2026.1.post1-py2.py3-none-any.whl (510 kB)
+2026-04-20T13:00:13.2717487Z Downloading soupsieve-2.8.3-py3-none-any.whl (37 kB)
+2026-04-20T13:00:13.2849795Z Downloading tqdm-4.67.3-py3-none-any.whl (78 kB)
+2026-04-20T13:00:13.2982709Z Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+2026-04-20T13:00:13.3111725Z Downloading tzdata-2026.1-py2.py3-none-any.whl (348 kB)
+2026-04-20T13:00:13.3250426Z Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+2026-04-20T13:00:13.3384300Z Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+2026-04-20T13:00:13.4838030Z Building wheels for collected packages: sgmllib3k
+2026-04-20T13:00:13.4845446Z   Building wheel for sgmllib3k (pyproject.toml): started
+2026-04-20T13:00:13.6801782Z   Building wheel for sgmllib3k (pyproject.toml): finished with status 'done'
+2026-04-20T13:00:13.6806831Z   Created wheel for sgmllib3k: filename=sgmllib3k-1.0.0-py3-none-any.whl size=6090 sha256=04bdd6f541f7836c5a01c34e6edc89a656692f4e9ae2c21543a1845c67a502f0
+2026-04-20T13:00:13.6808083Z   Stored in directory: /home/runner/.cache/pip/wheels/03/f5/1a/23761066dac1d0e8e683e5fdb27e12de53209d05a4a37e6246
+2026-04-20T13:00:13.6822713Z Successfully built sgmllib3k
+2026-04-20T13:00:13.7928433Z Installing collected packages: tls-client, sgmllib3k, pytz, websockets, urllib3, tzdata, typing-extensions, tqdm, tenacity, soupsieve, sniffio, six, regex, rapidfuzz, pyyaml, pygments, pycparser, pyasn1, pluggy, packaging, NUMPY, libsql, jiter, iniconfig, idna, h11, feedparser, distro, charset_normalizer, certifi, annotated-types, typing-inspection, requests, python-dateutil, pytest, pydantic-core, pyasn1-modules, httpcore, cffi, beautifulsoup4, anyio, pydantic, pandas, markdownify, httpx, cryptography, python-jobspy, openai, google-auth, google-genai
+2026-04-20T13:00:24.2699723Z 
+2026-04-20T13:00:24.2739741Z Successfully installed NUMPY-1.26.3 annotated-types-0.7.0 anyio-4.13.0 beautifulsoup4-4.14.3 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.7 cryptography-46.0.7 distro-1.9.0 feedparser-6.0.12 google-auth-2.49.2 google-genai-1.73.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.11 iniconfig-2.3.0 jiter-0.14.0 libsql-0.1.11 markdownify-0.13.1 openai-2.32.0 packaging-26.1 pandas-2.3.3 pluggy-1.6.0 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.13.2 pydantic-core-2.46.2 pygments-2.20.0 pytest-9.0.3 python-dateutil-2.9.0.post0 python-jobspy-1.1.82 pytz-2026.1.post1 pyyaml-6.0.3 rapidfuzz-3.14.5 regex-2024.11.6 requests-2.33.1 sgmllib3k-1.0.0 six-1.17.0 sniffio-1.3.1 soupsieve-2.8.3 tenacity-9.1.4 tls-client-1.0.1 tqdm-4.67.3 typing-extensions-4.15.0 typing-inspection-0.4.2 tzdata-2026.1 urllib3-2.6.3 websockets-16.0

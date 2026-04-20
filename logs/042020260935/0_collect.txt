@@ -1,0 +1,1014 @@
+﻿2026-04-20T13:00:03.1010535Z Current runner version: '2.333.1'
+2026-04-20T13:00:03.1036037Z ##[group]Runner Image Provisioner
+2026-04-20T13:00:03.1037176Z Hosted Compute Agent
+2026-04-20T13:00:03.1037918Z Version: 20260213.493
+2026-04-20T13:00:03.1038776Z Commit: 5c115507f6dd24b8de37d8bbe0bb4509d0cc0fa3
+2026-04-20T13:00:03.1039635Z Build Date: 2026-02-13T00:28:41Z
+2026-04-20T13:00:03.1040562Z Worker ID: {bfbbdf54-2a98-4b95-b5b7-518a7f386ea8}
+2026-04-20T13:00:03.1041411Z Azure Region: westus3
+2026-04-20T13:00:03.1042190Z ##[endgroup]
+2026-04-20T13:00:03.1043780Z ##[group]Operating System
+2026-04-20T13:00:03.1044609Z Ubuntu
+2026-04-20T13:00:03.1045266Z 24.04.4
+2026-04-20T13:00:03.1046174Z LTS
+2026-04-20T13:00:03.1046830Z ##[endgroup]
+2026-04-20T13:00:03.1047509Z ##[group]Runner Image
+2026-04-20T13:00:03.1048221Z Image: ubuntu-24.04
+2026-04-20T13:00:03.1048920Z Version: 20260413.86.1
+2026-04-20T13:00:03.1050269Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260413.86/images/ubuntu/Ubuntu2404-Readme.md
+2026-04-20T13:00:03.1051909Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260413.86
+2026-04-20T13:00:03.1052919Z ##[endgroup]
+2026-04-20T13:00:03.1054242Z ##[group]GITHUB_TOKEN Permissions
+2026-04-20T13:00:03.1056542Z Contents: read
+2026-04-20T13:00:03.1057269Z Metadata: read
+2026-04-20T13:00:03.1057943Z Packages: read
+2026-04-20T13:00:03.1058606Z ##[endgroup]
+2026-04-20T13:00:03.1060949Z Secret source: Actions
+2026-04-20T13:00:03.1061840Z Prepare workflow directory
+2026-04-20T13:00:03.1378133Z Prepare all required actions
+2026-04-20T13:00:03.1416775Z Getting action download info
+2026-04-20T13:00:03.6979979Z Download action repository 'actions/checkout@v6' (SHA:de0fac2e4500dabe0009e67214ff5f5447ce83dd)
+2026-04-20T13:00:03.8178830Z Download action repository 'actions/setup-python@v6' (SHA:a309ff8b426b58ec0e2a45f0f869d46889d02405)
+2026-04-20T13:00:03.9156825Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-04-20T13:00:04.0936465Z Complete job name: collect
+2026-04-20T13:00:04.1702197Z ##[group]Run actions/checkout@v6
+2026-04-20T13:00:04.1703074Z with:
+2026-04-20T13:00:04.1703604Z   persist-credentials: false
+2026-04-20T13:00:04.1704524Z   repository: victomancini/job-monitor
+2026-04-20T13:00:04.1705339Z   token: ***
+2026-04-20T13:00:04.1705967Z   ssh-strict: true
+2026-04-20T13:00:04.1706495Z   ssh-user: git
+2026-04-20T13:00:04.1707024Z   clean: true
+2026-04-20T13:00:04.1707552Z   sparse-checkout-cone-mode: true
+2026-04-20T13:00:04.1708149Z   fetch-depth: 1
+2026-04-20T13:00:04.1708650Z   fetch-tags: false
+2026-04-20T13:00:04.1709192Z   show-progress: true
+2026-04-20T13:00:04.1709720Z   lfs: false
+2026-04-20T13:00:04.1710229Z   submodules: false
+2026-04-20T13:00:04.1710763Z   set-safe-directory: true
+2026-04-20T13:00:04.1711658Z ##[endgroup]
+2026-04-20T13:00:04.2598008Z Syncing repository: victomancini/job-monitor
+2026-04-20T13:00:04.2600077Z ##[group]Getting Git version info
+2026-04-20T13:00:04.2600994Z Working directory is '/home/runner/work/job-monitor/job-monitor'
+2026-04-20T13:00:04.2602141Z [command]/usr/bin/git version
+2026-04-20T13:00:04.2628892Z git version 2.53.0
+2026-04-20T13:00:04.2650845Z ##[endgroup]
+2026-04-20T13:00:04.2663752Z Temporarily overriding HOME='/home/runner/work/_temp/5e16e6fa-1d4a-430c-98c6-a107e2c70ffd' before making global git config changes
+2026-04-20T13:00:04.2665279Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-20T13:00:04.2668370Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/job-monitor/job-monitor
+2026-04-20T13:00:04.2698653Z Deleting the contents of '/home/runner/work/job-monitor/job-monitor'
+2026-04-20T13:00:04.2702322Z ##[group]Initializing the repository
+2026-04-20T13:00:04.2706643Z [command]/usr/bin/git init /home/runner/work/job-monitor/job-monitor
+2026-04-20T13:00:04.2775724Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-04-20T13:00:04.2777517Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-04-20T13:00:04.2778783Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-04-20T13:00:04.2779684Z hint: call:
+2026-04-20T13:00:04.2780455Z hint:
+2026-04-20T13:00:04.2781309Z hint: 	git config --global init.defaultBranch <name>
+2026-04-20T13:00:04.2781997Z hint:
+2026-04-20T13:00:04.2782658Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-04-20T13:00:04.2783921Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-04-20T13:00:04.2785260Z hint:
+2026-04-20T13:00:04.2785980Z hint: 	git branch -m <name>
+2026-04-20T13:00:04.2786539Z hint:
+2026-04-20T13:00:04.2787240Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-04-20T13:00:04.2788321Z Initialized empty Git repository in /home/runner/work/job-monitor/job-monitor/.git/
+2026-04-20T13:00:04.2790393Z [command]/usr/bin/git remote add origin https://github.com/victomancini/job-monitor
+2026-04-20T13:00:04.2811674Z ##[endgroup]
+2026-04-20T13:00:04.2812586Z ##[group]Disabling automatic garbage collection
+2026-04-20T13:00:04.2815033Z [command]/usr/bin/git config --local gc.auto 0
+2026-04-20T13:00:04.2839739Z ##[endgroup]
+2026-04-20T13:00:04.2840782Z ##[group]Setting up auth
+2026-04-20T13:00:04.2841518Z Removing SSH command configuration
+2026-04-20T13:00:04.2845783Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-20T13:00:04.2871232Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-20T13:00:04.3090103Z Removing HTTP extra header
+2026-04-20T13:00:04.3095665Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-20T13:00:04.3123620Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-20T13:00:04.3294989Z Removing includeIf entries pointing to credentials config files
+2026-04-20T13:00:04.3300668Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-20T13:00:04.3327197Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-20T13:00:04.3508581Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-04-20T13:00:04.3541536Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/job-monitor/job-monitor/.git.path /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:04.3565960Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/job-monitor/job-monitor/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:04.3588406Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:04.3613043Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:04.3633594Z ##[endgroup]
+2026-04-20T13:00:04.3634493Z ##[group]Fetching the repository
+2026-04-20T13:00:04.3641452Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +fdfdff441846f4cc72dc36204b01c7b0156d68f8:refs/remotes/origin/main
+2026-04-20T13:00:05.1922785Z From https://github.com/victomancini/job-monitor
+2026-04-20T13:00:05.1926506Z  * [new ref]         fdfdff441846f4cc72dc36204b01c7b0156d68f8 -> origin/main
+2026-04-20T13:00:05.1951902Z [command]/usr/bin/git branch --list --remote origin/main
+2026-04-20T13:00:05.1980388Z   origin/main
+2026-04-20T13:00:05.1989704Z [command]/usr/bin/git rev-parse refs/remotes/origin/main
+2026-04-20T13:00:05.2007329Z fdfdff441846f4cc72dc36204b01c7b0156d68f8
+2026-04-20T13:00:05.2013348Z ##[endgroup]
+2026-04-20T13:00:05.2016543Z ##[group]Determining the checkout info
+2026-04-20T13:00:05.2020327Z ##[endgroup]
+2026-04-20T13:00:05.2022650Z [command]/usr/bin/git sparse-checkout disable
+2026-04-20T13:00:05.2049428Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-04-20T13:00:05.2072403Z ##[group]Checking out the ref
+2026-04-20T13:00:05.2074819Z [command]/usr/bin/git checkout --progress --force -B main refs/remotes/origin/main
+2026-04-20T13:00:05.2177946Z Switched to a new branch 'main'
+2026-04-20T13:00:05.2180601Z branch 'main' set up to track 'origin/main'.
+2026-04-20T13:00:05.2187926Z ##[endgroup]
+2026-04-20T13:00:05.2216066Z [command]/usr/bin/git log -1 --format=%H
+2026-04-20T13:00:05.2235705Z fdfdff441846f4cc72dc36204b01c7b0156d68f8
+2026-04-20T13:00:05.2245245Z ##[group]Removing auth
+2026-04-20T13:00:05.2247634Z Removing SSH command configuration
+2026-04-20T13:00:05.2250948Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-20T13:00:05.2276900Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-20T13:00:05.2442599Z Removing HTTP extra header
+2026-04-20T13:00:05.2446078Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-20T13:00:05.2479628Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-20T13:00:05.2644626Z Removing includeIf entries pointing to credentials config files
+2026-04-20T13:00:05.2649367Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-20T13:00:05.2666844Z includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git.path
+2026-04-20T13:00:05.2670934Z includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git/worktrees/*.path
+2026-04-20T13:00:05.2674635Z includeif.gitdir:/github/workspace/.git.path
+2026-04-20T13:00:05.2677906Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-04-20T13:00:05.2683771Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git.path
+2026-04-20T13:00:05.2694710Z /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2707184Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git.path /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2733248Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git/worktrees/*.path
+2026-04-20T13:00:05.2751761Z /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2762415Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/job-monitor/job-monitor/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2787950Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-04-20T13:00:05.2812773Z /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2822756Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2846573Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-04-20T13:00:05.2863707Z /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2870578Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config
+2026-04-20T13:00:05.2932037Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-20T13:00:05.3110251Z Removing credentials config '/home/runner/work/_temp/git-credentials-0a42b6a8-5959-44a1-9e11-e4844a7903ea.config'
+2026-04-20T13:00:05.3116692Z ##[endgroup]
+2026-04-20T13:00:05.3433512Z ##[group]Run actions/setup-python@v6
+2026-04-20T13:00:05.3434830Z with:
+2026-04-20T13:00:05.3435916Z   python-version: 3.12
+2026-04-20T13:00:05.3437073Z   check-latest: false
+2026-04-20T13:00:05.3438473Z   token: ***
+2026-04-20T13:00:05.3439531Z   update-environment: true
+2026-04-20T13:00:05.3440751Z   allow-prereleases: false
+2026-04-20T13:00:05.3441933Z   freethreaded: false
+2026-04-20T13:00:05.3443041Z ##[endgroup]
+2026-04-20T13:00:05.4704186Z ##[group]Installed versions
+2026-04-20T13:00:05.4792357Z Successfully set up CPython (3.12.13)
+2026-04-20T13:00:05.4794533Z ##[endgroup]
+2026-04-20T13:00:05.4933802Z ##[group]Run pip install -r requirements.txt
+2026-04-20T13:00:05.4935779Z [36;1mpip install -r requirements.txt[0m
+2026-04-20T13:00:05.4966682Z shell: /usr/bin/bash -e {0}
+2026-04-20T13:00:05.4967886Z env:
+2026-04-20T13:00:05.4969091Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4970959Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:00:05.4972833Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4974539Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4976462Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:05.4978218Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:00:05.4979750Z ##[endgroup]
+2026-04-20T13:00:06.5571456Z Collecting requests>=2.31.0 (from -r requirements.txt (line 1))
+2026-04-20T13:00:06.6368520Z   Downloading requests-2.33.1-py3-none-any.whl.metadata (4.8 kB)
+2026-04-20T13:00:07.1756493Z Collecting rapidfuzz>=3.14.0 (from -r requirements.txt (line 2))
+2026-04-20T13:00:07.1871821Z   Downloading rapidfuzz-3.14.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (12 kB)
+2026-04-20T13:00:07.2169519Z Collecting google-genai>=1.70.0 (from -r requirements.txt (line 3))
+2026-04-20T13:00:07.2286516Z   Downloading google_genai-1.73.1-py3-none-any.whl.metadata (52 kB)
+2026-04-20T13:00:07.3024992Z Collecting openai>=1.30.0 (from -r requirements.txt (line 4))
+2026-04-20T13:00:07.3135091Z   Downloading openai-2.32.0-py3-none-any.whl.metadata (31 kB)
+2026-04-20T13:00:07.3474902Z Collecting libsql>=0.1.11 (from -r requirements.txt (line 5))
+2026-04-20T13:00:07.3600616Z   Downloading libsql-0.1.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (281 bytes)
+2026-04-20T13:00:07.3803742Z Collecting feedparser>=6.0.12 (from -r requirements.txt (line 6))
+2026-04-20T13:00:07.3922157Z   Downloading feedparser-6.0.12-py3-none-any.whl.metadata (2.7 kB)
+2026-04-20T13:00:07.4365059Z Collecting pyyaml>=6.0.1 (from -r requirements.txt (line 7))
+2026-04-20T13:00:07.4482792Z   Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+2026-04-20T13:00:07.4688768Z Collecting python-dateutil>=2.8.2 (from -r requirements.txt (line 8))
+2026-04-20T13:00:07.4805328Z   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:07.5160414Z Collecting pytest>=8.0.0 (from -r requirements.txt (line 9))
+2026-04-20T13:00:07.5279082Z   Downloading pytest-9.0.3-py3-none-any.whl.metadata (7.6 kB)
+2026-04-20T13:00:07.5517848Z Collecting beautifulsoup4>=4.12.0 (from -r requirements.txt (line 11))
+2026-04-20T13:00:07.5631191Z   Downloading beautifulsoup4-4.14.3-py3-none-any.whl.metadata (3.8 kB)
+2026-04-20T13:00:07.5918511Z Collecting python-jobspy>=1.1.0 (from -r requirements.txt (line 12))
+2026-04-20T13:00:07.6037935Z   Downloading python_jobspy-1.1.82-py3-none-any.whl.metadata (10 kB)
+2026-04-20T13:00:07.7343397Z Collecting charset_normalizer<4,>=2 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.7460494Z   Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (40 kB)
+2026-04-20T13:00:07.7694407Z Collecting idna<4,>=2.5 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.7806576Z   Downloading idna-3.11-py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:07.8086669Z Collecting urllib3<3,>=1.26 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.8200397Z   Downloading urllib3-2.6.3-py3-none-any.whl.metadata (6.9 kB)
+2026-04-20T13:00:07.8449439Z Collecting certifi>=2023.5.7 (from requests>=2.31.0->-r requirements.txt (line 1))
+2026-04-20T13:00:07.8564986Z   Downloading certifi-2026.2.25-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:07.8823084Z Collecting anyio<5.0.0,>=4.8.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.8935883Z   Downloading anyio-4.13.0-py3-none-any.whl.metadata (4.5 kB)
+2026-04-20T13:00:07.9282548Z Collecting google-auth<3.0.0,>=2.48.1 (from google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.9398829Z   Downloading google_auth-2.49.2-py3-none-any.whl.metadata (6.2 kB)
+2026-04-20T13:00:07.9666515Z Collecting httpx<1.0.0,>=0.28.1 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:07.9776976Z   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+2026-04-20T13:00:08.0873973Z Collecting pydantic<3.0.0,>=2.9.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.0988134Z   Downloading pydantic-2.13.2-py3-none-any.whl.metadata (108 kB)
+2026-04-20T13:00:08.1363892Z Collecting tenacity<9.2.0,>=8.2.3 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.1479287Z   Downloading tenacity-9.1.4-py3-none-any.whl.metadata (1.2 kB)
+2026-04-20T13:00:08.2344536Z Collecting websockets<17.0,>=13.0.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.2458067Z   Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+2026-04-20T13:00:08.2674998Z Collecting typing-extensions<5.0.0,>=4.14.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.2784886Z   Downloading typing_extensions-4.15.0-py3-none-any.whl.metadata (3.3 kB)
+2026-04-20T13:00:08.2969682Z Collecting distro<2,>=1.7.0 (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3081704Z   Downloading distro-1.9.0-py3-none-any.whl.metadata (6.8 kB)
+2026-04-20T13:00:08.3262962Z Collecting sniffio (from google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3373138Z   Downloading sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+2026-04-20T13:00:08.3657348Z Collecting pyasn1-modules>=0.2.1 (from google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.3774613Z   Downloading pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+2026-04-20T13:00:08.5519494Z Collecting cryptography>=38.0.3 (from google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.5630656Z   Downloading cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl.metadata (5.7 kB)
+2026-04-20T13:00:08.5925195Z Collecting httpcore==1.* (from httpx<1.0.0,>=0.28.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6039543Z   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+2026-04-20T13:00:08.6242364Z Collecting h11>=0.16 (from httpcore==1.*->httpx<1.0.0,>=0.28.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6359217Z   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+2026-04-20T13:00:08.6544058Z Collecting annotated-types>=0.6.0 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:08.6656167Z   Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+2026-04-20T13:00:09.2968535Z Collecting pydantic-core==2.46.2 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:09.3081269Z   Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.6 kB)
+2026-04-20T13:00:09.3274275Z Collecting typing-inspection>=0.4.2 (from pydantic<3.0.0,>=2.9.0->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:09.3387280Z   Downloading typing_inspection-0.4.2-py3-none-any.whl.metadata (2.6 kB)
+2026-04-20T13:00:09.4185348Z Collecting jiter<1,>=0.10.0 (from openai>=1.30.0->-r requirements.txt (line 4))
+2026-04-20T13:00:09.4298587Z   Downloading jiter-0.14.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (5.2 kB)
+2026-04-20T13:00:09.5306589Z Collecting tqdm>4 (from openai>=1.30.0->-r requirements.txt (line 4))
+2026-04-20T13:00:09.5419804Z   Downloading tqdm-4.67.3-py3-none-any.whl.metadata (57 kB)
+2026-04-20T13:00:09.5666826Z Collecting sgmllib3k (from feedparser>=6.0.12->-r requirements.txt (line 6))
+2026-04-20T13:00:09.5779727Z   Downloading sgmllib3k-1.0.0.tar.gz (5.8 kB)
+2026-04-20T13:00:09.5835444Z   Installing build dependencies: started
+2026-04-20T13:00:10.5565913Z   Installing build dependencies: finished with status 'done'
+2026-04-20T13:00:10.5571972Z   Getting requirements to build wheel: started
+2026-04-20T13:00:10.8902932Z   Getting requirements to build wheel: finished with status 'done'
+2026-04-20T13:00:10.8911759Z   Preparing metadata (pyproject.toml): started
+2026-04-20T13:00:11.0587967Z   Preparing metadata (pyproject.toml): finished with status 'done'
+2026-04-20T13:00:11.0786254Z Collecting six>=1.5 (from python-dateutil>=2.8.2->-r requirements.txt (line 8))
+2026-04-20T13:00:11.0978556Z   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+2026-04-20T13:00:11.1103463Z Collecting iniconfig>=1.0.1 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1214470Z   Downloading iniconfig-2.3.0-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:11.1432143Z Collecting packaging>=22 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1545309Z   Downloading packaging-26.1-py3-none-any.whl.metadata (3.5 kB)
+2026-04-20T13:00:11.1736704Z Collecting pluggy<2,>=1.5 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.1846746Z   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+2026-04-20T13:00:11.2105192Z Collecting pygments>=2.7.2 (from pytest>=8.0.0->-r requirements.txt (line 9))
+2026-04-20T13:00:11.2222257Z   Downloading pygments-2.20.0-py3-none-any.whl.metadata (2.5 kB)
+2026-04-20T13:00:11.2467507Z Collecting soupsieve>=1.6.1 (from beautifulsoup4>=4.12.0->-r requirements.txt (line 11))
+2026-04-20T13:00:11.2578568Z   Downloading soupsieve-2.8.3-py3-none-any.whl.metadata (4.6 kB)
+2026-04-20T13:00:11.4268539Z Collecting NUMPY==1.26.3 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.4386001Z   Downloading numpy-1.26.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (61 kB)
+2026-04-20T13:00:11.4695768Z Collecting markdownify<0.14.0,>=0.13.1 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.4812870Z   Downloading markdownify-0.13.1-py3-none-any.whl.metadata (8.5 kB)
+2026-04-20T13:00:11.5847486Z Collecting pandas<3.0.0,>=2.1.0 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:11.5964519Z   Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (91 kB)
+2026-04-20T13:00:12.0099975Z Collecting regex<2025.0.0,>=2024.4.28 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.0225062Z   Downloading regex-2024.11.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (40 kB)
+2026-04-20T13:00:12.0437215Z Collecting tls-client<2.0.0,>=1.0.1 (from python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.0550623Z   Downloading tls_client-1.0.1-py3-none-any.whl.metadata (5.0 kB)
+2026-04-20T13:00:12.0973403Z Collecting pytz>=2020.1 (from pandas<3.0.0,>=2.1.0->python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.1087919Z   Downloading pytz-2026.1.post1-py2.py3-none-any.whl.metadata (22 kB)
+2026-04-20T13:00:12.1315772Z Collecting tzdata>=2022.7 (from pandas<3.0.0,>=2.1.0->python-jobspy>=1.1.0->-r requirements.txt (line 12))
+2026-04-20T13:00:12.1429210Z   Downloading tzdata-2026.1-py2.py3-none-any.whl.metadata (1.4 kB)
+2026-04-20T13:00:12.2356728Z Collecting cffi>=2.0.0 (from cryptography>=38.0.3->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.2474837Z   Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (2.6 kB)
+2026-04-20T13:00:12.2670700Z Collecting pycparser (from cffi>=2.0.0->cryptography>=38.0.3->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.2781850Z   Downloading pycparser-3.0-py3-none-any.whl.metadata (8.2 kB)
+2026-04-20T13:00:12.3070844Z Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth<3.0.0,>=2.48.1->google-auth[requests]<3.0.0,>=2.48.1->google-genai>=1.70.0->-r requirements.txt (line 3))
+2026-04-20T13:00:12.3183509Z   Downloading pyasn1-0.6.3-py3-none-any.whl.metadata (8.4 kB)
+2026-04-20T13:00:12.3394528Z Downloading requests-2.33.1-py3-none-any.whl (64 kB)
+2026-04-20T13:00:12.3529492Z Downloading charset_normalizer-3.4.7-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (216 kB)
+2026-04-20T13:00:12.3762555Z Downloading idna-3.11-py3-none-any.whl (71 kB)
+2026-04-20T13:00:12.3896482Z Downloading urllib3-2.6.3-py3-none-any.whl (131 kB)
+2026-04-20T13:00:12.4041875Z Downloading rapidfuzz-3.14.5-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (3.1 MB)
+2026-04-20T13:00:12.4531214Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.1/3.1 MB 64.5 MB/s  0:00:00
+2026-04-20T13:00:12.4650887Z Downloading google_genai-1.73.1-py3-none-any.whl (783 kB)
+2026-04-20T13:00:12.4711422Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 783.6/783.6 kB 151.2 MB/s  0:00:00
+2026-04-20T13:00:12.4824274Z Downloading anyio-4.13.0-py3-none-any.whl (114 kB)
+2026-04-20T13:00:12.4958908Z Downloading distro-1.9.0-py3-none-any.whl (20 kB)
+2026-04-20T13:00:12.5093724Z Downloading google_auth-2.49.2-py3-none-any.whl (240 kB)
+2026-04-20T13:00:12.5231149Z Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+2026-04-20T13:00:12.5363702Z Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+2026-04-20T13:00:12.5497253Z Downloading pydantic-2.13.2-py3-none-any.whl (471 kB)
+2026-04-20T13:00:12.5642320Z Downloading pydantic_core-2.46.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.1 MB)
+2026-04-20T13:00:12.5725258Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 308.3 MB/s  0:00:00
+2026-04-20T13:00:12.5837202Z Downloading tenacity-9.1.4-py3-none-any.whl (28 kB)
+2026-04-20T13:00:12.5971335Z Downloading typing_extensions-4.15.0-py3-none-any.whl (44 kB)
+2026-04-20T13:00:12.6106072Z Downloading websockets-16.0-cp312-cp312-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (184 kB)
+2026-04-20T13:00:12.6243725Z Downloading openai-2.32.0-py3-none-any.whl (1.2 MB)
+2026-04-20T13:00:12.6310316Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 220.8 MB/s  0:00:00
+2026-04-20T13:00:12.6425067Z Downloading jiter-0.14.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (353 kB)
+2026-04-20T13:00:12.6569900Z Downloading libsql-0.1.11-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (5.1 MB)
+2026-04-20T13:00:12.6843845Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 5.1/5.1 MB 194.5 MB/s  0:00:00
+2026-04-20T13:00:12.6956537Z Downloading feedparser-6.0.12-py3-none-any.whl (81 kB)
+2026-04-20T13:00:12.7095897Z Downloading pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (807 kB)
+2026-04-20T13:00:12.7151286Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 807.9/807.9 kB 169.6 MB/s  0:00:00
+2026-04-20T13:00:12.7264590Z Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+2026-04-20T13:00:12.7402772Z Downloading pytest-9.0.3-py3-none-any.whl (375 kB)
+2026-04-20T13:00:12.7548101Z Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+2026-04-20T13:00:12.7684464Z Downloading beautifulsoup4-4.14.3-py3-none-any.whl (107 kB)
+2026-04-20T13:00:12.7824355Z Downloading python_jobspy-1.1.82-py3-none-any.whl (52 kB)
+2026-04-20T13:00:12.7966715Z Downloading numpy-1.26.3-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (18.0 MB)
+2026-04-20T13:00:12.8557560Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 18.0/18.0 MB 311.6 MB/s  0:00:00
+2026-04-20T13:00:12.8676375Z Downloading markdownify-0.13.1-py3-none-any.whl (10 kB)
+2026-04-20T13:00:12.8809843Z Downloading pandas-2.3.3-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (12.4 MB)
+2026-04-20T13:00:12.9299581Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 12.4/12.4 MB 274.2 MB/s  0:00:00
+2026-04-20T13:00:12.9418827Z Downloading regex-2024.11.6-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (796 kB)
+2026-04-20T13:00:12.9484607Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 796.9/796.9 kB 164.1 MB/s  0:00:00
+2026-04-20T13:00:12.9597116Z Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+2026-04-20T13:00:12.9732240Z Downloading tls_client-1.0.1-py3-none-any.whl (41.3 MB)
+2026-04-20T13:00:13.0890239Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 41.3/41.3 MB 361.8 MB/s  0:00:00
+2026-04-20T13:00:13.1068966Z Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+2026-04-20T13:00:13.1200196Z Downloading certifi-2026.2.25-py3-none-any.whl (153 kB)
+2026-04-20T13:00:13.1334710Z Downloading cryptography-46.0.7-cp311-abi3-manylinux_2_34_x86_64.whl (4.5 MB)
+2026-04-20T13:00:13.1477898Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 4.5/4.5 MB 345.3 MB/s  0:00:00
+2026-04-20T13:00:13.1590301Z Downloading cffi-2.0.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (219 kB)
+2026-04-20T13:00:13.1727410Z Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+2026-04-20T13:00:13.1854565Z Downloading iniconfig-2.3.0-py3-none-any.whl (7.5 kB)
+2026-04-20T13:00:13.1985024Z Downloading packaging-26.1-py3-none-any.whl (95 kB)
+2026-04-20T13:00:13.2119259Z Downloading pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+2026-04-20T13:00:13.2254404Z Downloading pyasn1-0.6.3-py3-none-any.whl (83 kB)
+2026-04-20T13:00:13.2385982Z Downloading pygments-2.20.0-py3-none-any.whl (1.2 MB)
+2026-04-20T13:00:13.2461334Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 193.2 MB/s  0:00:00
+2026-04-20T13:00:13.2573640Z Downloading pytz-2026.1.post1-py2.py3-none-any.whl (510 kB)
+2026-04-20T13:00:13.2717506Z Downloading soupsieve-2.8.3-py3-none-any.whl (37 kB)
+2026-04-20T13:00:13.2849818Z Downloading tqdm-4.67.3-py3-none-any.whl (78 kB)
+2026-04-20T13:00:13.2982739Z Downloading typing_inspection-0.4.2-py3-none-any.whl (14 kB)
+2026-04-20T13:00:13.3111788Z Downloading tzdata-2026.1-py2.py3-none-any.whl (348 kB)
+2026-04-20T13:00:13.3250447Z Downloading pycparser-3.0-py3-none-any.whl (48 kB)
+2026-04-20T13:00:13.3384318Z Downloading sniffio-1.3.1-py3-none-any.whl (10 kB)
+2026-04-20T13:00:13.4838070Z Building wheels for collected packages: sgmllib3k
+2026-04-20T13:00:13.4845452Z   Building wheel for sgmllib3k (pyproject.toml): started
+2026-04-20T13:00:13.6801816Z   Building wheel for sgmllib3k (pyproject.toml): finished with status 'done'
+2026-04-20T13:00:13.6806837Z   Created wheel for sgmllib3k: filename=sgmllib3k-1.0.0-py3-none-any.whl size=6090 sha256=04bdd6f541f7836c5a01c34e6edc89a656692f4e9ae2c21543a1845c67a502f0
+2026-04-20T13:00:13.6808089Z   Stored in directory: /home/runner/.cache/pip/wheels/03/f5/1a/23761066dac1d0e8e683e5fdb27e12de53209d05a4a37e6246
+2026-04-20T13:00:13.6822721Z Successfully built sgmllib3k
+2026-04-20T13:00:13.7928487Z Installing collected packages: tls-client, sgmllib3k, pytz, websockets, urllib3, tzdata, typing-extensions, tqdm, tenacity, soupsieve, sniffio, six, regex, rapidfuzz, pyyaml, pygments, pycparser, pyasn1, pluggy, packaging, NUMPY, libsql, jiter, iniconfig, idna, h11, feedparser, distro, charset_normalizer, certifi, annotated-types, typing-inspection, requests, python-dateutil, pytest, pydantic-core, pyasn1-modules, httpcore, cffi, beautifulsoup4, anyio, pydantic, pandas, markdownify, httpx, cryptography, python-jobspy, openai, google-auth, google-genai
+2026-04-20T13:00:24.2699769Z 
+2026-04-20T13:00:24.2739979Z Successfully installed NUMPY-1.26.3 annotated-types-0.7.0 anyio-4.13.0 beautifulsoup4-4.14.3 certifi-2026.2.25 cffi-2.0.0 charset_normalizer-3.4.7 cryptography-46.0.7 distro-1.9.0 feedparser-6.0.12 google-auth-2.49.2 google-genai-1.73.1 h11-0.16.0 httpcore-1.0.9 httpx-0.28.1 idna-3.11 iniconfig-2.3.0 jiter-0.14.0 libsql-0.1.11 markdownify-0.13.1 openai-2.32.0 packaging-26.1 pandas-2.3.3 pluggy-1.6.0 pyasn1-0.6.3 pyasn1-modules-0.4.2 pycparser-3.0 pydantic-2.13.2 pydantic-core-2.46.2 pygments-2.20.0 pytest-9.0.3 python-dateutil-2.9.0.post0 python-jobspy-1.1.82 pytz-2026.1.post1 pyyaml-6.0.3 rapidfuzz-3.14.5 regex-2024.11.6 requests-2.33.1 sgmllib3k-1.0.0 six-1.17.0 sniffio-1.3.1 soupsieve-2.8.3 tenacity-9.1.4 tls-client-1.0.1 tqdm-4.67.3 typing-extensions-4.15.0 typing-inspection-0.4.2 tzdata-2026.1 urllib3-2.6.3 websockets-16.0
+2026-04-20T13:00:25.0140965Z ##[group]Run python src/collector.py
+2026-04-20T13:00:25.0141360Z [36;1mpython src/collector.py[0m
+2026-04-20T13:00:25.0156154Z shell: /usr/bin/bash -e {0}
+2026-04-20T13:00:25.0156455Z env:
+2026-04-20T13:00:25.0156785Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:25.0157260Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:00:25.0157737Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:25.0158171Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:25.0158601Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:00:25.0159027Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:00:25.0159660Z   JSEARCH_API_KEY: ***
+2026-04-20T13:00:25.0160001Z   JOOBLE_API_KEY: ***
+2026-04-20T13:00:25.0160294Z   ADZUNA_APP_ID: ***
+2026-04-20T13:00:25.0160607Z   ADZUNA_APP_KEY: ***
+2026-04-20T13:00:25.0160899Z   USAJOBS_EMAIL: ***
+2026-04-20T13:00:25.0161335Z   USAJOBS_API_KEY: ***
+2026-04-20T13:00:25.0161729Z   GROQ_API_KEY: ***
+2026-04-20T13:00:25.0162067Z   GEMINI_API_KEY: ***
+2026-04-20T13:00:25.0162899Z   OPENAI_API_KEY: ***
+2026-04-20T13:00:25.0163313Z   TURSO_DB_URL: ***
+2026-04-20T13:00:25.0165164Z   TURSO_AUTH_TOKEN: ***
+2026-04-20T13:00:25.0165649Z   WP_URL: ***
+2026-04-20T13:00:25.0165963Z   WP_USERNAME: ***
+2026-04-20T13:00:25.0166299Z   WP_APP_PASSWORD: ***
+2026-04-20T13:00:25.0166576Z   WP_SHARED_SECRET: 
+2026-04-20T13:00:25.0166904Z   BREVO_SMTP_USER: ***
+2026-04-20T13:00:25.0167430Z   BREVO_SMTP_PASS: ***
+2026-04-20T13:00:25.0167767Z   NOTIFICATION_EMAIL: ***
+2026-04-20T13:00:25.0168098Z   PUSHOVER_USER_KEY: ***
+2026-04-20T13:00:25.0168433Z   PUSHOVER_APP_TOKEN: ***
+2026-04-20T13:00:25.0168842Z   HEALTHCHECK_URL: ***
+2026-04-20T13:00:25.0169273Z   GOOGLE_ALERT_RSS_1: ***
+2026-04-20T13:00:25.0169711Z   GOOGLE_ALERT_RSS_2: ***
+2026-04-20T13:00:25.0170156Z   GOOGLE_ALERT_RSS_3: ***
+2026-04-20T13:00:25.0170597Z   GOOGLE_ALERT_RSS_4: ***
+2026-04-20T13:00:25.0171024Z   GOOGLE_ALERT_RSS_5: ***
+2026-04-20T13:00:25.0171448Z   GOOGLE_ALERT_SIOP: ***
+2026-04-20T13:00:25.0171743Z   TALKWALKER_RSS_1: ***
+2026-04-20T13:00:25.0172021Z   TALKWALKER_RSS_2: ***
+2026-04-20T13:00:25.0172304Z   TALKWALKER_RSS_3: ***
+2026-04-20T13:00:25.0172568Z ##[endgroup]
+2026-04-20T13:00:28.5560513Z 2026-04-20 13:00:28,555 INFO collector: === Phase 1: sources ===
+2026-04-20T13:01:31.0908936Z 2026-04-20 13:01:31,090 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T13:01:31.0910589Z 2026-04-20 13:01:31,090 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T13:01:31.0911945Z 2026-04-20 13:01:31,090 WARNING src.sources.google_alerts: google_alerts: fetch error on ***: Invalid URL '***': No scheme supplied. Perhaps you meant https://***?
+2026-04-20T13:03:30.6470915Z 2026-04-20 13:03:30,646 WARNING src.sources._http: ReadTimeout on https://api.lever.co/v0/postings/netflix (attempt 1) — retrying
+2026-04-20T13:04:37.3797541Z 2026-04-20 13:04:37,379 - INFO - JobSpy:Linkedin - finished scraping
+2026-04-20T13:04:38.5436642Z 2026-04-20 13:04:38,543 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:04:38.5437597Z 2026-04-20 13:04:38,543 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:04:38.6512079Z 2026-04-20 13:04:38,650 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:04:46.6186606Z 2026-04-20 13:04:46,618 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:04:46.6187641Z 2026-04-20 13:04:46,618 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:04:46.6707603Z 2026-04-20 13:04:46,670 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:04:57.3473678Z 2026-04-20 13:04:57,347 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:04:57.3474687Z 2026-04-20 13:04:57,347 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:04:57.3965591Z 2026-04-20 13:04:57,396 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:05:08.9627353Z 2026-04-20 13:05:08,962 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:05:08.9628258Z 2026-04-20 13:05:08,962 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:05:09.0286918Z 2026-04-20 13:05:09,028 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:05:16.7145139Z 2026-04-20 13:05:16,714 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:05:16.7146250Z 2026-04-20 13:05:16,714 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:05:16.7643432Z 2026-04-20 13:05:16,764 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:05:25.6177957Z 2026-04-20 13:05:25,617 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:05:25.6178759Z 2026-04-20 13:05:25,617 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:05:25.6754901Z 2026-04-20 13:05:25,675 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:05:37.2251961Z 2026-04-20 13:05:37,224 - ERROR - JobSpy:Glassdoor - Glassdoor response status code 400
+2026-04-20T13:05:37.2252955Z 2026-04-20 13:05:37,225 - ERROR - JobSpy:Glassdoor - Glassdoor: location not parsed
+2026-04-20T13:05:37.2841082Z 2026-04-20 13:05:37,283 - ERROR - JobSpy:ZipRecruiter - ZipRecruiter response status code 403 with response: {"status_code":403,"error_code":"forbidden cf-waf","error_message":"Forbidden"}
+2026-04-20T13:05:39.4944066Z 2026-04-20 13:05:39,493 INFO collector: sources: {'jsearch_found': 10, 'jooble_found': 122, 'adzuna_found': 240, 'usajobs_found': 183, 'alerts_found': 0, 'greenhouse_found': 6268, 'lever_found': 92, 'ashby_found': 332, 'jobspy_found': 56, 'onemodel_found': 0, 'included_ai_found': 0, 'siop_found': 0}
+2026-04-20T13:05:39.4945873Z 2026-04-20 13:05:39,494 INFO collector: === Phase 2: keyword filter ===
+2026-04-20T13:07:36.8000203Z 2026-04-20 13:07:36,799 INFO collector: keyword_filter: 74 candidates / 7229 rejects
+2026-04-20T13:07:36.8001880Z 2026-04-20 13:07:36,799 INFO collector: === Phase 3: LLM classifier ===
+2026-04-20T13:07:37.4486691Z 2026-04-20 13:07:37,448 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:07:37.4496219Z 2026-04-20 13:07:37,449 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98073, Requested 2131. Please try again in 2m56.256s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:07:38.1872891Z 2026-04-20 13:07:38,186 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:07:40.6311788Z 2026-04-20 13:07:40,630 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:07:44.7408867Z 2026-04-20 13:07:44,740 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:07:44.7414760Z 2026-04-20 13:07:44,741 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 98065, Requested 2181. Please try again in 3m32.543999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:07:44.7821452Z 2026-04-20 13:07:44,781 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:07:47.7243486Z 2026-04-20 13:07:47,724 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:07:52.1413217Z 2026-04-20 13:07:52,141 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:07:54.7607020Z 2026-04-20 13:07:54,760 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:07:54.7611083Z 2026-04-20 13:07:54,760 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99990, Requested 1859. Please try again in 26m37.536s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:07:54.8014875Z 2026-04-20 13:07:54,801 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:07:56.2976512Z 2026-04-20 13:07:56,297 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:08:00.4104848Z 2026-04-20 13:08:00,410 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:00.4109805Z 2026-04-20 13:08:00,410 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99984, Requested 2126. Please try again in 30m23.04s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:00.4516259Z 2026-04-20 13:08:00,451 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:01.5704139Z 2026-04-20 13:08:01,570 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:08:05.6858649Z 2026-04-20 13:08:05,685 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:05.6862963Z 2026-04-20 13:08:05,686 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99979, Requested 2137. Please try again in 30m28.224s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:05.7269308Z 2026-04-20 13:08:05,726 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:10.1438394Z 2026-04-20 13:08:10,143 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:08:14.2617535Z 2026-04-20 13:08:14,261 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:14.2621393Z 2026-04-20 13:08:14,261 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99969, Requested 1918. Please try again in 27m10.368s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:14.3029474Z 2026-04-20 13:08:14,302 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:17.8749800Z 2026-04-20 13:08:17,874 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:08:21.9752599Z 2026-04-20 13:08:21,974 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:21.9757129Z 2026-04-20 13:08:21,975 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99959, Requested 1681. Please try again in 23m36.96s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:22.0160563Z 2026-04-20 13:08:22,015 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:22.1399352Z 2026-04-20 13:08:22,139 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:22.1407491Z 2026-04-20 13:08:22,140 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 37.882233395s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:24.5186989Z 2026-04-20 13:08:24,518 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:25.6169897Z 2026-04-20 13:08:25,616 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:25.6173069Z 2026-04-20 13:08:25,617 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99956, Requested 2127. Please try again in 29m59.712s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:25.6575160Z 2026-04-20 13:08:25,657 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:26.8420978Z 2026-04-20 13:08:26,841 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:08:30.9531016Z 2026-04-20 13:08:30,952 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:30.9536056Z 2026-04-20 13:08:30,953 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99950, Requested 1917. Please try again in 26m53.088s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:30.9939791Z 2026-04-20 13:08:30,993 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:31.1138901Z 2026-04-20 13:08:31,113 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:31.1143709Z 2026-04-20 13:08:31,114 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 28.908893393s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:33.0212138Z 2026-04-20 13:08:33,020 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:34.1385905Z 2026-04-20 13:08:34,138 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:34.1390357Z 2026-04-20 13:08:34,138 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99946, Requested 1833. Please try again in 25m37.056s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:34.1791043Z 2026-04-20 13:08:34,178 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:34.3126998Z 2026-04-20 13:08:34,312 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:34.3131567Z 2026-04-20 13:08:34,312 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 25.710276738s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:36.4253786Z 2026-04-20 13:08:36,424 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:37.5302632Z 2026-04-20 13:08:37,530 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:37.5307403Z 2026-04-20 13:08:37,530 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99942, Requested 1845. Please try again in 25m43.968s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:37.5707634Z 2026-04-20 13:08:37,570 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:37.7046037Z 2026-04-20 13:08:37,704 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:37.7052209Z 2026-04-20 13:08:37,704 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 22.31813751s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:08:40.6854996Z 2026-04-20 13:08:40,684 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:41.7957512Z 2026-04-20 13:08:41,795 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:41.7963779Z 2026-04-20 13:08:41,796 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99937, Requested 1825. Please try again in 25m22.368s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:41.8370234Z 2026-04-20 13:08:41,836 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:41.9599786Z 2026-04-20 13:08:41,959 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:41.9608178Z 2026-04-20 13:08:41,960 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 18.062573158s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:43.5930326Z 2026-04-20 13:08:43,592 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:44.6953009Z 2026-04-20 13:08:44,694 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:44.6959089Z 2026-04-20 13:08:44,695 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99934, Requested 1829. Please try again in 25m23.232s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:44.7365796Z 2026-04-20 13:08:44,736 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:44.8617257Z 2026-04-20 13:08:44,861 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:44.8622671Z 2026-04-20 13:08:44,861 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 15.161369229s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:46.2277559Z 2026-04-20 13:08:46,227 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:47.3321418Z 2026-04-20 13:08:47,331 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:47.3326090Z 2026-04-20 13:08:47,332 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99930, Requested 1827. Please try again in 25m18.048s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:47.3727767Z 2026-04-20 13:08:47,372 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:47.4870357Z 2026-04-20 13:08:47,486 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:47.4879428Z 2026-04-20 13:08:47,487 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 12.535836168s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:08:49.3120574Z 2026-04-20 13:08:49,311 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:50.4175434Z 2026-04-20 13:08:50,417 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:50.4182526Z 2026-04-20 13:08:50,417 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99927, Requested 1830. Please try again in 25m18.048s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:50.4661782Z 2026-04-20 13:08:50,465 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:50.5794174Z 2026-04-20 13:08:50,579 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:50.5803215Z 2026-04-20 13:08:50,579 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 9.442432427s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:08:51.7677042Z 2026-04-20 13:08:51,767 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:52.8729967Z 2026-04-20 13:08:52,872 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:52.8734245Z 2026-04-20 13:08:52,873 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99923, Requested 1855. Please try again in 25m36.192s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:52.9136988Z 2026-04-20 13:08:52,913 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:53.0360541Z 2026-04-20 13:08:53,035 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:53.0367488Z 2026-04-20 13:08:53,036 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 6.985601473s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:08:54.5179198Z 2026-04-20 13:08:54,517 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:55.6256175Z 2026-04-20 13:08:55,625 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:55.6260690Z 2026-04-20 13:08:55,625 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99921, Requested 1830. Please try again in 25m12.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:55.6664974Z 2026-04-20 13:08:55,666 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:55.7778796Z 2026-04-20 13:08:55,777 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:55.7783607Z 2026-04-20 13:08:55,778 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 4.243911829s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:08:56.9839903Z 2026-04-20 13:08:56,983 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:08:58.0883507Z 2026-04-20 13:08:58,088 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:58.0889866Z 2026-04-20 13:08:58,088 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99918, Requested 1841. Please try again in 25m19.776s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:08:58.1295058Z 2026-04-20 13:08:58,129 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:08:58.2782406Z 2026-04-20 13:08:58,277 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:08:58.2792082Z 2026-04-20 13:08:58,278 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 1.744018872s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:08:59.6856982Z 2026-04-20 13:08:59,685 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:00.7906286Z 2026-04-20 13:09:00,790 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:00.7912378Z 2026-04-20 13:09:00,790 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99914, Requested 1837. Please try again in 25m12.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:00.8315419Z 2026-04-20 13:09:00,831 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:00.9588338Z 2026-04-20 13:09:00,958 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:00.9594398Z 2026-04-20 13:09:00,959 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 59.063816209s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:02.1826676Z 2026-04-20 13:09:02,182 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:03.3036968Z 2026-04-20 13:09:03,303 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:03.3041924Z 2026-04-20 13:09:03,303 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99912, Requested 1843. Please try again in 25m16.32s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:03.3471571Z 2026-04-20 13:09:03,346 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:03.4527483Z 2026-04-20 13:09:03,452 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:03.4538092Z 2026-04-20 13:09:03,453 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 56.569030734s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:04.5267814Z 2026-04-20 13:09:04,526 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:05.6407553Z 2026-04-20 13:09:05,640 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:05.6413511Z 2026-04-20 13:09:05,640 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99909, Requested 1826. Please try again in 24m59.04s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:05.6820572Z 2026-04-20 13:09:05,681 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:12.4731534Z 2026-04-20 13:09:12,472 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 200 OK"
+2026-04-20T13:09:16.5757879Z 2026-04-20 13:09:16,575 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:16.5762540Z 2026-04-20 13:09:16,576 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99896, Requested 1853. Please try again in 25m11.136s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:16.6218375Z 2026-04-20 13:09:16,621 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:16.7385059Z 2026-04-20 13:09:16,738 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:16.7392288Z 2026-04-20 13:09:16,738 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 43.283974195s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:18.8147870Z 2026-04-20 13:09:18,814 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:19.9152451Z 2026-04-20 13:09:19,914 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:19.9158869Z 2026-04-20 13:09:19,915 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99893, Requested 1830. Please try again in 24m48.671999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:19.9562459Z 2026-04-20 13:09:19,955 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:20.0678751Z 2026-04-20 13:09:20,067 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:20.0687184Z 2026-04-20 13:09:20,068 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 39.953749891s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:21.8051874Z 2026-04-20 13:09:21,804 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:22.9074784Z 2026-04-20 13:09:22,907 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:22.9080890Z 2026-04-20 13:09:22,907 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99889, Requested 1843. Please try again in 24m56.447999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:22.9489310Z 2026-04-20 13:09:22,948 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:23.0898136Z 2026-04-20 13:09:23,089 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:23.0903512Z 2026-04-20 13:09:23,090 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 36.933092042s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:25.0056238Z 2026-04-20 13:09:25,005 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:26.1315170Z 2026-04-20 13:09:26,131 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:26.1319836Z 2026-04-20 13:09:26,131 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99885, Requested 1843. Please try again in 24m52.992s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:26.1719931Z 2026-04-20 13:09:26,171 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:26.2958626Z 2026-04-20 13:09:26,295 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:26.2966412Z 2026-04-20 13:09:26,296 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 33.727041176s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:27.5404804Z 2026-04-20 13:09:27,540 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:28.6474923Z 2026-04-20 13:09:28,647 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:28.6478575Z 2026-04-20 13:09:28,647 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99883, Requested 1840. Please try again in 24m48.671999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:28.6882931Z 2026-04-20 13:09:28,688 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:28.8093538Z 2026-04-20 13:09:28,808 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:28.8098400Z 2026-04-20 13:09:28,809 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 31.213898174s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:30.3037448Z 2026-04-20 13:09:30,303 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:31.4168910Z 2026-04-20 13:09:31,416 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:31.4175010Z 2026-04-20 13:09:31,417 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99880, Requested 1848. Please try again in 24m52.992s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:31.4580262Z 2026-04-20 13:09:31,457 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:31.5630541Z 2026-04-20 13:09:31,562 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:31.5639003Z 2026-04-20 13:09:31,563 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 28.458805035s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:33.3533927Z 2026-04-20 13:09:33,353 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:34.4619802Z 2026-04-20 13:09:34,461 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:34.4625877Z 2026-04-20 13:09:34,462 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99876, Requested 1845. Please try again in 24m46.944s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:34.5029105Z 2026-04-20 13:09:34,502 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:34.6119416Z 2026-04-20 13:09:34,611 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:34.6125625Z 2026-04-20 13:09:34,612 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 25.409102563s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:36.2193763Z 2026-04-20 13:09:36,219 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:37.3195124Z 2026-04-20 13:09:37,319 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:37.3201193Z 2026-04-20 13:09:37,319 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99872, Requested 1833. Please try again in 24m33.12s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:37.3603261Z 2026-04-20 13:09:37,360 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:37.4721730Z 2026-04-20 13:09:37,471 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:37.4728399Z 2026-04-20 13:09:37,472 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 22.550573905s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:38.9116898Z 2026-04-20 13:09:38,911 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:40.0141035Z 2026-04-20 13:09:40,013 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:40.0147817Z 2026-04-20 13:09:40,014 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99870, Requested 1838. Please try again in 24m35.712s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:40.0548187Z 2026-04-20 13:09:40,054 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:40.1683863Z 2026-04-20 13:09:40,168 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:40.1691329Z 2026-04-20 13:09:40,168 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 19.853947697s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:41.4002198Z 2026-04-20 13:09:41,399 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:42.5035920Z 2026-04-20 13:09:42,503 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:42.5040838Z 2026-04-20 13:09:42,503 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99867, Requested 1845. Please try again in 24m39.168s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:42.5443979Z 2026-04-20 13:09:42,544 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:42.6482887Z 2026-04-20 13:09:42,648 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:42.6490176Z 2026-04-20 13:09:42,648 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 17.373576068s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:43.7811431Z 2026-04-20 13:09:43,780 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:44.9058602Z 2026-04-20 13:09:44,905 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:44.9063027Z 2026-04-20 13:09:44,905 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99864, Requested 1848. Please try again in 24m39.168s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:44.9470710Z 2026-04-20 13:09:44,946 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:45.0507600Z 2026-04-20 13:09:45,050 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:45.0515773Z 2026-04-20 13:09:45,051 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 14.971248939s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:46.4238243Z 2026-04-20 13:09:46,423 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:47.5321735Z 2026-04-20 13:09:47,531 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:47.5326247Z 2026-04-20 13:09:47,532 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99861, Requested 1840. Please try again in 24m29.664s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:47.5726002Z 2026-04-20 13:09:47,572 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:47.6853233Z 2026-04-20 13:09:47,685 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:47.6859476Z 2026-04-20 13:09:47,685 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 12.336775014s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:09:49.0627998Z 2026-04-20 13:09:49,062 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:50.1619884Z 2026-04-20 13:09:50,161 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:50.1624194Z 2026-04-20 13:09:50,162 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99858, Requested 1864. Please try again in 24m47.808s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:50.2031160Z 2026-04-20 13:09:50,202 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:50.3097614Z 2026-04-20 13:09:50,309 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:50.3105922Z 2026-04-20 13:09:50,310 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 9.712657305s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:09:51.7837095Z 2026-04-20 13:09:51,783 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:52.8999780Z 2026-04-20 13:09:52,899 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:52.9003398Z 2026-04-20 13:09:52,899 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99854, Requested 1863. Please try again in 24m43.488s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:52.9411406Z 2026-04-20 13:09:52,940 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:53.0459271Z 2026-04-20 13:09:53,045 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:53.0464696Z 2026-04-20 13:09:53,046 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 6.974739087s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:09:55.2627828Z 2026-04-20 13:09:55,262 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:56.3713805Z 2026-04-20 13:09:56,371 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:56.3719970Z 2026-04-20 13:09:56,371 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99851, Requested 1871. Please try again in 24m47.808s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:56.4123173Z 2026-04-20 13:09:56,412 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:56.5264157Z 2026-04-20 13:09:56,526 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:56.5316171Z 2026-04-20 13:09:56,531 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 3.495678885s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:09:57.6689500Z 2026-04-20 13:09:57,668 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:09:58.7919430Z 2026-04-20 13:09:58,791 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:58.7922124Z 2026-04-20 13:09:58,791 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99847, Requested 1862. Please try again in 24m36.576s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:09:58.8326447Z 2026-04-20 13:09:58,832 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:09:58.9405353Z 2026-04-20 13:09:58,940 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:09:58.9414212Z 2026-04-20 13:09:58,940 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 1.081925126s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:00.3702697Z 2026-04-20 13:10:00,369 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:01.4829390Z 2026-04-20 13:10:01,482 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:01.4835135Z 2026-04-20 13:10:01,483 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99845, Requested 1867. Please try again in 24m39.168s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:01.5246495Z 2026-04-20 13:10:01,524 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:01.6362642Z 2026-04-20 13:10:01,635 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:01.6370732Z 2026-04-20 13:10:01,636 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 58.385252398s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:02.9282978Z 2026-04-20 13:10:02,928 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:04.0353803Z 2026-04-20 13:10:04,035 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:04.0358582Z 2026-04-20 13:10:04,035 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99842, Requested 1865. Please try again in 24m34.848s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:04.0760067Z 2026-04-20 13:10:04,075 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:04.1856849Z 2026-04-20 13:10:04,185 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:04.2044644Z 2026-04-20 13:10:04,203 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 55.836566345s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:05.5756974Z 2026-04-20 13:10:05,575 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:06.6873329Z 2026-04-20 13:10:06,687 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:06.6879583Z 2026-04-20 13:10:06,687 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99838, Requested 1864. Please try again in 24m30.528s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:06.7282513Z 2026-04-20 13:10:06,727 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:06.8432061Z 2026-04-20 13:10:06,842 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:06.8440215Z 2026-04-20 13:10:06,843 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 53.179827472s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:08.7162503Z 2026-04-20 13:10:08,715 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:09.8165299Z 2026-04-20 13:10:09,816 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:09.8214344Z 2026-04-20 13:10:09,821 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99835, Requested 1874. Please try again in 24m36.576s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:09.8618243Z 2026-04-20 13:10:09,861 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:09.9775717Z 2026-04-20 13:10:09,977 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:09.9780196Z 2026-04-20 13:10:09,977 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 50.04426711s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:11.6111488Z 2026-04-20 13:10:11,610 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:12.7189211Z 2026-04-20 13:10:12,718 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:12.7193832Z 2026-04-20 13:10:12,719 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99831, Requested 1861. Please try again in 24m21.888s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:12.7596691Z 2026-04-20 13:10:12,759 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:12.8729176Z 2026-04-20 13:10:12,872 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:12.8738146Z 2026-04-20 13:10:12,873 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 47.149744456s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:14.3112550Z 2026-04-20 13:10:14,310 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:15.4099303Z 2026-04-20 13:10:15,409 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:15.4103844Z 2026-04-20 13:10:15,410 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99829, Requested 1867. Please try again in 24m25.344s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:15.4509633Z 2026-04-20 13:10:15,450 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:15.5671357Z 2026-04-20 13:10:15,566 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:15.5678469Z 2026-04-20 13:10:15,567 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 44.458097373s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:17.0619243Z 2026-04-20 13:10:17,061 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:18.1628587Z 2026-04-20 13:10:18,162 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:18.1634815Z 2026-04-20 13:10:18,163 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99824, Requested 1627. Please try again in 20m53.664s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:18.2089334Z 2026-04-20 13:10:18,203 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:18.3141676Z 2026-04-20 13:10:18,313 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:18.3149084Z 2026-04-20 13:10:18,314 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 41.707355534s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:19.9491586Z 2026-04-20 13:10:19,948 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:21.0487898Z 2026-04-20 13:10:21,048 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:21.0492737Z 2026-04-20 13:10:21,048 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99822, Requested 1865. Please try again in 24m17.568s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:21.0901615Z 2026-04-20 13:10:21,089 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:21.2089987Z 2026-04-20 13:10:21,208 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:21.2095166Z 2026-04-20 13:10:21,209 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 38.813225241s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:23.8882063Z 2026-04-20 13:10:23,887 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:25.0086517Z 2026-04-20 13:10:25,008 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:25.0091906Z 2026-04-20 13:10:25,008 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99817, Requested 1878. Please try again in 24m24.48s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:25.0496134Z 2026-04-20 13:10:25,049 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:25.2021500Z 2026-04-20 13:10:25,201 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:25.2028757Z 2026-04-20 13:10:25,202 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 34.820317065s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:29.3105106Z 2026-04-20 13:10:29,310 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:30.4216511Z 2026-04-20 13:10:30,421 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:30.4220981Z 2026-04-20 13:10:30,421 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99810, Requested 1642. Please try again in 20m54.528s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:30.4623540Z 2026-04-20 13:10:30,461 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:30.5901186Z 2026-04-20 13:10:30,589 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:30.5907582Z 2026-04-20 13:10:30,590 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 29.43269291s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:32.2997709Z 2026-04-20 13:10:32,299 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:33.4045647Z 2026-04-20 13:10:33,404 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:33.4050679Z 2026-04-20 13:10:33,404 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99808, Requested 2119. Please try again in 27m44.928s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:33.4454775Z 2026-04-20 13:10:33,445 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:33.5609158Z 2026-04-20 13:10:33,560 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:33.5617220Z 2026-04-20 13:10:33,561 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 26.462442079s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:35.4393209Z 2026-04-20 13:10:35,439 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:36.5471076Z 2026-04-20 13:10:36,546 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:36.5477414Z 2026-04-20 13:10:36,547 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99804, Requested 2149. Please try again in 28m7.391999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:36.5885769Z 2026-04-20 13:10:36,588 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:36.7068986Z 2026-04-20 13:10:36,706 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:36.7078810Z 2026-04-20 13:10:36,707 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 23.319743193s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:38.2716183Z 2026-04-20 13:10:38,271 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:39.3908804Z 2026-04-20 13:10:39,390 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:39.3912770Z 2026-04-20 13:10:39,391 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99800, Requested 2267. Please try again in 29m45.888s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:39.4313203Z 2026-04-20 13:10:39,431 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:39.5420050Z 2026-04-20 13:10:39,541 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:39.5428717Z 2026-04-20 13:10:39,542 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 20.47978303s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:40.9088158Z 2026-04-20 13:10:40,908 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:42.0095426Z 2026-04-20 13:10:42,009 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:42.0101464Z 2026-04-20 13:10:42,009 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99797, Requested 2238. Please try again in 29m18.24s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:42.0505096Z 2026-04-20 13:10:42,050 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:42.1568678Z 2026-04-20 13:10:42,156 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:42.1575414Z 2026-04-20 13:10:42,157 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 17.865351144s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:44.7323561Z 2026-04-20 13:10:44,732 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:45.8331235Z 2026-04-20 13:10:45,832 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:45.8335994Z 2026-04-20 13:10:45,833 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99792, Requested 1996. Please try again in 25m44.832s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:45.8795331Z 2026-04-20 13:10:45,879 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:45.9906841Z 2026-04-20 13:10:45,990 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:45.9912674Z 2026-04-20 13:10:45,991 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 14.031473407s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:48.6621209Z 2026-04-20 13:10:48,661 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:49.7683724Z 2026-04-20 13:10:49,768 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:49.7688237Z 2026-04-20 13:10:49,768 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99788, Requested 2262. Please try again in 29m31.2s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:49.8091087Z 2026-04-20 13:10:49,808 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:49.9208972Z 2026-04-20 13:10:49,920 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:49.9214871Z 2026-04-20 13:10:49,921 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 10.100862822s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:10:51.6376331Z 2026-04-20 13:10:51,637 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:52.7439042Z 2026-04-20 13:10:52,743 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:52.7443645Z 2026-04-20 13:10:52,744 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99785, Requested 2254. Please try again in 29m21.696s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:52.7850509Z 2026-04-20 13:10:52,784 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:52.8939976Z 2026-04-20 13:10:52,893 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:52.8947079Z 2026-04-20 13:10:52,894 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 7.128079222s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:54.4383156Z 2026-04-20 13:10:54,438 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:55.5484845Z 2026-04-20 13:10:55,548 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:55.5488008Z 2026-04-20 13:10:55,548 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99781, Requested 2264. Please try again in 29m26.88s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:55.5890952Z 2026-04-20 13:10:55,588 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:55.7443138Z 2026-04-20 13:10:55,743 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:55.7448513Z 2026-04-20 13:10:55,744 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 4.278885499s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:10:57.2655031Z 2026-04-20 13:10:57,265 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:10:58.3736461Z 2026-04-20 13:10:58,373 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:58.3741126Z 2026-04-20 13:10:58,373 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99779, Requested 2222. Please try again in 28m48.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:10:58.4147305Z 2026-04-20 13:10:58,414 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:10:58.5319792Z 2026-04-20 13:10:58,531 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:10:58.5324104Z 2026-04-20 13:10:58,532 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 1.490672153s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:11:00.4959492Z 2026-04-20 13:11:00,495 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:01.5998762Z 2026-04-20 13:11:01,599 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:01.6004606Z 2026-04-20 13:11:01,600 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99775, Requested 2252. Please try again in 29m11.328s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:01.6412447Z 2026-04-20 13:11:01,641 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:01.7601256Z 2026-04-20 13:11:01,759 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:01.7608779Z 2026-04-20 13:11:01,760 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 58.262294392s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:03.6166211Z 2026-04-20 13:11:03,616 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:04.7136426Z 2026-04-20 13:11:04,713 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:04.7139902Z 2026-04-20 13:11:04,713 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99771, Requested 2017. Please try again in 25m44.832s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:04.7547815Z 2026-04-20 13:11:04,754 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:04.8669277Z 2026-04-20 13:11:04,866 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:04.8677619Z 2026-04-20 13:11:04,867 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 55.155371239s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:06.4355977Z 2026-04-20 13:11:06,435 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:07.5474702Z 2026-04-20 13:11:07,547 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:07.5478070Z 2026-04-20 13:11:07,547 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99768, Requested 2291. Please try again in 29m38.976s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:07.5878717Z 2026-04-20 13:11:07,587 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:07.7177801Z 2026-04-20 13:11:07,717 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:07.7184826Z 2026-04-20 13:11:07,718 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 52.304506826s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:09.0953673Z 2026-04-20 13:11:09,094 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:10.2164897Z 2026-04-20 13:11:10,216 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:10.2169226Z 2026-04-20 13:11:10,216 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99764, Requested 2368. Please try again in 30m42.047999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:10.2619037Z 2026-04-20 13:11:10,261 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:10.3723507Z 2026-04-20 13:11:10,371 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:10.3732753Z 2026-04-20 13:11:10,372 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 49.650082357s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:12.1619215Z 2026-04-20 13:11:12,161 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:13.2702362Z 2026-04-20 13:11:13,269 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:13.2708471Z 2026-04-20 13:11:13,270 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99761, Requested 2368. Please try again in 30m39.456s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:13.3111456Z 2026-04-20 13:11:13,310 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:13.4249997Z 2026-04-20 13:11:13,424 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:13.4253955Z 2026-04-20 13:11:13,425 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 46.597670207s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:15.2753128Z 2026-04-20 13:11:15,274 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:16.3913892Z 2026-04-20 13:11:16,391 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:16.3918369Z 2026-04-20 13:11:16,391 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99757, Requested 2709. Please try again in 35m30.624s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:16.4321257Z 2026-04-20 13:11:16,431 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:16.5672964Z 2026-04-20 13:11:16,567 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:16.5680660Z 2026-04-20 13:11:16,567 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 43.458569359s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:18.3290180Z 2026-04-20 13:11:18,328 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:19.4301331Z 2026-04-20 13:11:19,429 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:19.4305274Z 2026-04-20 13:11:19,430 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99755, Requested 2709. Please try again in 35m28.895999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:19.4707427Z 2026-04-20 13:11:19,470 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:19.5862615Z 2026-04-20 13:11:19,585 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:19.5869739Z 2026-04-20 13:11:19,586 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 40.435727261s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:21.1155324Z 2026-04-20 13:11:21,115 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:22.2132413Z 2026-04-20 13:11:22,212 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:22.2138902Z 2026-04-20 13:11:22,213 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99751, Requested 2194. Please try again in 28m0.479999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:22.2541159Z 2026-04-20 13:11:22,253 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:22.3702904Z 2026-04-20 13:11:22,369 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:22.3708170Z 2026-04-20 13:11:22,370 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 37.652609981s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:23.6970476Z 2026-04-20 13:11:23,696 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:24.8076299Z 2026-04-20 13:11:24,807 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:24.8080390Z 2026-04-20 13:11:24,807 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99748, Requested 2215. Please try again in 28m16.032s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:24.8485238Z 2026-04-20 13:11:24,848 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:24.9590842Z 2026-04-20 13:11:24,958 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:24.9597823Z 2026-04-20 13:11:24,959 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 35.063020721s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:26.4999304Z 2026-04-20 13:11:26,499 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:27.6017748Z 2026-04-20 13:11:27,601 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:27.6021194Z 2026-04-20 13:11:27,601 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99745, Requested 2325. Please try again in 29m48.48s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:27.6422689Z 2026-04-20 13:11:27,641 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:27.7544460Z 2026-04-20 13:11:27,754 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:27.7552177Z 2026-04-20 13:11:27,754 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 32.267075955s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:29.3111793Z 2026-04-20 13:11:29,310 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:30.4084950Z 2026-04-20 13:11:30,408 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:30.4091987Z 2026-04-20 13:11:30,408 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99742, Requested 2185. Please try again in 27m44.928s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:30.4494905Z 2026-04-20 13:11:30,449 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:30.5584726Z 2026-04-20 13:11:30,558 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:30.5593874Z 2026-04-20 13:11:30,558 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 29.463697285s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:31.9514872Z 2026-04-20 13:11:31,951 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:33.0555020Z 2026-04-20 13:11:33,055 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:33.0559910Z 2026-04-20 13:11:33,055 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99739, Requested 2178. Please try again in 27m36.288s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:33.0965247Z 2026-04-20 13:11:33,096 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:33.2247908Z 2026-04-20 13:11:33,224 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:33.2256506Z 2026-04-20 13:11:33,225 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 26.797295977s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:34.7095726Z 2026-04-20 13:11:34,709 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:35.8126319Z 2026-04-20 13:11:35,812 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:35.8130411Z 2026-04-20 13:11:35,812 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99736, Requested 2168. Please try again in 27m25.056s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:35.8532465Z 2026-04-20 13:11:35,852 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:35.9761064Z 2026-04-20 13:11:35,975 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:35.9767699Z 2026-04-20 13:11:35,976 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 24.046052058s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:37.7063636Z 2026-04-20 13:11:37,706 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:38.8132306Z 2026-04-20 13:11:38,812 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:38.8136799Z 2026-04-20 13:11:38,813 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99732, Requested 2145. Please try again in 27m1.727999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:38.8538859Z 2026-04-20 13:11:38,853 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:38.9763798Z 2026-04-20 13:11:38,975 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:38.9767910Z 2026-04-20 13:11:38,976 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 21.04613285s.', 'status': 'RESOURCE_EXHAU
+2026-04-20T13:11:40.7108441Z 2026-04-20 13:11:40,710 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:41.8127261Z 2026-04-20 13:11:41,812 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:41.8131169Z 2026-04-20 13:11:41,812 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99728, Requested 1773. Please try again in 21m36.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:41.8531950Z 2026-04-20 13:11:41,852 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:41.9673172Z 2026-04-20 13:11:41,967 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:41.9679834Z 2026-04-20 13:11:41,967 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 18.054973749s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:43.5552570Z 2026-04-20 13:11:43,554 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:44.6531096Z 2026-04-20 13:11:44,652 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:44.6537368Z 2026-04-20 13:11:44,653 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99725, Requested 1777. Please try again in 21m37.728s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:44.6942169Z 2026-04-20 13:11:44,693 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:44.8068355Z 2026-04-20 13:11:44,806 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:44.8076201Z 2026-04-20 13:11:44,807 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 15.214909356s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:46.6059433Z 2026-04-20 13:11:46,605 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:47.7197448Z 2026-04-20 13:11:47,719 INFO httpx: HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:47.7203279Z 2026-04-20 13:11:47,719 WARNING src.processors.llm_classifier: groq classification failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kpbb5w51fzga6qndxpj91vk7` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99721, Requested 1780. Please try again in 21m36.864s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+2026-04-20T13:11:47.7612200Z 2026-04-20 13:11:47,760 INFO google_genai.models: AFC is enabled with max remote calls: 10.
+2026-04-20T13:11:47.8799818Z 2026-04-20 13:11:47,879 INFO httpx: HTTP Request: POST https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent "HTTP/1.1 429 Too Many Requests"
+2026-04-20T13:11:47.8807495Z 2026-04-20 13:11:47,880 WARNING src.processors.llm_classifier: gemini classification failed: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash-lite\nPlease retry in 12.143318796s.', 'status': 'RESOURCE_EXHA
+2026-04-20T13:11:49.4580813Z 2026-04-20 13:11:49,457 INFO httpx: HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2026-04-20T13:11:49.4629940Z 2026-04-20 13:11:49,462 INFO collector: llm: 68 to publish / providers={'gemini': 8, 'groq': 1, 'openai': 65}
+2026-04-20T13:11:49.6492444Z 2026-04-20 13:11:49,648 INFO collector: === Phase 4: deduplicator ===
+2026-04-20T13:11:52.0519087Z 2026-04-20 13:11:52,051 INFO collector: deduplicator: 39 kept / 29 skipped as dupes
+2026-04-20T13:11:52.4547664Z 2026-04-20 13:11:52,454 INFO collector: apply_url upgrade: jooble_-5151707541051713032 -> https://jooble.org/jdp/5494645857461846671
+2026-04-20T13:11:52.9661541Z 2026-04-20 13:11:52,965 INFO collector: apply_url upgrade: jooble_153363956038599742 -> https://jooble.org/jdp/-6302981400088135319
+2026-04-20T13:11:53.1188220Z 2026-04-20 13:11:53,118 INFO collector: === Phase 4.5: enrichment ===
+2026-04-20T13:11:53.1206631Z 2026-04-20 13:11:53,120 INFO src.processors.enrichment: enrich_job[jsearch_bak9ydjfUcqe26SHAAAAAA==] source=jsearch url=https://cowlitz.wd5.myworkdayjobs.com/ilani/job/ilani/Workforce-Analytics-Manager_R-04128-1 host=cowlitz.wd5.myworkdayjobs.com aggregator=False
+2026-04-20T13:11:53.1214586Z 2026-04-20 13:11:53,121 INFO src.processors.enrichment: enrich_job[jsearch_-wprVirLnIAm6OeJAAAAAA==] source=jsearch url=https://www.linkedin.com/jobs/view/director-workforce-analytics-at-advantage-solutions-4380621990 host=www.linkedin.com aggregator=True
+2026-04-20T13:11:53.1245791Z 2026-04-20 13:11:53,124 INFO src.processors.enrichment: enrich_job[jsearch_sqbpUGwH0lFVrPD8AAAAAA==] source=jsearch url=https://www.whatjobs.com/jobs/director-workforce-analytics/remote?id=2605608221 host=www.whatjobs.com aggregator=False
+2026-04-20T13:11:53.1270423Z 2026-04-20 13:11:53,126 INFO src.processors.enrichment: enrich_job[jooble_-5487407538774413611] source=jooble url=https://jooble.org/jdp/-5487407538774413611 host=jooble.org aggregator=True
+2026-04-20T13:11:53.2463582Z 2026-04-20 13:11:53,246 INFO src.processors.enrichment: enrich_job[jooble_-5487407538774413611] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:53.4591782Z 2026-04-20 13:11:53,458 WARNING src.processors.enrichment: apply_url not resolved for jooble_-5487407538774413611: https://jooble.org/jdp/-5487407538774413611
+2026-04-20T13:11:53.5969823Z 2026-04-20 13:11:53,596 INFO src.processors.enrichment: enrich_job[jsearch_bak9ydjfUcqe26SHAAAAAA==] HTTP status=200 redirected=False final_host=cowlitz.wd5.myworkdayjobs.com
+2026-04-20T13:11:53.7335950Z 2026-04-20 13:11:53,733 INFO src.processors.enrichment: enrich_job[jsearch_-wprVirLnIAm6OeJAAAAAA==] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T13:11:54.0613633Z 2026-04-20 13:11:54,061 INFO src.processors.enrichment: enrich_job[jsearch_sqbpUGwH0lFVrPD8AAAAAA==] HTTP status=200 redirected=False final_host=www.whatjobs.com
+2026-04-20T13:11:54.1260429Z 2026-04-20 13:11:54,125 INFO src.processors.enrichment: enrich_job[jsearch_VJKoNOSZFJQC0Yl1AAAAAA==] source=jsearch url=https://www.whatjobs.com/jobs/associate-director-workforce-analytics-solutions/new-jersey?id=2629815 host=www.whatjobs.com aggregator=False
+2026-04-20T13:11:54.1275447Z 2026-04-20 13:11:54,127 INFO src.processors.enrichment: enrich_job[jooble_8718276104813549967] source=jooble url=https://jooble.org/jdp/8718276104813549967 host=jooble.org aggregator=True
+2026-04-20T13:11:54.2039789Z 2026-04-20 13:11:54,203 INFO src.processors.enrichment: enrich_job[jooble_8718276104813549967] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:54.3536014Z 2026-04-20 13:11:54,352 WARNING src.processors.enrichment: apply_url not resolved for jooble_8718276104813549967: https://jooble.org/jdp/8718276104813549967
+2026-04-20T13:11:54.9307169Z 2026-04-20 13:11:54,929 WARNING src.processors.enrichment: apply_url not resolved for jsearch_-wprVirLnIAm6OeJAAAAAA==: https://www.linkedin.com/jobs/view/director-workforce-analytics-at-advantage-solutions-4380621990
+2026-04-20T13:11:54.9992706Z 2026-04-20 13:11:54,998 INFO src.processors.enrichment: enrich_job[jsearch_VJKoNOSZFJQC0Yl1AAAAAA==] HTTP status=200 redirected=False final_host=www.whatjobs.com
+2026-04-20T13:11:55.1277577Z 2026-04-20 13:11:55,127 INFO src.processors.enrichment: enrich_job[jooble_4006907133188642870] source=jooble url=https://jooble.org/jdp/4006907133188642870 host=jooble.org aggregator=True
+2026-04-20T13:11:55.2089498Z 2026-04-20 13:11:55,208 INFO src.processors.enrichment: enrich_job[jooble_4006907133188642870] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:55.3424295Z 2026-04-20 13:11:55,341 WARNING src.processors.enrichment: apply_url not resolved for jooble_4006907133188642870: https://jooble.org/jdp/4006907133188642870
+2026-04-20T13:11:56.1276246Z 2026-04-20 13:11:56,127 INFO src.processors.enrichment: enrich_job[jooble_4422493689246616587] source=jooble url=https://jooble.org/jdp/4422493689246616587 host=jooble.org aggregator=True
+2026-04-20T13:11:56.1860211Z 2026-04-20 13:11:56,185 INFO src.processors.enrichment: enrich_job[jooble_4422493689246616587] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:56.3253253Z 2026-04-20 13:11:56,324 WARNING src.processors.enrichment: apply_url not resolved for jooble_4422493689246616587: https://jooble.org/jdp/4422493689246616587
+2026-04-20T13:11:57.1280754Z 2026-04-20 13:11:57,127 INFO src.processors.enrichment: enrich_job[jooble_6850534718609694352] source=jooble url=https://jooble.org/jdp/6850534718609694352 host=jooble.org aggregator=True
+2026-04-20T13:11:57.1881668Z 2026-04-20 13:11:57,187 INFO src.processors.enrichment: enrich_job[jooble_6850534718609694352] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:57.3185990Z 2026-04-20 13:11:57,317 WARNING src.processors.enrichment: apply_url not resolved for jooble_6850534718609694352: https://jooble.org/jdp/6850534718609694352
+2026-04-20T13:11:58.1283432Z 2026-04-20 13:11:58,128 INFO src.processors.enrichment: enrich_job[jooble_5922575470780092130] source=jooble url=https://jooble.org/jdp/5922575470780092130 host=jooble.org aggregator=True
+2026-04-20T13:11:58.1874258Z 2026-04-20 13:11:58,187 INFO src.processors.enrichment: enrich_job[jooble_5922575470780092130] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:58.3025395Z 2026-04-20 13:11:58,302 WARNING src.processors.enrichment: apply_url not resolved for jooble_5922575470780092130: https://jooble.org/jdp/5922575470780092130
+2026-04-20T13:11:59.1281577Z 2026-04-20 13:11:59,127 INFO src.processors.enrichment: enrich_job[jooble_-7150257525595891925] source=jooble url=https://jooble.org/jdp/-7150257525595891925 host=jooble.org aggregator=True
+2026-04-20T13:11:59.1854139Z 2026-04-20 13:11:59,184 INFO src.processors.enrichment: enrich_job[jooble_-7150257525595891925] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:11:59.3059671Z 2026-04-20 13:11:59,305 WARNING src.processors.enrichment: apply_url not resolved for jooble_-7150257525595891925: https://jooble.org/jdp/-7150257525595891925
+2026-04-20T13:12:00.1284253Z 2026-04-20 13:12:00,127 INFO src.processors.enrichment: enrich_job[jooble_3169455418079108501] source=jooble url=https://jooble.org/jdp/3169455418079108501 host=jooble.org aggregator=True
+2026-04-20T13:12:00.1856570Z 2026-04-20 13:12:00,185 INFO src.processors.enrichment: enrich_job[jooble_3169455418079108501] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:12:00.3005441Z 2026-04-20 13:12:00,299 WARNING src.processors.enrichment: apply_url not resolved for jooble_3169455418079108501: https://jooble.org/jdp/3169455418079108501
+2026-04-20T13:12:00.3017071Z 2026-04-20 13:12:00,301 INFO src.processors.enrichment: enrich_job[adzuna_5704840025] source=adzuna url=https://www.adzuna.com/details/5704840025?utm_medium=api&utm_source=*** host=www.adzuna.com aggregator=True
+2026-04-20T13:12:00.6962061Z 2026-04-20 13:12:00,695 INFO src.processors.enrichment: enrich_job[adzuna_5704840025] HTTP status=200 redirected=False final_host=www.adzuna.com
+2026-04-20T13:12:01.1287092Z 2026-04-20 13:12:01,128 INFO src.processors.enrichment: enrich_job[jooble_-184306249712854387] source=jooble url=https://jooble.org/jdp/-184306249712854387 host=jooble.org aggregator=True
+2026-04-20T13:12:01.1997162Z 2026-04-20 13:12:01,199 INFO src.processors.enrichment: enrich_job[jooble_-184306249712854387] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:12:01.2148006Z 2026-04-20 13:12:01,214 WARNING src.processors.enrichment: apply_url not resolved for adzuna_5704840025: https://www.adzuna.com/details/5704840025?utm_medium=api&utm_source=***
+2026-04-20T13:12:01.2160685Z 2026-04-20 13:12:01,215 INFO src.processors.enrichment: enrich_job[adzuna_5703725949] source=adzuna url=https://www.adzuna.co.uk/jobs/details/5703725949?utm_medium=api&utm_source=*** host=www.adzuna.co.uk aggregator=True
+2026-04-20T13:12:01.3236748Z 2026-04-20 13:12:01,322 WARNING src.processors.enrichment: apply_url not resolved for jooble_-184306249712854387: https://jooble.org/jdp/-184306249712854387
+2026-04-20T13:12:01.3248786Z 2026-04-20 13:12:01,324 INFO src.processors.enrichment: enrich_job[adzuna_5702834460] source=adzuna url=https://www.adzuna.ca/details/5702834460?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T13:12:01.7237995Z 2026-04-20 13:12:01,723 INFO src.processors.enrichment: enrich_job[adzuna_5702834460] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T13:12:02.1289632Z 2026-04-20 13:12:02,128 INFO src.processors.enrichment: enrich_job[jooble_-7533723408999091102] source=jooble url=https://jooble.org/jdp/-7533723408999091102 host=jooble.org aggregator=True
+2026-04-20T13:12:02.1410619Z 2026-04-20 13:12:02,140 INFO src.processors.enrichment: enrich_job[adzuna_5703725949] HTTP status=200 redirected=False final_host=www.adzuna.co.uk
+2026-04-20T13:12:02.1864612Z 2026-04-20 13:12:02,186 INFO src.processors.enrichment: enrich_job[jooble_-7533723408999091102] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:12:02.3251489Z 2026-04-20 13:12:02,324 WARNING src.processors.enrichment: apply_url not resolved for jooble_-7533723408999091102: https://jooble.org/jdp/-7533723408999091102
+2026-04-20T13:12:02.3262117Z 2026-04-20 13:12:02,325 INFO src.processors.enrichment: enrich_job[adzuna_5696932925] source=adzuna url=https://www.adzuna.ca/details/5696932925?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T13:12:02.6346883Z 2026-04-20 13:12:02,634 INFO src.processors.enrichment: enrich_job[adzuna_5696932925] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T13:12:02.6401493Z 2026-04-20 13:12:02,639 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] source=adzuna url=https://www.adzuna.com.au/details/5702135260?utm_medium=api&utm_source=*** host=www.adzuna.com.au aggregator=False
+2026-04-20T13:12:03.1288273Z 2026-04-20 13:12:03,128 INFO src.processors.enrichment: enrich_job[jooble_-2099121581115119289] source=jooble url=https://jooble.org/jdp/-2099121581115119289 host=jooble.org aggregator=True
+2026-04-20T13:12:03.1952924Z 2026-04-20 13:12:03,194 INFO src.processors.enrichment: enrich_job[jooble_-2099121581115119289] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:12:03.3210674Z 2026-04-20 13:12:03,320 WARNING src.processors.enrichment: apply_url not resolved for jooble_-2099121581115119289: https://jooble.org/jdp/-2099121581115119289
+2026-04-20T13:12:03.3266808Z 2026-04-20 13:12:03,326 INFO src.processors.enrichment: enrich_job[adzuna_5696894519] source=adzuna url=https://www.adzuna.ca/details/5696894519?utm_medium=api&utm_source=*** host=www.adzuna.ca aggregator=False
+2026-04-20T13:12:03.3453176Z 2026-04-20 13:12:03,344 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] HTTP status=200 redirected=False final_host=www.adzuna.com.au
+2026-04-20T13:12:03.3496175Z 2026-04-20 13:12:03,349 INFO src.processors.enrichment: enrich_job[usajobs_865498800] source=usajobs url=https://www.usajobs.gov:443/job/865498800 host=www.usajobs.gov:443 aggregator=False
+2026-04-20T13:12:03.5115190Z 2026-04-20 13:12:03,511 WARNING src.processors.enrichment: apply_url not resolved for adzuna_5703725949: https://www.adzuna.co.uk/jobs/details/5703725949?utm_medium=api&utm_source=***
+2026-04-20T13:12:03.6082322Z 2026-04-20 13:12:03,607 INFO src.processors.enrichment: enrich_job[adzuna_5696894519] HTTP status=200 redirected=False final_host=www.adzuna.ca
+2026-04-20T13:12:03.6123057Z 2026-04-20 13:12:03,612 INFO src.processors.enrichment: enrich_job[gh_pinterest_7568861] source=greenhouse url=https://www.pinterestcareers.com/jobs/?gh_jid=7568861 host=www.pinterestcareers.com aggregator=False
+2026-04-20T13:12:03.6404094Z 2026-04-20 13:12:03,639 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] source=adzuna url=https://www.adzuna.com.au/details/5702135260?utm_medium=api&utm_source=*** host=www.adzuna.com.au aggregator=False
+2026-04-20T13:12:03.7059491Z 2026-04-20 13:12:03,705 INFO src.processors.enrichment: enrich_job[usajobs_865498800] HTTP status=200 redirected=False final_host=www.usajobs.gov:443
+2026-04-20T13:12:03.7315392Z 2026-04-20 13:12:03,731 INFO src.processors.enrichment: enrich_job[gh_databricks_8485471002] source=greenhouse url=https://databricks.com/company/careers/open-positions/job?gh_jid=8485471002 host=databricks.com aggregator=False
+2026-04-20T13:12:03.7927332Z 2026-04-20 13:12:03,790 INFO src.processors.enrichment: enrich_job[gh_pinterest_7568861] HTTP status=403 redirected=False final_host=www.pinterestcareers.com
+2026-04-20T13:12:03.7946609Z 2026-04-20 13:12:03,792 INFO src.processors.enrichment: enrich_job[gh_figma_5737300004] source=greenhouse url=https://boards.greenhouse.io/figma/jobs/5737300004?gh_jid=5737300004 host=boards.greenhouse.io aggregator=False
+2026-04-20T13:12:04.1290486Z 2026-04-20 13:12:04,128 INFO src.processors.enrichment: enrich_job[jooble_5918110456944402403] source=jooble url=https://jooble.org/jdp/5918110456944402403 host=jooble.org aggregator=True
+2026-04-20T13:12:04.1884646Z 2026-04-20 13:12:04,188 INFO src.processors.enrichment: enrich_job[jooble_5918110456944402403] HTTP status=403 redirected=False final_host=jooble.org
+2026-04-20T13:12:04.2366131Z 2026-04-20 13:12:04,236 INFO src.processors.enrichment: enrich_job[gh_figma_5737300004] HTTP status=200 redirected=True final_host=job-boards.greenhouse.io
+2026-04-20T13:12:04.2457388Z 2026-04-20 13:12:04,245 INFO src.processors.enrichment: enrich_job[gh_airtable_8235618002] source=greenhouse url=https://job-boards.greenhouse.io/airtable/jobs/8235618002 host=job-boards.greenhouse.io aggregator=False
+2026-04-20T13:12:04.2797484Z 2026-04-20 13:12:04,279 INFO src.processors.enrichment: enrich_job[adzuna_5702135260] HTTP status=200 redirected=False final_host=www.adzuna.com.au
+2026-04-20T13:12:04.2918730Z 2026-04-20 13:12:04,291 INFO src.processors.enrichment: enrich_job[gh_duolingo_8449530002] source=greenhouse url=https://careers.duolingo.com/jobs/8449530002?gh_jid=8449530002 host=careers.duolingo.com aggregator=False
+2026-04-20T13:12:04.3136692Z 2026-04-20 13:12:04,313 WARNING src.processors.enrichment: apply_url not resolved for jooble_5918110456944402403: https://jooble.org/jdp/5918110456944402403
+2026-04-20T13:12:04.3150528Z 2026-04-20 13:12:04,314 INFO src.processors.enrichment: enrich_job[gh_dropbox_7536374] source=greenhouse url=https://jobs.dropbox.com/listing/7536374?gh_jid=7536374 host=jobs.dropbox.com aggregator=False
+2026-04-20T13:12:04.3496382Z 2026-04-20 13:12:04,349 INFO src.processors.enrichment: enrich_job[usajobs_864919200] source=usajobs url=https://www.usajobs.gov:443/job/864919200 host=www.usajobs.gov:443 aggregator=False
+2026-04-20T13:12:04.4959025Z 2026-04-20 13:12:04,495 INFO src.processors.enrichment: enrich_job[gh_airtable_8235618002] HTTP status=200 redirected=False final_host=job-boards.greenhouse.io
+2026-04-20T13:12:04.5339754Z 2026-04-20 13:12:04,533 INFO src.processors.enrichment: enrich_job[gh_databricks_8485471002] HTTP status=200 redirected=True final_host=www.databricks.com
+2026-04-20T13:12:04.5463624Z 2026-04-20 13:12:04,546 INFO src.processors.enrichment: enrich_job[gh_datadog_7607540] source=greenhouse url=https://careers.datadoghq.com/detail/7607540/?gh_jid=7607540 host=careers.datadoghq.com aggregator=False
+2026-04-20T13:12:04.6114403Z 2026-04-20 13:12:04,611 INFO src.processors.enrichment: enrich_job[usajobs_864919200] HTTP status=200 redirected=False final_host=www.usajobs.gov:443
+2026-04-20T13:12:04.6201776Z 2026-04-20 13:12:04,619 INFO src.processors.enrichment: enrich_job[gh_okta_7649312] source=greenhouse url=https://www.okta.com/company/careers/opportunity/7649312?gh_jid=7649312 host=www.okta.com aggregator=False
+2026-04-20T13:12:04.6374093Z 2026-04-20 13:12:04,637 INFO src.processors.enrichment: enrich_job[gh_duolingo_8449530002] HTTP status=200 redirected=False final_host=careers.duolingo.com
+2026-04-20T13:12:04.6389641Z 2026-04-20 13:12:04,638 INFO src.processors.enrichment: enrich_job[gh_mongodb_7766266] source=greenhouse url=https://www.mongodb.com/careers/job/?gh_jid=7766266 host=www.mongodb.com aggregator=False
+2026-04-20T13:12:04.7072638Z 2026-04-20 13:12:04,706 INFO src.processors.enrichment: enrich_job[gh_datadog_7607540] HTTP status=200 redirected=False final_host=careers.datadoghq.com
+2026-04-20T13:12:04.7140341Z 2026-04-20 13:12:04,713 INFO src.processors.enrichment: enrich_job[ashby_notion_704a8769-cc09-4d4e-987d-a27a025374e7] source=ashby url=https://jobs.ashbyhq.com/notion/704a8769-cc09-4d4e-987d-a27a025374e7 host=jobs.ashbyhq.com aggregator=False
+2026-04-20T13:12:04.9292522Z 2026-04-20 13:12:04,928 INFO src.processors.enrichment: enrich_job[gh_dropbox_7536374] HTTP status=403 redirected=True final_host=www.dropbox.jobs
+2026-04-20T13:12:04.9312094Z 2026-04-20 13:12:04,930 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_0d8326a793b3e351] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4404058381 host=www.linkedin.com aggregator=True
+2026-04-20T13:12:05.1421927Z 2026-04-20 13:12:05,141 INFO src.processors.enrichment: enrich_job[ashby_notion_704a8769-cc09-4d4e-987d-a27a025374e7] HTTP status=200 redirected=False final_host=jobs.ashbyhq.com
+2026-04-20T13:12:05.3158088Z 2026-04-20 13:12:05,315 INFO src.processors.enrichment: enrich_job[gh_dropbox_7571497] source=greenhouse url=https://jobs.dropbox.com/listing/7571497?gh_jid=7571497 host=jobs.dropbox.com aggregator=False
+2026-04-20T13:12:05.3410332Z 2026-04-20 13:12:05,340 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_0d8326a793b3e351] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T13:12:05.5159694Z 2026-04-20 13:12:05,515 INFO src.processors.enrichment: enrich_job[gh_dropbox_7571497] HTTP status=403 redirected=True final_host=www.dropbox.jobs
+2026-04-20T13:12:05.5415724Z 2026-04-20 13:12:05,541 INFO src.processors.enrichment: enrich_job[gh_okta_7649312] HTTP status=200 redirected=False final_host=www.okta.com
+2026-04-20T13:12:05.9319935Z 2026-04-20 13:12:05,931 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_d1b9c20396cb3fa0] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4372774542 host=www.linkedin.com aggregator=True
+2026-04-20T13:12:06.1126719Z 2026-04-20 13:12:06,112 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_0d8326a793b3e351: https://www.linkedin.com/jobs/view/4404058381
+2026-04-20T13:12:06.6188838Z 2026-04-20 13:12:06,618 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_d1b9c20396cb3fa0] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T13:12:06.9320273Z 2026-04-20 13:12:06,931 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_8a3d6db49b1c1714] source=jobspy_linkedin url=https://www.linkedin.com/jobs/view/4372941019 host=www.linkedin.com aggregator=True
+2026-04-20T13:12:07.7085300Z 2026-04-20 13:12:07,708 INFO src.processors.enrichment: enrich_job[jobspy_linkedin_8a3d6db49b1c1714] HTTP status=200 redirected=False final_host=www.linkedin.com
+2026-04-20T13:12:07.9630661Z 2026-04-20 13:12:07,962 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_d1b9c20396cb3fa0: https://www.linkedin.com/jobs/view/4372774542
+2026-04-20T13:12:08.9197892Z 2026-04-20 13:12:08,919 INFO src.processors.enrichment: enrich_job[gh_mongodb_7766266] HTTP status=200 redirected=False final_host=www.mongodb.com
+2026-04-20T13:12:09.0532825Z 2026-04-20 13:12:09,052 WARNING src.processors.enrichment: apply_url not resolved for jobspy_linkedin_8a3d6db49b1c1714: https://www.linkedin.com/jobs/view/4372941019
+2026-04-20T13:12:09.0549422Z 2026-04-20 13:12:09,054 INFO collector: enrichment: {'enriched_from_source': 24, 'aggregator_only': 15}
+2026-04-20T13:12:30.8346235Z 2026-04-20 13:12:30,834 INFO collector: === Phase 5: WordPress publish ===
+2026-04-20T13:12:31.2716113Z 2026-04-20 13:12:31,271 INFO collector: retry_queue: {'attempted': 0, 'succeeded': 0, 'failed': 0, 'dropped': 0}
+2026-04-20T13:12:51.4599864Z 2026-04-20 13:12:51,459 INFO collector: publish: {'created': 7, 'updated': 32, 'errors': 0, 'queued': 0, 'batches': 2}
+2026-04-20T13:12:53.0623572Z 2026-04-20 13:12:53,062 INFO collector: apply_url upgrade WP push: {'created': 0, 'updated': 2, 'errors': 0, 'queued': 0, 'batches': 1} (count=2)
+2026-04-20T13:12:53.0625129Z 2026-04-20 13:12:53,062 INFO collector: === Phase 6: notifier ===
+2026-04-20T13:12:57.6882119Z 2026-04-20 13:12:57,687 INFO collector: notifier: {'qualifying': 25, 'pushes_sent': 25, 'email_sent': 1}
+2026-04-20T13:12:57.6882941Z 2026-04-20 13:12:57,687 INFO collector: === Phase 6.5: lifecycle checker ===
+2026-04-20T13:13:04.7624111Z 2026-04-20 13:13:04,761 INFO src.processors.lifecycle_checker: lifecycle_checker: {'checked': 7, 'still_active': 2, 'likely_closed': 0, 'unknown': 5, 'ats_snapshot_hits': 0, 'http_checks': 2, 'http_budget_deferred': 0, 'errors': 0, 'transitions_to_closed': [], 'transitions_to_active': []}
+2026-04-20T13:13:04.7625951Z 2026-04-20 13:13:04,761 INFO collector: lifecycle_checker: {'checked': 7, 'still_active': 2, 'likely_closed': 0, 'unknown': 5, 'ats_snapshot_hits': 0, 'http_checks': 2, 'http_budget_deferred': 0, 'errors': 0, 'transitions_to_closed': [], 'transitions_to_active': []}
+2026-04-20T13:13:04.7627312Z 2026-04-20 13:13:04,761 INFO collector: === Phase 7: archiver ===
+2026-04-20T13:13:05.3334333Z 2026-04-20 13:13:05,332 INFO collector: archiver: {'archived': 0, 'archived_fast_path': 0, 'marked_likely_closed': 0}
+2026-04-20T13:13:18.9827042Z 2026-04-20 13:13:18,982 INFO collector: stats_aggregator: {'rows_written': 71, 'total_active': 172}
+2026-04-20T13:13:21.3183025Z 2026-04-20 13:13:21,317 INFO collector: dashboard_stats: {'ok': True, 'status': 200}
+2026-04-20T13:13:21.3183738Z 2026-04-20 13:13:21,318 INFO collector: === Phase 8: healthcheck ping ===
+2026-04-20T13:13:21.8543896Z 2026-04-20 13:13:21,853 INFO collector: === DONE in 759.4s ===
+2026-04-20T13:13:22.2018785Z ##[group]Run actions/upload-artifact@v4
+2026-04-20T13:13:22.2019184Z with:
+2026-04-20T13:13:22.2019431Z   name: shadow-log-20
+2026-04-20T13:13:22.2019719Z   path: shadow_log.jsonl
+2026-04-20T13:13:22.2019994Z   retention-days: 14
+2026-04-20T13:13:22.2020269Z   if-no-files-found: ignore
+2026-04-20T13:13:22.2020551Z   compression-level: 6
+2026-04-20T13:13:22.2020815Z   overwrite: false
+2026-04-20T13:13:22.2021074Z   include-hidden-files: false
+2026-04-20T13:13:22.2021353Z env:
+2026-04-20T13:13:22.2021656Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:22.2022140Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:13:22.2022603Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:22.2023033Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:22.2023460Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:22.2023935Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:13:22.2024306Z ##[endgroup]
+2026-04-20T13:13:22.4055014Z With the provided path, there will be 1 file uploaded
+2026-04-20T13:13:22.4057995Z Artifact name is valid!
+2026-04-20T13:13:22.4059100Z Root directory input is valid!
+2026-04-20T13:13:22.7417532Z Beginning upload of artifact content to blob storage
+2026-04-20T13:13:23.2395130Z Uploaded bytes 134915
+2026-04-20T13:13:23.3127892Z Finished uploading artifact content to blob storage!
+2026-04-20T13:13:23.3132050Z SHA256 digest of uploaded artifact zip is c8fdf2284899e93cf9d666b1d53b59a15053e13b7cb409e3f8f352de2ba424a4
+2026-04-20T13:13:23.3134453Z Finalizing artifact upload
+2026-04-20T13:13:23.4954906Z Artifact shadow-log-20.zip successfully finalized. Artifact ID 6532349846
+2026-04-20T13:13:23.4956816Z Artifact shadow-log-20 has been successfully uploaded! Final size is 134915 bytes. Artifact ID is 6532349846
+2026-04-20T13:13:23.4964622Z Artifact download URL: https://github.com/victomancini/job-monitor/actions/runs/24667257338/artifacts/6532349846
+2026-04-20T13:13:23.5058169Z ##[group]Run curl -fsS -m 10 --retry 5 ***
+2026-04-20T13:13:23.5058785Z [36;1mcurl -fsS -m 10 --retry 5 ***[0m
+2026-04-20T13:13:23.5072095Z shell: /usr/bin/bash -e {0}
+2026-04-20T13:13:23.5072408Z env:
+2026-04-20T13:13:23.5072751Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5073233Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:13:23.5073705Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5074132Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5074551Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5075025Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:13:23.5075398Z ##[endgroup]
+2026-04-20T13:13:23.9760054Z OK
+2026-04-20T13:13:23.9822154Z Post job cleanup.
+2026-04-20T13:13:24.1008904Z Post job cleanup.
+2026-04-20T13:13:24.1773478Z [command]/usr/bin/git version
+2026-04-20T13:13:24.1821360Z git version 2.53.0
+2026-04-20T13:13:24.1874228Z Temporarily overriding HOME='/home/runner/work/_temp/8a8e2ce9-42b9-4705-b75a-cff99dd766f5' before making global git config changes
+2026-04-20T13:13:24.1875687Z Adding repository directory to the temporary git global config as a safe directory
+2026-04-20T13:13:24.1882327Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/job-monitor/job-monitor
+2026-04-20T13:13:24.1914161Z Removing SSH command configuration
+2026-04-20T13:13:24.1923547Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-04-20T13:13:24.1958511Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-04-20T13:13:24.2155051Z Removing HTTP extra header
+2026-04-20T13:13:24.2161854Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-04-20T13:13:24.2197652Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-04-20T13:13:24.2387863Z Removing includeIf entries pointing to credentials config files
+2026-04-20T13:13:24.2397723Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-04-20T13:13:24.2435874Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-04-20T13:13:24.2764058Z Cleaning up orphan processes
+2026-04-20T13:13:24.2998756Z ##[warning]Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/upload-artifact@v4. Actions will be forced to run with Node.js 24 by default starting June 2nd, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

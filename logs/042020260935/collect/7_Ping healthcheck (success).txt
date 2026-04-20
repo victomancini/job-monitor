@@ -1,0 +1,12 @@
+﻿2026-04-20T13:13:23.5058157Z ##[group]Run curl -fsS -m 10 --retry 5 ***
+2026-04-20T13:13:23.5058783Z [36;1mcurl -fsS -m 10 --retry 5 ***[0m
+2026-04-20T13:13:23.5072077Z shell: /usr/bin/bash -e {0}
+2026-04-20T13:13:23.5072401Z env:
+2026-04-20T13:13:23.5072748Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5073230Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib/pkgconfig
+2026-04-20T13:13:23.5073703Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5074129Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5074549Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.13/x64
+2026-04-20T13:13:23.5075023Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.13/x64/lib
+2026-04-20T13:13:23.5075396Z ##[endgroup]
+2026-04-20T13:13:23.9760025Z OK
